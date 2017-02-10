@@ -40,6 +40,8 @@ def find_sensibility(pattern, pattern_start):
     blast_selected_reads = get_blast_matched_ids(pattern)
     correctly_filtered_reads = [read for read in blast_selected_reads if read in related_reads]
     sensibility = float(len(correctly_filtered_reads)) / len(related_reads)
+    with open('0_size_related_reads.txt', 'a') as outfile: #0
+        outfile.write('%s %s\n' % (len(pattern), len(related_reads)))
     with open('1_size_sensibility.txt', 'a') as outfile: #1
         outfile.write('%s %s\n' % (len(pattern), sensibility))
     with open('2_size_blast_selected.txt', 'a') as outfile: #2
