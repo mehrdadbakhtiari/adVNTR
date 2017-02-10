@@ -54,7 +54,7 @@ def get_occurrence_of_pattern_in_text(text, pattern, min_similarity):
     return occurrence
 
 
-def get_copy_number_of_pattern_in_reads(query, matched_reads, average_coverage=20.0, min_similarity=0.60):
+def get_copy_number_of_pattern_in_reads(query, matched_reads, average_coverage=20.0, min_similarity=0.66):
     occurrence = 0
     for read in matched_reads:
         rc_query = str(Seq.Seq(query).reverse_complement())
