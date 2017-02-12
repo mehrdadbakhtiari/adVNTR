@@ -66,11 +66,12 @@ def get_copy_number_of_pattern_in_reads(query, matched_reads, average_coverage=2
 
 def get_blast_matched_ids(query, word_size='7', blast_db_name='hg_19_chr_15_reads'):
     with open("query.fasta", "w") as output_handle:
-        output_handle.write('query\n')
-        output_handle.write(query)
+        my_rec = SeqRecord.SeqRecord(seq=Seq.Seq(query), id='query', description='')
+        SeqIO.write([my_rec], output_handle, 'fasta')
+
     blastn_cline = NcbiblastnCommandline(query="query.fasta", db=blast_db_name, outfmt='"6 sallseqid"',
                                          out="result.txt", num_threads="4", word_size=word_size, gapopen='2',
-                                         gapextend='2', penalty='-1', reward='1')
+                                         gapextend='2', penalty='-1', reward='1', max_target_seqs='1000')
     blastn_cline()
 
     with open('result.txt') as result_input:

@@ -1,5 +1,6 @@
 from repeat_finder import *
 import pysam
+from Bio import pairwise2, Seq, SeqRecord, SeqIO
 
 
 def get_gc_content(s):
@@ -10,7 +11,7 @@ def get_gc_content(s):
     return float(res) / len(s)
 
 
-def get_related_reads(pattern, pattern_start, repeats, read_file):
+def get_related_reads_in_samfile(pattern, pattern_start, repeats, read_file):
     pattern_length = len(pattern)
     related_reads = []
     samfile = pysam.AlignmentFile(read_file, "r")
@@ -26,17 +27,21 @@ def get_related_reads(pattern, pattern_start, repeats, read_file):
     return related_reads
 
 
-def find_sensibility(pattern, pattern_start):
-    # pattern_start = 89398653
-    # pattern = 'CTCTGCCCCTGGAGTAGAGGACATCAGCGGGCTTCCTTCTGGAGAAGTTCTAGAGAC'
+def get_exact_number_of_repeats_from_sequence(pattern, pattern_start):
     file_name = 'chr15.fa'
     fasta_sequences = SeqIO.parse(open(file_name), 'fasta')
     sequence = ''
     for fasta in fasta_sequences:
         name, sequence = fasta.id, str(fasta.seq)
-    repeats = get_occurrence_of_pattern_in_text(sequence[pattern_start:pattern_start+len(pattern)*35].upper(), pattern, 0.66)
+    corresponding_region_in_seq = sequence[pattern_start:pattern_start + len(pattern) * 35].upper()
+    repeats = get_occurrence_of_pattern_in_text(corresponding_region_in_seq, pattern, 0.66)
+    return repeats
 
-    related_reads = get_related_reads(pattern, pattern_start, repeats, 'paired_dat.sam')
+
+def find_sensibility(pattern, pattern_start):
+    repeats = get_exact_number_of_repeats_from_sequence(pattern, pattern_start)
+
+    related_reads = get_related_reads_in_samfile(pattern, pattern_start, repeats, 'paired_dat.sam')
     blast_selected_reads = get_blast_matched_ids(pattern)
     correctly_filtered_reads = [read for read in blast_selected_reads if read in related_reads]
     sensibility = float(len(correctly_filtered_reads)) / len(related_reads)
@@ -50,6 +55,27 @@ def find_sensibility(pattern, pattern_start):
         outfile.write('%s %s\n' % (len(related_reads) * 150.0 / (len(pattern) * repeats), get_gc_content(pattern)))
 
 
+def add_two_copy_to_all_patterns(patterns, start_points):
+    file_name = 'chr15.fa'
+    fasta_sequences = SeqIO.parse(open(file_name), 'fasta')
+    sequence = ''
+    record = SeqRecord.SeqRecord('')
+    for fasta in fasta_sequences:
+        record = fasta
+        name, sequence = fasta.id, str(fasta.seq)
+    total_added_chars = 0
+    for i in range(len(patterns)):
+        start_point = start_points[i] + total_added_chars
+        pattern = patterns[i]
+        sequence = sequence[:start_point] + pattern * 2 + sequence[start_point:]
+        total_added_chars += len(pattern * 2)
+
+    record.seq = Seq.Seq(sequence)
+    output_name = 'edited_chr15_two_more_copies.fa'
+    with open(output_name, 'w') as output_handle:
+        SeqIO.write([record], output_handle, 'fasta')
+
+
 with open('patterns.txt') as input:
     patterns = input.readlines()
     patterns = [pattern.strip() for pattern in patterns]
@@ -57,6 +83,8 @@ with open('start_points.txt') as input:
     lines = input.readlines()
     start_points = [int(num.strip())-1 for num in lines]
 
-for i in range(len(patterns)):
-    print(i)
-    find_sensibility(patterns[i], start_points[i])
+add_two_copy_to_all_patterns(patterns, start_points)
+
+# for i in range(len(patterns)):
+#     print(i)
+#     find_sensibility(patterns[i], start_points[i])
