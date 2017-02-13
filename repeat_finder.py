@@ -10,7 +10,10 @@ def find_exact_match_from_candid_reads(query, candid_reads, min_similarity_score
     matched_reads = []
     for read_number, read_segment in candid_reads:
         # reward, mismatch, gapopen, gapextend
-        alignment_score = pairwise2.align.localms(read_segment, query, 1, -1, -2, -2, score_only=True)
+        penalty = -1
+        if len(query) < 25:
+            penalty = -3
+        alignment_score = pairwise2.align.localms(read_segment, query, 1, penalty, -2, -2, score_only=True)
         if float(alignment_score) / len(query) > min_similarity_score:
             matched_reads.append(read_segment)
     return matched_reads
@@ -64,14 +67,17 @@ def get_copy_number_of_pattern_in_reads(query, matched_reads, average_coverage=2
     return float(occurrence) / average_coverage
 
 
-def get_blast_matched_ids(query, word_size='7', blast_db_name='hg_19_chr_15_reads'):
+def get_blast_matched_ids(query, blast_db_name, word_size='7'):
     with open("query.fasta", "w") as output_handle:
         my_rec = SeqRecord.SeqRecord(seq=Seq.Seq(query), id='query', description='')
         SeqIO.write([my_rec], output_handle, 'fasta')
 
+    penalty = '-1'
+    if len(query) < 25:
+        penalty = '-3'
     blastn_cline = NcbiblastnCommandline(query="query.fasta", db=blast_db_name, outfmt='"6 sallseqid"',
                                          out="result.txt", num_threads="4", word_size=word_size, gapopen='2',
-                                         gapextend='2', penalty='-1', reward='1', max_target_seqs='1000')
+                                         gapextend='2', penalty=penalty, reward='1', max_target_seqs='1000')
     blastn_cline()
 
     with open('result.txt') as result_input:
@@ -81,11 +87,14 @@ def get_blast_matched_ids(query, word_size='7', blast_db_name='hg_19_chr_15_read
     return matched_ids
 
 
-def get_copy_number_of_pattern(query, fasta_files):
+def get_copy_number_of_pattern(query, fasta_files, directory=''):
     min_alignment_score = 0.66
     total_length = 100 * 1000 * 1000
 
-    blast_db_name = 'hg_19_chr_15_reads'
+    db_name = 'blast_db'
+    if len(directory):
+        db_name = directory[:len(directory)-1]
+    blast_db_name = directory + db_name
     # make_blast_database(fasta_files, blast_db_name)
 
     matched_ids = get_blast_matched_ids(query, blast_db_name=blast_db_name)
@@ -97,5 +106,8 @@ def get_copy_number_of_pattern(query, fasta_files):
 if __name__ == '__main__':
     repeating_unit = 'TAGAACAGAAGGACAAGGCCCTGGAACCAAAAGATAAAGACT'
     paired_end_files = ['paired_dat1.fasta', 'paired_dat2.fasta']
-    print(get_copy_number_of_pattern(repeating_unit, paired_end_files))
+    files_dir = 'original_reads/'
+    for i in range(len(paired_end_files)):
+        paired_end_files[i] = files_dir + paired_end_files[i]
+    print(get_copy_number_of_pattern(repeating_unit, paired_end_files, files_dir))
 

@@ -42,7 +42,7 @@ def find_sensibility(pattern, pattern_start):
     repeats = get_exact_number_of_repeats_from_sequence(pattern, pattern_start)
 
     related_reads = get_related_reads_in_samfile(pattern, pattern_start, repeats, 'paired_dat.sam')
-    blast_selected_reads = get_blast_matched_ids(pattern)
+    blast_selected_reads = get_blast_matched_ids(pattern, 'hg_19_chr_15_reads')
     correctly_filtered_reads = [read for read in blast_selected_reads if read in related_reads]
     sensibility = float(len(correctly_filtered_reads)) / len(related_reads)
     with open('0_size_related_reads.txt', 'a') as outfile: #0
@@ -76,6 +76,35 @@ def add_two_copy_to_all_patterns(patterns, start_points):
         SeqIO.write([record], output_handle, 'fasta')
 
 
+def write_cn_over_true_cn_to_files(patterns, start_points):
+    out_files = ['10X_ratio.txt', '20X_ratio.txt', '30X_ratio.txt']
+    read_files = [['10X_paired_dat1.fasta', '10X_paired_dat2.fasta'],
+                  ['paired_dat1.fasta', 'paired_dat2.fasta'],
+                  ['30X_paired_dat1.fasta', '30X_paired_dat2.fasta']]
+    directory = ['10X_reads/', 'original_reads/', '30X_reads/']
+    true_cn = []
+    for i in range(len(patterns)):
+        if i > 3:
+            break
+        true_cn.append(get_exact_number_of_repeats_from_sequence(patterns[i], start_points[i]))
+
+    for k in range(len(out_files)):
+        if k != 1:
+            continue
+        db_name = 'blast_db'
+        if len(directory[k]):
+            db_name = directory[k][:len(directory) - 1]
+        blast_db_name = directory[k] + db_name
+        for t in range(len(read_files[k])):
+            read_files[k][t] = directory[k] + read_files[k][t]
+        make_blast_database(read_files[k], blast_db_name)
+
+        for i in range(len(patterns)):
+            calculated_cn = get_copy_number_of_pattern(patterns[i], read_files[k], directory[k])
+            with open(out_files[k], 'a') as outfile:
+                outfile.write('%s %s\n' % (len(patterns[i]), calculated_cn / true_cn[i]))
+
+
 with open('patterns.txt') as input:
     patterns = input.readlines()
     patterns = [pattern.strip() for pattern in patterns]
@@ -83,7 +112,7 @@ with open('start_points.txt') as input:
     lines = input.readlines()
     start_points = [int(num.strip())-1 for num in lines]
 
-add_two_copy_to_all_patterns(patterns, start_points)
+write_cn_over_true_cn_to_files(patterns, start_points)
 
 # for i in range(len(patterns)):
 #     print(i)
