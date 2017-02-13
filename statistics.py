@@ -84,16 +84,12 @@ def write_cn_over_true_cn_to_files(patterns, start_points):
     directory = ['10X_reads/', 'original_reads/', '30X_reads/']
     true_cn = []
     for i in range(len(patterns)):
-        if i > 3:
-            break
         true_cn.append(get_exact_number_of_repeats_from_sequence(patterns[i], start_points[i]))
 
     for k in range(len(out_files)):
-        if k != 1:
-            continue
         db_name = 'blast_db'
         if len(directory[k]):
-            db_name = directory[k][:len(directory) - 1]
+            db_name = directory[k][:len(directory[k]) - 1]
         blast_db_name = directory[k] + db_name
         for t in range(len(read_files[k])):
             read_files[k][t] = directory[k] + read_files[k][t]
