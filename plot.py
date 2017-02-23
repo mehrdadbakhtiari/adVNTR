@@ -97,11 +97,13 @@ def plot_coverage_comparison():
     plt.close()
 
 
-def plot_cn_over_size():
+def plot_cn_over_sens():
     stat_file = '20X_ratio.txt'
+    stat_file2 = '20X_ratio_at_least_two_copy.txt'
     sens_file = 'original_case_r1_p1/1_size_sensibility.txt'
     X = []
     Y = []
+    Y2 = []
 
     import matplotlib.pyplot as plt
 
@@ -113,6 +115,15 @@ def plot_cn_over_size():
                 continue
             nums = [float(n) for n in line.split()]
             Y.append(nums[1])
+    with open(stat_file2) as input_file:
+        lines = input_file.readlines()
+        for line in lines:
+            line = line.strip()
+            if line == '':
+                continue
+            nums = [float(n) for n in line.split()]
+            Y2.append(nums[1])
+
     with open(sens_file) as input_file:
         lines = input_file.readlines()
     for line in lines:
@@ -120,12 +131,50 @@ def plot_cn_over_size():
         if line == '':
             continue
         nums = [float(n) for n in line.split()]
-        X.append(nums[0])
-    plt.plot(X, Y, 'o', label='Copy Count / TrueCN')
-    plt.xlabel('Size')
+        X.append(nums[1])
+    plt.plot(X, Y2, 'o', color='blue', label='Filtered reads with at least two copy')
+    plt.plot(X, Y, 'o', color='red', label='All reads')
+    plt.xlabel('Sensibility')
     plt.ylabel('Copy Count / True Copy Count')
     plt.legend(loc=0)
-    plt.savefig('CN_over_size.png')  # save the figure to file
+    plt.savefig('CN_over_sens_compare.png')  # save the figure to file
     plt.close()
 
-plot_cn_over_size()
+
+def plot_tandem_copy_number_and_genome_copy_number():
+    stat_file = 'copy_number_analysis.txt'
+    sens_file = 'original_case_r1_p1/1_size_sensibility.txt'
+    X = []
+    Y = []
+    Y2 = []
+
+    import matplotlib.pyplot as plt
+
+    with open(stat_file) as input_file:
+        lines = input_file.readlines()
+        for line in lines:
+            line = line.strip()
+            if line == '':
+                continue
+            nums = [float(n) for n in line.split()]
+            Y.append(float(nums[1]) / nums[0])
+
+    with open(sens_file) as input_file:
+        lines = input_file.readlines()
+    for i in range(len(lines)):
+        line = lines[i]
+        line = line.strip()
+        if line == '':
+            continue
+        nums = [float(n) for n in line.split()]
+        X.append(nums[0])
+    plt.plot(X, Y, 'o', color='blue', label='CN in 100Kbp region / CN in ~1Kbp region')
+    # plt.plot(X, Y2, 'o', color='red', label='CN in 100Kbp region')
+    plt.xlabel('Pattern size')
+    plt.ylabel('Copies 100k / Copies in 1K')
+    plt.legend(loc=0)
+    plt.savefig('CN_in_genome_compare.png')  # save the figure to file
+    plt.close()
+
+# plot_cn_over_sens()
+plot_tandem_copy_number_and_genome_copy_number()
