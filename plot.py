@@ -1,10 +1,10 @@
 
 def plot1():
-    stat_files = ['0_size_related_reads.txt', '1_size_sensibility.txt', '2_size_blast_selected.txt',
+    stat_files = ['0_size_related_reads.txt', '1_size_sensitivity.txt', '2_size_blast_selected.txt',
                   '3_sim_read_coverage__gc_content.txt']
 
     x_label = {0: 'Pattern Size', 1: 'Pattern Size', 2: 'Pattern Size', 3: 'Simulated Read Coverage'}
-    y_label = {0: 'Reads from the pattern', 1: 'Sensibility', 2: 'Number of Selected Reads by Blast', 3: 'GC Content'}
+    y_label = {0: 'Reads from the pattern', 1: 'Sensitivity', 2: 'Number of Selected Reads by Blast', 3: 'GC Content'}
 
 
     i = 0
@@ -31,10 +31,10 @@ def plot1():
 
 def plot2():
     dirs = ['original_case_r1_p1/', 'penalty_3_reward_1/']
-    stat_files = ['1_size_sensibility.txt', '2_size_blast_selected.txt']
+    stat_files = ['1_size_sensitivity.txt', '2_size_blast_selected.txt']
 
     x_label = {1: 'Pattern Size', 2: 'Pattern Size'}
-    y_label = {1: 'Sensibility', 2: 'Number of Selected Reads by Blast'}
+    y_label = {1: 'Sensitivity', 2: 'Number of Selected Reads by Blast'}
 
     X = []
     Y = [[], []]
@@ -100,7 +100,7 @@ def plot_coverage_comparison():
 def plot_cn_over_sens():
     stat_file = '20X_ratio.txt'
     stat_file2 = '20X_ratio_at_least_two_copy.txt'
-    sens_file = 'original_case_r1_p1/1_size_sensibility.txt'
+    sens_file = 'original_case_r1_p1/1_size_sensitivity.txt'
     X = []
     Y = []
     Y2 = []
@@ -134,7 +134,7 @@ def plot_cn_over_sens():
         X.append(nums[1])
     plt.plot(X, Y2, 'o', color='blue', label='Filtered reads with at least two copy')
     plt.plot(X, Y, 'o', color='red', label='All reads')
-    plt.xlabel('Sensibility')
+    plt.xlabel('Sensitivity')
     plt.ylabel('Copy Count / True Copy Count')
     plt.legend(loc=0)
     plt.savefig('CN_over_sens_compare.png')  # save the figure to file
@@ -143,7 +143,7 @@ def plot_cn_over_sens():
 
 def plot_tandem_copy_number_and_genome_copy_number():
     stat_file = 'copy_number_analysis.txt'
-    sens_file = 'original_case_r1_p1/1_size_sensibility.txt'
+    sens_file = 'original_case_r1_p1/1_size_sensitivity.txt'
     X = []
     Y = []
     Y2 = []

@@ -38,21 +38,26 @@ def get_exact_number_of_repeats_from_sequence(pattern, pattern_start):
     return repeats
 
 
-def find_sensibility(pattern, pattern_start):
+def find_sensitivity(pattern, pattern_start):
     repeats = get_exact_number_of_repeats_from_sequence(pattern, pattern_start)
 
-    related_reads = get_related_reads_in_samfile(pattern, pattern_start, repeats, 'paired_dat.sam')
-    blast_selected_reads = get_blast_matched_ids(pattern, 'hg_19_chr_15_reads')
-    correctly_filtered_reads = [read for read in blast_selected_reads if read in related_reads]
-    sensibility = float(len(correctly_filtered_reads)) / len(related_reads)
-    with open('0_size_related_reads.txt', 'a') as outfile: #0
-        outfile.write('%s %s\n' % (len(pattern), len(related_reads)))
-    with open('1_size_sensibility.txt', 'a') as outfile: #1
-        outfile.write('%s %s\n' % (len(pattern), sensibility))
-    with open('2_size_blast_selected.txt', 'a') as outfile: #2
-        outfile.write('%s %s\n' % (len(pattern), len(blast_selected_reads)))
-    with open('3_sim_read_coverage__gc_content.txt', 'a') as outfile: #3
-        outfile.write('%s %s\n' % (len(related_reads) * 150.0 / (len(pattern) * repeats), get_gc_content(pattern)))
+    related_reads = get_related_reads_in_samfile(pattern, pattern_start, repeats, 'original_reads/paired_dat.sam')
+    blast_selected_reads = get_blast_matched_ids(pattern, 'original_reads/original_reads', max_seq='6000')
+    TP = [read for read in blast_selected_reads if read in related_reads]
+    FP = [read for read in blast_selected_reads if read not in TP]
+    FN = [read for read in related_reads if read not in blast_selected_reads]
+    sensitivity = float(len(TP)) / len(related_reads)
+    specifity = float(len(TP) / (TP + FP))
+    with open('Sensivity_Specifity.txt', 'a') as outfile:
+        outfile.write('%s %s\n' % (specifity, sensitivity))
+    # with open('0_size_related_reads.txt', 'a') as outfile: #0
+    #     outfile.write('%s %s\n' % (len(pattern), len(related_reads)))
+    # with open('1_size_sensitivity.txt', 'a') as outfile: #1
+    #     outfile.write('%s %s\n' % (len(pattern), sensitivity))
+    # with open('2_size_blast_selected.txt', 'a') as outfile: #2
+    #     outfile.write('%s %s\n' % (len(pattern), len(blast_selected_reads)))
+    # with open('3_sim_read_coverage__gc_content.txt', 'a') as outfile: #3
+    #     outfile.write('%s %s\n' % (len(related_reads) * 150.0 / (len(pattern) * repeats), get_gc_content(pattern)))
 
 
 def add_two_copy_to_all_patterns(patterns, start_points):
@@ -113,8 +118,8 @@ with open('start_points.txt') as input:
     lines = input.readlines()
     start_points = [int(num.strip())-1 for num in lines]
 
-write_cn_over_true_cn_to_files(patterns, start_points)
+# write_cn_over_true_cn_to_files(patterns, start_points)
 
-# for i in range(len(patterns)):
-#     print(i)
-#     find_sensibility(patterns[i], start_points[i])
+for i in range(len(patterns)):
+    print(i)
+    find_sensitivity(patterns[i], start_points[i])
