@@ -77,6 +77,11 @@ def add_two_copy_to_all_patterns(patterns, start_points):
 
 
 def write_cn_over_true_cn_to_files(patterns, start_points):
+    # read_files = [['paired_dat1.fasta', 'paired_dat2.fasta'],
+    # ['paired_dat1.fasta', 'paired_dat2.fasta', 'edited_chr15_paired_dat1.fasta', 'edited_chr15_paired_dat2.fasta']]
+    # out_files = ['original_computed_cn.txt', 'diploid_computed_cn.txt']
+    # directory = ['original_reads/', 'diploid/']
+
     out_files = ['10X_ratio.txt', '20X_ratio.txt', '30X_ratio.txt']
     read_files = [['10X_paired_dat1.fasta', '10X_paired_dat2.fasta'],
                   ['paired_dat1.fasta', 'paired_dat2.fasta'],
@@ -93,7 +98,7 @@ def write_cn_over_true_cn_to_files(patterns, start_points):
         blast_db_name = directory[k] + db_name
         for t in range(len(read_files[k])):
             read_files[k][t] = directory[k] + read_files[k][t]
-        make_blast_database(read_files[k], blast_db_name)
+        # make_blast_database(read_files[k], blast_db_name)
 
         for i in range(len(patterns)):
             calculated_cn = get_copy_number_of_pattern(patterns[i], read_files[k], directory[k])
