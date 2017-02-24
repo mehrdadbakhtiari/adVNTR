@@ -57,26 +57,28 @@ def find_sensitivity(pattern_num, pattern, pattern_start, min_length_for_pattern
     related_reads = get_related_reads_in_samfile(pattern, pattern_start, repeats, 'original_reads/paired_dat.sam')
 
     valid_parameters = read_blast_params_list()
-    for word_size in range(4, 11):
+    blast_pattern = pattern
+    if min_length_for_pattern and len(pattern) < min_length_for_pattern:
+        blast_pattern = pattern * int(round(50.0 / len(pattern) + 0.5))
+
+    for word_size in [4, 7, 10]:
         word_size = str(word_size)
         for params in valid_parameters:
-            blast_pattern = pattern
-            if min_length_for_pattern and len(pattern) < min_length_for_pattern:
-                blast_pattern = pattern * int(round(50.0 / len(pattern) + 0.5))
-            blast_selected_reads = get_blast_matched_ids(blast_pattern, 'original_reads/original_reads', max_seq='6000',
-                                                         word_size=word_size, reward=params.reward,
-                                                         penalty=params.penalty, gapopen=params.gapopen,
-                                                         gapextend=params.gapextend)
-            TP = [read for read in blast_selected_reads if read in related_reads]
-            FP = [read for read in blast_selected_reads if read not in TP]
-            FN = [read for read in related_reads if read not in blast_selected_reads]
-            print('TP:', len(TP), 'FP:', len(FP), 'blast selected:', len(blast_selected_reads))
-            print('FN:', len(FN))
-            sensitivity = float(len(TP)) / len(related_reads) if len(related_reads) > 0 else 0
-            precision = float(len(TP)) / (len(TP) + len(FP)) if len(TP) + len(FP) > 0 else 0
-            min_len = min_length_for_pattern if min_length_for_pattern else 0
-            with open('sensivity_over_precision_min_len%s_seq_%s.txt' % (min_len, pattern_num), 'a') as outfile:
-                outfile.write('%s %s\n' % (precision, sensitivity))
+            for evalue in [0.1, 1.0, 10.0]:
+                blast_selected_reads = get_blast_matched_ids(blast_pattern, 'original_reads/original_reads', max_seq='6000',
+                                                             word_size=word_size, reward=params.reward,
+                                                             penalty=params.penalty, gapopen=params.gapopen,
+                                                             gapextend=params.gapextend, evalue=evalue)
+                TP = [read for read in blast_selected_reads if read in related_reads]
+                FP = [read for read in blast_selected_reads if read not in TP]
+                FN = [read for read in related_reads if read not in blast_selected_reads]
+                print('TP:', len(TP), 'FP:', len(FP), 'blast selected:', len(blast_selected_reads))
+                print('FN:', len(FN))
+                sensitivity = float(len(TP)) / len(related_reads) if len(related_reads) > 0 else 0
+                precision = float(len(TP)) / (len(TP) + len(FP)) if len(TP) + len(FP) > 0 else 0
+                min_len = min_length_for_pattern if min_length_for_pattern else 0
+                with open('sensivity_over_precision_min_len%s_seq_%s.txt' % (min_len, pattern_num), 'a') as outfile:
+                    outfile.write('%s %s\n' % (precision, sensitivity))
 
     # with open('0_size_related_reads.txt', 'a') as outfile: #0
     #     outfile.write('%s %s\n' % (len(pattern), len(related_reads)))
