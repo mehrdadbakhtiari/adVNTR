@@ -97,10 +97,8 @@ def plot_coverage_comparison():
     plt.close()
 
 
-def plot_cn_over_sens():
-    stat_file = '20X_ratio.txt'
-    stat_file2 = '20X_ratio_at_least_two_copy.txt'
-    sens_file = 'original_case_r1_p1/1_size_sensitivity.txt'
+def plot_sensitivity_over_precision():
+    stat_file = 'Sensivity_over_Precision.txt'
     X = []
     Y = []
     Y2 = []
@@ -114,30 +112,14 @@ def plot_cn_over_sens():
             if line == '':
                 continue
             nums = [float(n) for n in line.split()]
+            X.append(nums[0])
             Y.append(nums[1])
-    with open(stat_file2) as input_file:
-        lines = input_file.readlines()
-        for line in lines:
-            line = line.strip()
-            if line == '':
-                continue
-            nums = [float(n) for n in line.split()]
-            Y2.append(nums[1])
 
-    with open(sens_file) as input_file:
-        lines = input_file.readlines()
-    for line in lines:
-        line = line.strip()
-        if line == '':
-            continue
-        nums = [float(n) for n in line.split()]
-        X.append(nums[1])
-    plt.plot(X, Y2, 'o', color='blue', label='Filtered reads with at least two copy')
-    plt.plot(X, Y, 'o', color='red', label='All reads')
-    plt.xlabel('Sensitivity')
-    plt.ylabel('Copy Count / True Copy Count')
+    plt.plot(X, Y, 'o', color='red', label='default Blast, wsize 5 if |pattern| <= 20, ow 7')
+    plt.xlabel('Precision')
+    plt.ylabel('Sensitivity')
     plt.legend(loc=0)
-    plt.savefig('CN_over_sens_compare.png')  # save the figure to file
+    plt.savefig('sensitivity_over_precision.png')  # save the figure to file
     plt.close()
 
 
@@ -176,5 +158,5 @@ def plot_tandem_copy_number_and_genome_copy_number():
     plt.savefig('CN_in_genome_compare.png')  # save the figure to file
     plt.close()
 
-# plot_cn_over_sens()
-plot_tandem_copy_number_and_genome_copy_number()
+# plot_tandem_copy_number_and_genome_copy_number()
+plot_sensitivity_over_precision()

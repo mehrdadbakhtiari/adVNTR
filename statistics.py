@@ -11,17 +11,31 @@ def get_gc_content(s):
     return float(res) / len(s)
 
 
+def get_read_seq_from_samfile(read_name, read_file):
+    result = None
+    samfile = pysam.AlignmentFile(read_file, "r")
+    for read in samfile.fetch():
+        read_number = '/1'
+        if read.is_read2:
+            read_number = '/2'
+        name = read.qname + read_number
+        if name == read_name:
+            result = read.query
+            break
+    return result
+
+
 def get_related_reads_in_samfile(pattern, pattern_start, repeats, read_file):
     pattern_length = len(pattern)
     related_reads = []
     samfile = pysam.AlignmentFile(read_file, "r")
     for read in samfile.fetch():
         start = read.reference_start
-        read_number = '/1'
-        if read.is_read2:
-            read_number = '/2'
-        name = read.qname + read_number
         if pattern_start - 150 + pattern_length < int(start) < pattern_start + (repeats-1) * pattern_length:
+            read_number = '/1'
+            if read.is_read2:
+                read_number = '/2'
+            name = read.qname + read_number
             related_reads.append(name)
     related_reads = set(related_reads)
     return related_reads
@@ -38,18 +52,27 @@ def get_exact_number_of_repeats_from_sequence(pattern, pattern_start):
     return repeats
 
 
-def find_sensitivity(pattern, pattern_start):
+def find_sensitivity(pattern, pattern_start, min_length_for_pattern=None):
     repeats = get_exact_number_of_repeats_from_sequence(pattern, pattern_start)
 
     related_reads = get_related_reads_in_samfile(pattern, pattern_start, repeats, 'original_reads/paired_dat.sam')
-    blast_selected_reads = get_blast_matched_ids(pattern, 'original_reads/original_reads', max_seq='6000')
+    word_size = '7'
+
+    blast_pattern = pattern
+    if len(pattern) < 50 and min_length_for_pattern:
+        blast_pattern = pattern * int(round(50.0 / len(pattern) + 0.5))
+    blast_selected_reads = get_blast_matched_ids(blast_pattern, 'original_reads/original_reads', max_seq='6000',
+                                                 word_size=word_size)
     TP = [read for read in blast_selected_reads if read in related_reads]
     FP = [read for read in blast_selected_reads if read not in TP]
     FN = [read for read in related_reads if read not in blast_selected_reads]
-    sensitivity = float(len(TP)) / len(related_reads)
-    specifity = float(len(TP) / (TP + FP))
-    with open('Sensivity_Specifity.txt', 'a') as outfile:
-        outfile.write('%s %s\n' % (specifity, sensitivity))
+    print('TP:', len(TP), 'FP:', len(FP), 'blast selected:', len(blast_selected_reads))
+    print('FN:', len(FN))
+    sensitivity = float(len(TP)) / len(related_reads) if len(related_reads) > 0 else 0
+    #    specifity = float(len(TN) / (len(TN) + len(FP)))
+    precision = float(len(TP)) / (len(TP) + len(FP)) if len(TP) + len(FP) > 0 else 0
+    with open('Sensivity_over_Precision.txt', 'a') as outfile:
+        outfile.write('%s %s\n' % (precision, sensitivity))
     # with open('0_size_related_reads.txt', 'a') as outfile: #0
     #     outfile.write('%s %s\n' % (len(pattern), len(related_reads)))
     # with open('1_size_sensitivity.txt', 'a') as outfile: #1
