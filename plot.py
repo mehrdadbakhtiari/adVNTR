@@ -98,7 +98,7 @@ def plot_coverage_comparison():
 
 
 def plot_sensitivity_over_precision():
-    stat_file = 'Sensivity_over_Precision.txt'
+    stat_file = 'fallout_and_sensitivity_min_len0_seq_68.txt'
     X = []
     Y = []
     Y2 = []
@@ -119,7 +119,7 @@ def plot_sensitivity_over_precision():
     plt.xlabel('Precision')
     plt.ylabel('Sensitivity')
     plt.legend(loc=0)
-    plt.savefig('sensitivity_over_precision.png')  # save the figure to file
+    plt.savefig('%s.png' % stat_file)  # save the figure to file
     plt.close()
 
 

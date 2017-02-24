@@ -25,11 +25,13 @@ def get_read_seq_from_samfile(read_name, read_file):
     return result
 
 
-def get_related_reads_in_samfile(pattern, pattern_start, repeats, read_file):
+def get_related_reads_and_read_count_in_samfile(pattern, pattern_start, repeats, read_file):
     pattern_length = len(pattern)
     related_reads = []
     samfile = pysam.AlignmentFile(read_file, "r")
+    read_count = 0
     for read in samfile.fetch():
+        read_count += 1
         start = read.reference_start
         if pattern_start - 150 + pattern_length < int(start) < pattern_start + (repeats-1) * pattern_length:
             read_number = '/1'
@@ -38,7 +40,7 @@ def get_related_reads_in_samfile(pattern, pattern_start, repeats, read_file):
             name = read.qname + read_number
             related_reads.append(name)
     related_reads = set(related_reads)
-    return related_reads
+    return related_reads, read_count
 
 
 def get_exact_number_of_repeats_from_sequence(pattern, pattern_start):
@@ -54,17 +56,18 @@ def get_exact_number_of_repeats_from_sequence(pattern, pattern_start):
 
 def find_sensitivity(pattern_num, pattern, pattern_start, min_length_for_pattern=None):
     repeats = get_exact_number_of_repeats_from_sequence(pattern, pattern_start)
-    related_reads = get_related_reads_in_samfile(pattern, pattern_start, repeats, 'original_reads/paired_dat.sam')
+    related_reads, read_counts = get_related_reads_and_read_count_in_samfile(pattern, pattern_start, repeats, 'original_reads/paired_dat.sam')
+    N = read_counts - len(related_reads)
 
     valid_parameters = read_blast_params_list()
     blast_pattern = pattern
     if min_length_for_pattern and len(pattern) < min_length_for_pattern:
         blast_pattern = pattern * int(round(50.0 / len(pattern) + 0.5))
 
-    for word_size in [4, 7, 10]:
-        word_size = str(word_size)
-        for params in valid_parameters:
-            for evalue in [0.1, 1.0, 10.0]:
+    for evalue in [0.1, 1.0, 10.0]:
+        for word_size in [4, 7, 10]:
+            word_size = str(word_size)
+            for params in valid_parameters:
                 blast_selected_reads = get_blast_matched_ids(blast_pattern, 'original_reads/original_reads', max_seq='6000',
                                                              word_size=word_size, reward=params.reward,
                                                              penalty=params.penalty, gapopen=params.gapopen,
@@ -75,10 +78,11 @@ def find_sensitivity(pattern_num, pattern, pattern_start, min_length_for_pattern
                 print('TP:', len(TP), 'FP:', len(FP), 'blast selected:', len(blast_selected_reads))
                 print('FN:', len(FN))
                 sensitivity = float(len(TP)) / len(related_reads) if len(related_reads) > 0 else 0
-                precision = float(len(TP)) / (len(TP) + len(FP)) if len(TP) + len(FP) > 0 else 0
+                # precision = float(len(TP)) / (len(TP) + len(FP)) if len(TP) + len(FP) > 0 else 0
+                fallout = float(len(FP)) / N
                 min_len = min_length_for_pattern if min_length_for_pattern else 0
-                with open('sensivity_over_precision_min_len%s_seq_%s.txt' % (min_len, pattern_num), 'a') as outfile:
-                    outfile.write('%s %s\n' % (precision, sensitivity))
+                with open('fallout_and_sensitivity_min_len%s_seq_%s.txt' % (min_len, pattern_num), 'a') as outfile:
+                    outfile.write('%s\t%s\t%s\n' % (fallout, sensitivity, evalue))
 
     # with open('0_size_related_reads.txt', 'a') as outfile: #0
     #     outfile.write('%s %s\n' % (len(pattern), len(related_reads)))
@@ -151,5 +155,7 @@ with open('start_points.txt') as input:
 # write_cn_over_true_cn_to_files(patterns, start_points)
 
 for i in range(len(patterns)):
+    if i != 67 and i != 68:
+        continue
     print(i)
     find_sensitivity(i+1, patterns[i], start_points[i])
