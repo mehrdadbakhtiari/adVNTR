@@ -1,4 +1,6 @@
 *.pyc
 .idea/
 .DS_Store
+blast_tmp/*
+!blast_tmp/PLACE_HOLDER
 

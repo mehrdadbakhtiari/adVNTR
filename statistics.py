@@ -64,14 +64,14 @@ def find_sensitivity(pattern_num, pattern, pattern_start, min_length_for_pattern
     if min_length_for_pattern and len(pattern) < min_length_for_pattern:
         blast_pattern = pattern * int(round(50.0 / len(pattern) + 0.5))
 
-    for evalue in [0.1, 1.0, 10.0]:
+    for evalue in [0.1, 1.0, 10.0, 100.0]:
         for word_size in [4, 7, 10]:
             word_size = str(word_size)
             for params in valid_parameters:
                 blast_selected_reads = get_blast_matched_ids(blast_pattern, 'original_reads/original_reads', max_seq='6000',
                                                              word_size=word_size, reward=params.reward,
                                                              penalty=params.penalty, gapopen=params.gapopen,
-                                                             gapextend=params.gapextend, evalue=evalue)
+                                                             gapextend=params.gapextend, evalue=evalue, search_id=str(pattern_num))
                 TP = [read for read in blast_selected_reads if read in related_reads]
                 FP = [read for read in blast_selected_reads if read not in TP]
                 FN = [read for read in related_reads if read not in blast_selected_reads]

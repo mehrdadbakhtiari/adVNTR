@@ -3,6 +3,7 @@ from blast_wrapper import *
 from Bio.Alphabet import IUPAC
 from Bio import pairwise2, Seq, SeqRecord, SeqIO
 from Bio.Blast.Applications import NcbiblastnCommandline
+import os
 # import time
 
 
@@ -67,20 +68,25 @@ def get_copy_number_of_pattern_in_reads(query, matched_reads, average_coverage=2
     return float(occurrence) / average_coverage
 
 
-def get_blast_matched_ids(query, blast_db_name, word_size='7', max_seq='6000', reward='1', penalty='-1', gapopen='2', gapextend='1', evalue=10.0):
-    with open("query.fasta", "w") as output_handle:
+def get_blast_matched_ids(query, blast_db_name, word_size='7', max_seq='6000', reward='1', penalty='-1', gapopen='2',
+                          gapextend='1', evalue=10.0, search_id=''):
+    query_file = 'blast_tmp/' + search_id + '_query.fasta'
+    result_file = 'blast_tmp/' + search_id + '_blast_result.txt'
+    with open(query_file, "w") as output_handle:
         my_rec = SeqRecord.SeqRecord(seq=Seq.Seq(query), id='query', description='')
         SeqIO.write([my_rec], output_handle, 'fasta')
 
-    blastn_cline = NcbiblastnCommandline(query="query.fasta", db=blast_db_name, outfmt='"6 sallseqid"', dust='no',
-                                         out="result.txt", num_threads="4", word_size=word_size, gapopen=gapopen,
+    blastn_cline = NcbiblastnCommandline(query=query_file, db=blast_db_name, outfmt='"6 sallseqid"', dust='no',
+                                         out=result_file, num_threads="4", word_size=word_size, gapopen=gapopen,
                                          gapextend=gapextend, penalty=penalty, reward=reward, max_target_seqs=max_seq,
                                          evalue=evalue)
     blastn_cline()
 
-    with open('result.txt') as result_input:
+    with open(result_file) as result_input:
         ids = result_input.readlines()
         matched_ids = set([seq_id.strip() for seq_id in ids])
+    os.remove(result_file) if os.path.exists(result_file) else None
+    os.remove(query_file) if os.path.exists(query_file) else None
 
     return matched_ids
 
