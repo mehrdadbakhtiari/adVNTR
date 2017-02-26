@@ -97,28 +97,44 @@ def plot_coverage_comparison():
     plt.close()
 
 
-def plot_sensitivity_over_precision():
-    stat_file = 'fallout_and_sensitivity_min_len0_seq_68.txt'
+def get_x_and_y_from_file(file_name):
+    points = []
     X = []
     Y = []
-    Y2 = []
-
-    import matplotlib.pyplot as plt
-
-    with open(stat_file) as input_file:
+    with open(file_name) as input_file:
         lines = input_file.readlines()
         for line in lines:
             line = line.strip()
             if line == '':
                 continue
             nums = [float(n) for n in line.split()]
-            X.append(nums[0])
-            Y.append(nums[1])
+            points.append((nums[0], nums[1]))
 
-    plt.plot(X, Y, 'o', color='red', label='default Blast, wsize 5 if |pattern| <= 20, ow 7')
-    plt.xlabel('Precision')
+    points.sort()
+    for x, y in points:
+        X.append(x)
+        Y.append(y)
+    return X, Y
+
+
+def plot_sensitivity_over_fallout():
+    stat_file = 'fallout_and_sensitivity_min_len0_seq_68.txt'
+    stat_file2 = 'fallout_and_sensitivity_min_len50.0_seq_68.txt'
+    X, Y = get_x_and_y_from_file(stat_file)
+    X2, Y2 = get_x_and_y_from_file(stat_file2)
+    # X.append(1)
+    # Y.append(1)
+
+    import matplotlib.pyplot as plt
+
+    plt.plot(X, Y, 'o', color='red')
+    plt.plot(X, Y, color='red', label='Pattern: %s' % 'CCTCAGAGGAGCCATTCC')
+    plt.plot(X2, Y2, 'o', color='blue')
+    plt.plot(X2, Y2, color='blue', label='Pattern: %s' % '3 * CCTCAGAGGAGCCATTCC')
+    # plt.xscale('log')
+    plt.xlabel('Fall-out')
     plt.ylabel('Sensitivity')
-    plt.legend(loc=0)
+    plt.legend(loc=4, prop={'size':9})
     plt.savefig('%s.png' % stat_file)  # save the figure to file
     plt.close()
 
@@ -159,4 +175,4 @@ def plot_tandem_copy_number_and_genome_copy_number():
     plt.close()
 
 # plot_tandem_copy_number_and_genome_copy_number()
-plot_sensitivity_over_precision()
+plot_sensitivity_over_fallout()
