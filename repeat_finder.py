@@ -68,7 +68,7 @@ def get_copy_number_of_pattern_in_reads(query, matched_reads, average_coverage=2
     return float(occurrence) / average_coverage
 
 
-def get_blast_matched_ids(query, blast_db_name, word_size='7', max_seq='6000', reward='1', penalty='-1', gapopen='2',
+def get_blast_matched_ids(query, blast_db_name, word_size=None, max_seq='6000', reward='1', penalty='-1', gapopen='2',
                           gapextend='1', evalue=10.0, search_id=''):
     query_file = 'blast_tmp/' + search_id + '_query.fasta'
     result_file = 'blast_tmp/' + search_id + '_blast_result.txt'
@@ -76,9 +76,13 @@ def get_blast_matched_ids(query, blast_db_name, word_size='7', max_seq='6000', r
         my_rec = SeqRecord.SeqRecord(seq=Seq.Seq(query), id='query', description='')
         SeqIO.write([my_rec], output_handle, 'fasta')
 
+    if word_size is None:
+        if len(query) < 30:
+            word_size = '7'
+        else:
+            word_size = '11'
     blastn_cline = NcbiblastnCommandline(query=query_file, db=blast_db_name, outfmt='"6 sallseqid"', dust='no',
-                                         out=result_file, num_threads="4", word_size=word_size, gapopen=gapopen,
-                                         gapextend=gapextend, penalty=penalty, reward=reward, max_target_seqs=max_seq,
+                                         out=result_file, num_threads="4", word_size=word_size, max_target_seqs=max_seq,
                                          evalue=evalue)
     blastn_cline()
 

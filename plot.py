@@ -118,21 +118,20 @@ def get_x_and_y_from_file(file_name):
 
 
 def plot_sensitivity_over_fallout():
-    stat_file = 'fallout_and_sensitivity_min_len0_seq_68.txt'
-    stat_file2 = 'fallout_and_sensitivity_min_len50.0_seq_68.txt'
+    stat_file = 'FP_and_sensitivity_seq_word_size_50.0_min_len68.txt'
+    # stat_file2 = 'fallout_and_sensitivity_min_len50.0_seq_68.txt'
     X, Y = get_x_and_y_from_file(stat_file)
-    X2, Y2 = get_x_and_y_from_file(stat_file2)
+    # X2, Y2 = get_x_and_y_from_file(stat_file2)
     # X.append(1)
     # Y.append(1)
 
     import matplotlib.pyplot as plt
 
-    plt.plot(X, Y, 'o', color='red')
-    plt.plot(X, Y, color='red', label='Pattern: %s' % 'CCTCAGAGGAGCCATTCC')
-    plt.plot(X2, Y2, 'o', color='blue')
-    plt.plot(X2, Y2, color='blue', label='Pattern: %s' % '3 * CCTCAGAGGAGCCATTCC')
+    # plt.plot(X, Y, '--o', color='red', label='Pattern: %s' % 'CTCTGCCCCTGGAGTAGAGGACATCAGCGGGCTTCCTTCTGGAGAAGTTCTAGAGAC')
+    # plt.plot(X, Y, '--o', color='red', label='Pattern: %s' % 'CCTCAGAGGAGCCATTCC')
+    plt.plot(X, Y, '--o', color='blue', label='Pattern: %s' % '3 * CCTCAGAGGAGCCATTCC')
     # plt.xscale('log')
-    plt.xlabel('Fall-out')
+    plt.xlabel('False Positives')
     plt.ylabel('Sensitivity')
     plt.legend(loc=4, prop={'size':9})
     plt.savefig('%s.png' % stat_file)  # save the figure to file
