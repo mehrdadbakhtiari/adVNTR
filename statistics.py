@@ -54,9 +54,14 @@ def get_exact_number_of_repeats_from_sequence(pattern, pattern_start):
     return repeats
 
 
-def find_sensitivity(pattern_num, blast_pattern, related_reads, word_size, evalue, min_length_for_pattern):
+def find_sensitivity(pattern_num, pattern, related_reads, word_size, evalue, min_length_for_pattern):
+    blast_pattern = pattern
+    if min_length_for_pattern and len(pattern) < min_length_for_pattern:
+        blast_pattern = pattern * int(round(50.0 / len(pattern) + 0.5))
+
     blast_selected_reads = get_blast_matched_ids(blast_pattern, 'original_reads/original_reads', max_seq='6000',
                                                  word_size=word_size, evalue=evalue, search_id=str(pattern_num))
+
     TP = [read for read in blast_selected_reads if read in related_reads]
     FP = [read for read in blast_selected_reads if read not in TP]
     FN = [read for read in related_reads if read not in blast_selected_reads]
@@ -67,8 +72,8 @@ def find_sensitivity(pattern_num, blast_pattern, related_reads, word_size, evalu
     min_len = min_length_for_pattern if min_length_for_pattern else 0
     param = word_size if word_size else evalue
     used_param = 'word_size' if word_size else 'evalue'
-    with open('FP_and_sensitivity_seq_%s_%s_min_len%s.txt' % (used_param, min_len, pattern_num), 'a') as outfile:
-        outfile.write('%s\t%s\t%s\n' % (len(FP), sensitivity, param))
+    with open('FP_and_sensitivity_%s_min_len%s.txt' % (used_param, min_len), 'a') as outfile:
+        outfile.write('%s\t%s\t%s\t%s\t%s\t%s\n' % (len(FP), sensitivity, param, pattern_num, len(pattern), len(TP)))
 
 
 def find_sensitivity_curve(pattern_num, pattern, pattern_start, min_length_for_pattern=None):
@@ -76,15 +81,11 @@ def find_sensitivity_curve(pattern_num, pattern, pattern_start, min_length_for_p
     related_reads, read_counts = get_related_reads_and_read_count_in_samfile(pattern, pattern_start, repeats, 'original_reads/paired_dat.sam')
     N = read_counts - len(related_reads)
 
-    blast_pattern = pattern
-    if min_length_for_pattern and len(pattern) < min_length_for_pattern:
-        blast_pattern = pattern * int(round(50.0 / len(pattern) + 0.5))
-
-    for evalue in [0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0, 50.0, 100.0, 500.0, 1000.0]:
-        find_sensitivity(pattern_num, blast_pattern, related_reads, None, evalue, min_length_for_pattern)
+    for evalue in [1e-20, 1e-17, 1e-15, 1e-12, 1e-9, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0]:
+        find_sensitivity(pattern_num, pattern, related_reads, None, evalue, min_length_for_pattern)
     for word_size in [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]:
         word_size = str(word_size)
-        find_sensitivity(pattern_num, blast_pattern, related_reads, word_size, 10.0, min_length_for_pattern)
+        find_sensitivity(pattern_num, pattern, related_reads, word_size, 10.0, min_length_for_pattern)
 
     # with open('0_size_related_reads.txt', 'a') as outfile: #0
     #     outfile.write('%s %s\n' % (len(pattern), len(related_reads)))
@@ -157,7 +158,5 @@ with open('start_points.txt') as input:
 # write_cn_over_true_cn_to_files(patterns, start_points)
 
 for i in range(len(patterns)):
-    if i != 67:# and i != 68:
-        continue
     print(i)
     find_sensitivity_curve(i+1, patterns[i], start_points[i], 50.0)
