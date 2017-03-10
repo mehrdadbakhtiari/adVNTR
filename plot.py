@@ -117,23 +117,61 @@ def get_x_and_y_from_file(file_name):
     return X, Y
 
 
+def get_pattern_result_map(file_name):
+    res = {}
+    min_len = 100
+    max_len = 0
+    with open(file_name) as input:
+        lines = input.readlines()
+        for line in lines:
+            line = line.strip()
+            if line == '':
+                continue
+            FP, sensitivity, evalue, p_num, len, TP = line.split()
+            if float(len) > max_len:
+                max_len = float(len)
+            if float(len) < min_len:
+                min_len = float(len)
+            if p_num not in res.keys():
+                res[p_num] = []
+            res[p_num].append((int(FP), float(sensitivity), float(evalue), int(len), int(TP)))
+
+    return res, min_len, max_len
+
+
 def plot_sensitivity_over_fallout():
-    stat_file = 'FP_and_sensitivity_seq_word_size_50.0_min_len68.txt'
+    stat_file = 'FP_and_sensitivity_evalue_min_len50.0.txt'
     # stat_file2 = 'fallout_and_sensitivity_min_len50.0_seq_68.txt'
     X, Y = get_x_and_y_from_file(stat_file)
-    # X2, Y2 = get_x_and_y_from_file(stat_file2)
-    # X.append(1)
-    # Y.append(1)
 
     import matplotlib.pyplot as plt
+    cmap = plt.get_cmap('seismic')
 
-    # plt.plot(X, Y, '--o', color='red', label='Pattern: %s' % 'CTCTGCCCCTGGAGTAGAGGACATCAGCGGGCTTCCTTCTGGAGAAGTTCTAGAGAC')
-    # plt.plot(X, Y, '--o', color='red', label='Pattern: %s' % 'CCTCAGAGGAGCCATTCC')
-    plt.plot(X, Y, '--o', color='blue', label='Pattern: %s' % '3 * CCTCAGAGGAGCCATTCC')
+    pattern_results, min_len, max_len = get_pattern_result_map(stat_file)
+    for p_num in pattern_results.keys():
+        # if p_num != '19':
+        #     continue
+        X = []
+        Y = []
+        points = []
+        color = None
+        for FP, sens, evalue, length, TP in pattern_results[p_num]:
+            points.append((FP, sens))
+            color = cmap((float(length) - min_len) / (max_len - min_len))
+        points.sort()
+        if points[len(points)-1][1] > 0.8:
+            continue
+        for x, y in points:
+            # if x > 1000:
+            #     continue
+            X.append(x)
+            Y.append(y)
+        plt.plot(X, Y, label='Pid:%s |Pattern|: %s' % (p_num, length))
     # plt.xscale('log')
     plt.xlabel('False Positives')
     plt.ylabel('Sensitivity')
     plt.legend(loc=4, prop={'size':9})
+    # plt.colorbar()
     plt.savefig('%s.png' % stat_file)  # save the figure to file
     plt.close()
 

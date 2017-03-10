@@ -1,14 +1,6 @@
 from repeat_finder import *
 import pysam
 from Bio import pairwise2, Seq, SeqRecord, SeqIO
-from blast_parameters import *
-
-def get_gc_content(s):
-    res = 0
-    for e in s:
-        if e == 'G' or e == 'C':
-            res += 1
-    return float(res) / len(s)
 
 
 def get_read_seq_from_samfile(read_name, read_file):
@@ -50,8 +42,8 @@ def get_exact_number_of_repeats_from_sequence(pattern, pattern_start):
     for fasta in fasta_sequences:
         name, sequence = fasta.id, str(fasta.seq)
     corresponding_region_in_seq = sequence[pattern_start:pattern_start + len(pattern) * 35].upper()
-    repeats = get_occurrence_of_pattern_in_text(corresponding_region_in_seq, pattern, 0.66)
-    return repeats
+    repeats, seqs = get_number_of_occurrence_of_pattern_in_text(corresponding_region_in_seq, pattern, 0.66, True)
+    return repeats, seqs
 
 
 def find_sensitivity(pattern_num, pattern, related_reads, word_size, evalue, min_length_for_pattern):
@@ -77,7 +69,7 @@ def find_sensitivity(pattern_num, pattern, related_reads, word_size, evalue, min
 
 
 def find_sensitivity_curve(pattern_num, pattern, pattern_start, min_length_for_pattern=None):
-    repeats = get_exact_number_of_repeats_from_sequence(pattern, pattern_start)
+    repeats, repeat_seqs = get_exact_number_of_repeats_from_sequence(pattern, pattern_start)
     related_reads, read_counts = get_related_reads_and_read_count_in_samfile(pattern, pattern_start, repeats, 'original_reads/paired_dat.sam')
     N = read_counts - len(related_reads)
 
@@ -131,7 +123,7 @@ def write_cn_over_true_cn_to_files(patterns, start_points):
     directory = ['10X_reads/', 'original_reads/', '30X_reads/']
     true_cn = []
     for i in range(len(patterns)):
-        true_cn.append(get_exact_number_of_repeats_from_sequence(patterns[i], start_points[i]))
+        true_cn.append(get_exact_number_of_repeats_from_sequence(patterns[i], start_points[i])[0])
 
     for k in range(len(out_files)):
         db_name = 'blast_db'
@@ -157,6 +149,6 @@ with open('start_points.txt') as input:
 
 # write_cn_over_true_cn_to_files(patterns, start_points)
 
-for i in range(len(patterns)):
-    print(i)
-    find_sensitivity_curve(i+1, patterns[i], start_points[i], 50.0)
+# for i in range(len(patterns)):
+#     print(i)
+#     find_sensitivity_curve(i+1, patterns[i], start_points[i], 50.0)

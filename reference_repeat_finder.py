@@ -1,0 +1,173 @@
+from Bio import Seq, SeqIO
+from pomegranate import DiscreteDistribution, DirichletDistribution, State
+from pomegranate import HiddenMarkovModel as Model
+
+
+def path_to_alignment(x, y, path):
+    for i, (index, state) in enumerate(path[1:-1]):
+        name = state.name
+
+        if name.startswith('D'):
+            y = y[:i] + '-' + y[i:]
+        elif name.startswith('I'):
+            x = x[:i] + '-' + x[i:]
+
+    return x, y
+
+
+def build_hmm(patterns, copies=1):
+    pattern = patterns[0]
+    model = Model(name="HMM Model")
+    insert_distribution = DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
+
+    insert_states = []
+    match_states = []
+    delete_states = []
+    for i in range(len(pattern) + 1):
+        insert_states.append(State(insert_distribution, name='I%s' % i))
+
+    for i in range(len(pattern)):
+        distribution_map = {'A': 0.01, 'C': 0.01, 'G': 0.01, 'T': 0.01}
+        distribution_map[pattern[i]] = 0.97
+        match_states.append(State(DiscreteDistribution(distribution_map), name='M%s' % str(i + 1)))
+
+    for i in range(len(pattern)):
+        delete_states.append(State(None, name='D%s' % str(i + 1)))
+
+    start_state = State(None, name='start')
+    end_state = State(None, name='end')
+    model.add_states(insert_states + match_states + delete_states + [start_state, end_state])
+    last = len(delete_states)-1
+
+    model.add_transition(model.start, start_state, 1)
+    model.add_transition(end_state, model.end, 0.5)
+
+    ignore_the_rest = State(insert_distribution, name='ignore-next-chars')
+    model.add_states([ignore_the_rest])
+    model.add_transition(end_state, ignore_the_rest, 0.5)
+    model.add_transition(ignore_the_rest, ignore_the_rest, 0.5)
+    model.add_transition(ignore_the_rest, model.end, 0.5)
+
+    model.add_transition(start_state, match_states[0], 0.98)
+    model.add_transition(start_state, delete_states[0], 0.01)
+    model.add_transition(start_state, insert_states[0], 0.01)
+
+    model.add_transition(insert_states[0], insert_states[0], 0.01)
+    model.add_transition(insert_states[0], delete_states[0], 0.01)
+    model.add_transition(insert_states[0], match_states[0], 0.98)
+
+    model.add_transition(delete_states[last], end_state, 0.99)
+    model.add_transition(delete_states[last], insert_states[last+1], 0.01)
+
+    model.add_transition(match_states[last], end_state, 0.99)
+    model.add_transition(match_states[last], insert_states[last+1], 0.01)
+
+    model.add_transition(insert_states[last+1], insert_states[last+1], 0.01)
+    model.add_transition(insert_states[last+1], end_state, 0.99)
+
+    for i in range(0, len(pattern)):
+        model.add_transition(match_states[i], insert_states[i+1], 0.01)
+        model.add_transition(delete_states[i], insert_states[i+1], 0.01)
+        model.add_transition(insert_states[i+1], insert_states[i+1], 0.01)
+        if i < len(pattern) - 1:
+            model.add_transition(insert_states[i+1], match_states[i+1], 0.98)
+            model.add_transition(insert_states[i+1], delete_states[i+1], 0.01)
+
+            model.add_transition(match_states[i], match_states[i+1], 0.98)
+            model.add_transition(match_states[i], delete_states[i+1], 0.01)
+
+            model.add_transition(delete_states[i], delete_states[i+1], 0.01)
+            model.add_transition(delete_states[i], match_states[i+1], 0.98)
+
+    model.bake()
+    if len(patterns) > 1:
+        # model.fit(patterns, algorithm='baum-welch', transition_pseudocount=1, use_pseudocount=True)
+        model.fit(patterns, algorithm='viterbi', transition_pseudocount=1, use_pseudocount=True)
+
+    original_model = model.copy()
+    for repeats in range(copies - 1):
+        additional_copy = original_model.copy()
+        model.concatenate(additional_copy, '_' + str(repeats+1))
+
+    for state in model.states:
+        if state.name.startswith('end'):
+            model.add_transition(state, model.end, 0.5)
+
+    model.bake()
+
+    return model
+
+
+def get_scores_and_segments(corresponding_region_in_ref, patterns, copies=40):
+    model = build_hmm(patterns, copies=copies)
+    single_model = build_hmm(patterns, copies=1)
+    logp, path = model.viterbi(corresponding_region_in_ref)
+    visited_states = [state.name for idx, state in path[1:-1]]
+
+    lengths = []
+    prev_start = None
+    for i in range(len(visited_states)):
+        if visited_states[i].startswith('start') and prev_start is not None:
+            current_len = 0
+            for j in range(prev_start, i):
+                if visited_states[j].startswith('M') or visited_states[j].startswith('I'):
+                    current_len += 1
+            lengths.append(current_len)
+        if visited_states[i].startswith('start'):
+            prev_start = i
+
+    repeat_segments = []
+    scores = []
+    added = 0
+    for l in lengths:
+        repeat_segments.append(corresponding_region_in_ref[added:added+l])
+        score, temp_path = single_model.viterbi(corresponding_region_in_ref[added:added+l])
+        scores.append(score)
+        added += l
+    return scores, repeat_segments
+
+
+def find_number_of_tandem_repeats_in_reference(pattern, pattern_start, ref_file_name='chr15.fa'):
+    fasta_sequences = SeqIO.parse(open(ref_file_name), 'fasta')
+    ref_sequence = ''
+    for fasta in fasta_sequences:
+        name, ref_sequence = fasta.id, str(fasta.seq)
+    corresponding_region_in_ref = ref_sequence[pattern_start:pattern_start + len(pattern) * 40].upper()
+
+    original_scores, repeat_segments = get_scores_and_segments(corresponding_region_in_ref, [pattern], 40)
+    hmm = build_hmm(repeat_segments[:20], copies=1)
+    scores = []
+    for seg in repeat_segments:
+        score, temp_path = hmm.viterbi(seg)
+        scores.append(score)
+    # scores, repeat_segments = get_scores_and_segments(corresponding_region_in_ref, repeat_segments[:rep])
+
+    threshold_index = scores.index(max(scores[1:])) + 1
+
+    import matplotlib.pyplot as plt
+    # X = [i for i, score in enumerate(scores)]
+    X = []
+    Y = []
+    for i, score in enumerate(scores):
+        if score > -50:
+            Y.append(score)
+            X.append(i)
+        else:
+            X.append(i)
+            Y.append(-50)
+    # Y = [score for i, score in enumerate(scores)]
+    plt.plot(X, Y, color='blue', label=pattern)
+    plt.xlabel('pattern number')
+    plt.ylabel('logp')
+    plt.legend(loc=0)
+    plt.savefig('hmm_p_%s_fitted_by_first20.png' % pattern)  # save the figure to file
+    plt.close()
+
+    return len(repeat_segments), repeat_segments
+
+# find_number_of_tandem_repeats_in_reference('CTCCAGCAGCCTCTCCTGCT', 82934326-1)
+# find_number_of_tandem_repeats_in_reference('CTCCTGTTCACGTAGCCTCTC', 82934566-1)
+
+# pattern = 'CTCCAGCAGCCTCTCCTGCT'
+# model = build_hmm([pattern], copies=10)
+# model.plot()

@@ -36,8 +36,9 @@ def find_reads_and_estimate_average_coverage(read_files, matched_read_ids, total
     return matched_reads, avg_coverage
 
 
-def get_occurrence_of_pattern_in_text(text, pattern, min_similarity):
+def get_number_of_occurrence_of_pattern_in_text(text, pattern, min_similarity, get_sequences=False):
     occurrence = 0
+    sequences = []
     while True:
         alignments = pairwise2.align.localms(text, pattern, 1, -0.5, -1, -1)
         if len(alignments) <= 0:
@@ -54,16 +55,21 @@ def get_occurrence_of_pattern_in_text(text, pattern, min_similarity):
             if first_alignment[0][i] == '-':
                 inserts += 1
         text = text[:start_index] + text[end_index-inserts:]
+        if get_sequences:
+            sequences.append(text[start_index:end_index-inserts])
 
-    return occurrence
+    if get_sequences:
+        return occurrence, sequences
+    else:
+        return occurrence
 
 
 def get_copy_number_of_pattern_in_reads(query, matched_reads, average_coverage=20.0, min_similarity=0.66):
     occurrence = 0
     for read in matched_reads:
         rc_query = str(Seq.Seq(query).reverse_complement())
-        query_occurrence = get_occurrence_of_pattern_in_text(read, query, min_similarity)
-        rc_query_occurrence = get_occurrence_of_pattern_in_text(read, rc_query, min_similarity)
+        query_occurrence = get_number_of_occurrence_of_pattern_in_text(read, query, min_similarity)
+        rc_query_occurrence = get_number_of_occurrence_of_pattern_in_text(read, rc_query, min_similarity)
         occurrence += max(query_occurrence, rc_query_occurrence)
     return float(occurrence) / average_coverage
 
