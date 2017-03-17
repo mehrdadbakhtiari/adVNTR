@@ -115,7 +115,7 @@ def get_scores_and_segments(corresponding_region_in_ref, patterns, copies=40):
     lengths = []
     prev_start = None
     for i in range(len(visited_states)):
-        if visited_states[i].startswith('unit_start') and prev_start is not None:
+        if visited_states[i].startswith('unit_end') and prev_start is not None:
             current_len = 0
             for j in range(prev_start, i):
                 if is_matching_state(visited_states[j]):
@@ -132,25 +132,24 @@ def get_scores_and_segments(corresponding_region_in_ref, patterns, copies=40):
         score, temp_path = single_model.viterbi(corresponding_region_in_ref[added:added+l])
         scores.append(score)
         added += l
-    return scores, repeat_segments
+    return scores, repeat_segments, visited_states
 
 
-def find_number_of_tandem_repeats_in_reference(pattern, pattern_start, ref_file_name='chr15.fa'):
+def find_number_of_tandem_repeats_in_reference(pattern, pattern_start, copies, ref_file_name='chr15.fa'):
     fasta_sequences = SeqIO.parse(open(ref_file_name), 'fasta')
     ref_sequence = ''
     for fasta in fasta_sequences:
         name, ref_sequence = fasta.id, str(fasta.seq)
-    corresponding_region_in_ref = ref_sequence[pattern_start:pattern_start + len(pattern) * 40].upper()
+    corresponding_region_in_ref = ref_sequence[pattern_start:pattern_start + len(pattern) * copies].upper()
 
-    original_scores, repeat_segments = get_scores_and_segments(corresponding_region_in_ref, [pattern], 40)
+    original_scores, repeat_segments, states = get_scores_and_segments(corresponding_region_in_ref, [pattern], copies)
     hmm = build_hmm(repeat_segments, copies=1)
     scores = []
     for seg in repeat_segments:
         score, temp_path = hmm.viterbi(seg)
         scores.append(score)
-    # scores, repeat_segments = get_scores_and_segments(corresponding_region_in_ref, repeat_segments[:rep])
 
-    return len(repeat_segments), repeat_segments
+    return len(repeat_segments), repeat_segments, states
 
 
 def plot_segment_scores(scores, pattern):
@@ -164,9 +163,31 @@ def plot_segment_scores(scores, pattern):
     plt.savefig('hmm_p_%s_fitted_by_first20.png' % pattern)  # save the figure to file
     plt.close()
 
-# find_number_of_tandem_repeats_in_reference('CTCCAGCAGCCTCTCCTGCT', 82934326-1)
-# find_number_of_tandem_repeats_in_reference('CTCCTGTTCACGTAGCCTCTC', 82934566-1)
 
-# pattern = 'CTCCAGCAGCCTCTCCTGCT'
-# model = build_hmm([pattern], copies=10)
-# model.plot()
+def find_true_repeat_counts():
+    with open('patterns.txt') as input:
+        patterns = input.readlines()
+        patterns = [pattern.strip() for pattern in patterns]
+    with open('start_points.txt') as input:
+        lines = input.readlines()
+        start_points = [int(num.strip()) - 1 for num in lines]
+    with open('vntrseek_repeats.txt') as input:
+        lines = input.readlines()
+        vntrseek_repeats = [int(float(num.strip())) - 1 for num in lines]
+
+    repeats = []
+    for i in range(len(patterns)):
+        print(i)
+        copies = vntrseek_repeats[i] + 5
+        if i < len(patterns) - 1 and len(patterns[i]) * copies > start_points[i+1]:
+            copies += vntrseek_repeats[i+1]
+        repeat_count, repeat_segments, states = find_number_of_tandem_repeats_in_reference(patterns[i], start_points[i], copies)
+        repeats.append(repeat_count)
+        if i > 0 and len(patterns[i-1]) * repeats[i-1] > start_points[i]:
+            repeat_count = 0
+        with open('pattern_repeat_counts.txt', 'a') as out:
+            out.write('%s\n' % repeat_count)
+        with open('visited_states.txt', 'a') as out:
+            out.write('%s\n' % ' '.join(states))
+
+find_true_repeat_counts()
