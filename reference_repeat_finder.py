@@ -20,82 +20,90 @@ def build_hmm(patterns, copies=1):
     model = Model(name="HMM Model")
     insert_distribution = DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
 
-    insert_states = []
-    match_states = []
-    delete_states = []
-    for i in range(len(pattern) + 1):
-        insert_states.append(State(insert_distribution, name='I%s' % i))
+    last_end = None
+    start_random_matches = State(insert_distribution, name='start_random_matches')
+    end_random_matches = State(insert_distribution, name='end_random_matches')
+    model.add_states([start_random_matches, end_random_matches])
+    for repeat in range(copies):
+        insert_states = []
+        match_states = []
+        delete_states = []
+        for i in range(len(pattern) + 1):
+            insert_states.append(State(insert_distribution, name='I%s_%s' % (i, repeat)))
 
-    for i in range(len(pattern)):
-        distribution_map = {'A': 0.01, 'C': 0.01, 'G': 0.01, 'T': 0.01}
-        distribution_map[pattern[i]] = 0.97
-        match_states.append(State(DiscreteDistribution(distribution_map), name='M%s' % str(i + 1)))
+        for i in range(len(pattern)):
+            distribution_map = {'A': 0.01, 'C': 0.01, 'G': 0.01, 'T': 0.01}
+            distribution_map[pattern[i]] = 0.97
+            match_states.append(State(DiscreteDistribution(distribution_map), name='M%s_%s' % (str(i + 1), repeat)))
 
-    for i in range(len(pattern)):
-        delete_states.append(State(None, name='D%s' % str(i + 1)))
+        for i in range(len(pattern)):
+            delete_states.append(State(None, name='D%s_%s' % (str(i + 1), repeat)))
 
-    start_state = State(None, name='start')
-    end_state = State(None, name='end')
-    model.add_states(insert_states + match_states + delete_states + [start_state, end_state])
-    last = len(delete_states)-1
+        unit_start = State(None, name='unit_start_%s' % repeat)
+        unit_end = State(None, name='unit_end_%s' % repeat)
+        model.add_states(insert_states + match_states + delete_states + [unit_start, unit_end])
+        last = len(delete_states)-1
 
-    model.add_transition(model.start, start_state, 1)
-    model.add_transition(end_state, model.end, 0.5)
+        if repeat > 0:
+            model.add_transition(last_end, unit_start, 0.5)
+        else:
+            model.add_transition(model.start, unit_start, 0.5)
+            model.add_transition(model.start, start_random_matches, 0.5)
+            model.add_transition(start_random_matches, unit_start, 0.5)
+            model.add_transition(start_random_matches, start_random_matches, 0.5)
 
-    ignore_the_rest = State(insert_distribution, name='ignore-next-chars')
-    model.add_states([ignore_the_rest])
-    model.add_transition(end_state, ignore_the_rest, 0.5)
-    model.add_transition(ignore_the_rest, ignore_the_rest, 0.5)
-    model.add_transition(ignore_the_rest, model.end, 0.5)
+        model.add_transition(unit_end, end_random_matches, 0.5)
+        if repeat == copies - 1:
+            model.add_transition(unit_end, model.end, 0.5)
+            model.add_transition(end_random_matches, end_random_matches, 0.5)
+            model.add_transition(end_random_matches, model.end, 0.5)
 
-    model.add_transition(start_state, match_states[0], 0.98)
-    model.add_transition(start_state, delete_states[0], 0.01)
-    model.add_transition(start_state, insert_states[0], 0.01)
+        model.add_transition(unit_start, match_states[0], 0.98)
+        model.add_transition(unit_start, delete_states[0], 0.01)
+        model.add_transition(unit_start, insert_states[0], 0.01)
 
-    model.add_transition(insert_states[0], insert_states[0], 0.01)
-    model.add_transition(insert_states[0], delete_states[0], 0.01)
-    model.add_transition(insert_states[0], match_states[0], 0.98)
+        model.add_transition(insert_states[0], insert_states[0], 0.01)
+        model.add_transition(insert_states[0], delete_states[0], 0.01)
+        model.add_transition(insert_states[0], match_states[0], 0.98)
 
-    model.add_transition(delete_states[last], end_state, 0.99)
-    model.add_transition(delete_states[last], insert_states[last+1], 0.01)
+        model.add_transition(delete_states[last], unit_end, 0.99)
+        model.add_transition(delete_states[last], insert_states[last+1], 0.01)
 
-    model.add_transition(match_states[last], end_state, 0.99)
-    model.add_transition(match_states[last], insert_states[last+1], 0.01)
+        model.add_transition(match_states[last], unit_end, 0.99)
+        model.add_transition(match_states[last], insert_states[last+1], 0.01)
 
-    model.add_transition(insert_states[last+1], insert_states[last+1], 0.01)
-    model.add_transition(insert_states[last+1], end_state, 0.99)
+        model.add_transition(insert_states[last+1], insert_states[last+1], 0.01)
+        model.add_transition(insert_states[last+1], unit_end, 0.99)
 
-    for i in range(0, len(pattern)):
-        model.add_transition(match_states[i], insert_states[i+1], 0.01)
-        model.add_transition(delete_states[i], insert_states[i+1], 0.01)
-        model.add_transition(insert_states[i+1], insert_states[i+1], 0.01)
-        if i < len(pattern) - 1:
-            model.add_transition(insert_states[i+1], match_states[i+1], 0.98)
-            model.add_transition(insert_states[i+1], delete_states[i+1], 0.01)
+        for i in range(0, len(pattern)):
+            model.add_transition(match_states[i], insert_states[i+1], 0.01)
+            model.add_transition(delete_states[i], insert_states[i+1], 0.01)
+            model.add_transition(insert_states[i+1], insert_states[i+1], 0.01)
+            if i < len(pattern) - 1:
+                model.add_transition(insert_states[i+1], match_states[i+1], 0.98)
+                model.add_transition(insert_states[i+1], delete_states[i+1], 0.01)
 
-            model.add_transition(match_states[i], match_states[i+1], 0.98)
-            model.add_transition(match_states[i], delete_states[i+1], 0.01)
+                model.add_transition(match_states[i], match_states[i+1], 0.98)
+                model.add_transition(match_states[i], delete_states[i+1], 0.01)
 
-            model.add_transition(delete_states[i], delete_states[i+1], 0.01)
-            model.add_transition(delete_states[i], match_states[i+1], 0.98)
+                model.add_transition(delete_states[i], delete_states[i+1], 0.01)
+                model.add_transition(delete_states[i], match_states[i+1], 0.98)
+
+        last_end = unit_end
 
     model.bake()
     if len(patterns) > 1:
         # model.fit(patterns, algorithm='baum-welch', transition_pseudocount=1, use_pseudocount=True)
-        model.fit(patterns, algorithm='viterbi', transition_pseudocount=1, use_pseudocount=True)
-
-    original_model = model.copy()
-    for repeats in range(copies - 1):
-        additional_copy = original_model.copy()
-        model.concatenate(additional_copy, '_' + str(repeats+1))
-
-    for state in model.states:
-        if state.name.startswith('end'):
-            model.add_transition(state, model.end, 0.5)
-
-    model.bake()
+        fit_patterns = [pattern * copies for pattern in patterns]
+        model.fit(fit_patterns, algorithm='viterbi', transition_pseudocount=1, use_pseudocount=True)
 
     return model
+
+
+def is_matching_state(state_name):
+    if state_name.startswith('M') or state_name.startswith('I') or state_name.startswith('start_random_matches')or state_name.startswith('end_random_matches'):
+        return True
+    return False
 
 
 def get_scores_and_segments(corresponding_region_in_ref, patterns, copies=40):
@@ -107,13 +115,13 @@ def get_scores_and_segments(corresponding_region_in_ref, patterns, copies=40):
     lengths = []
     prev_start = None
     for i in range(len(visited_states)):
-        if visited_states[i].startswith('start') and prev_start is not None:
+        if visited_states[i].startswith('unit_start') and prev_start is not None:
             current_len = 0
             for j in range(prev_start, i):
-                if visited_states[j].startswith('M') or visited_states[j].startswith('I'):
+                if is_matching_state(visited_states[j]):
                     current_len += 1
             lengths.append(current_len)
-        if visited_states[i].startswith('start'):
+        if visited_states[i].startswith('unit_start'):
             prev_start = i
 
     repeat_segments = []
@@ -135,35 +143,26 @@ def find_number_of_tandem_repeats_in_reference(pattern, pattern_start, ref_file_
     corresponding_region_in_ref = ref_sequence[pattern_start:pattern_start + len(pattern) * 40].upper()
 
     original_scores, repeat_segments = get_scores_and_segments(corresponding_region_in_ref, [pattern], 40)
-    hmm = build_hmm(repeat_segments[:20], copies=1)
+    hmm = build_hmm(repeat_segments, copies=1)
     scores = []
     for seg in repeat_segments:
         score, temp_path = hmm.viterbi(seg)
         scores.append(score)
     # scores, repeat_segments = get_scores_and_segments(corresponding_region_in_ref, repeat_segments[:rep])
 
-    threshold_index = scores.index(max(scores[1:])) + 1
+    return len(repeat_segments), repeat_segments
 
+
+def plot_segment_scores(scores, pattern):
     import matplotlib.pyplot as plt
-    # X = [i for i, score in enumerate(scores)]
-    X = []
-    Y = []
-    for i, score in enumerate(scores):
-        if score > -50:
-            Y.append(score)
-            X.append(i)
-        else:
-            X.append(i)
-            Y.append(-50)
-    # Y = [score for i, score in enumerate(scores)]
+    X = [i for i, score in enumerate(scores)]
+    Y = [score for i, score in enumerate(scores)]
     plt.plot(X, Y, color='blue', label=pattern)
     plt.xlabel('pattern number')
     plt.ylabel('logp')
     plt.legend(loc=0)
     plt.savefig('hmm_p_%s_fitted_by_first20.png' % pattern)  # save the figure to file
     plt.close()
-
-    return len(repeat_segments), repeat_segments
 
 # find_number_of_tandem_repeats_in_reference('CTCCAGCAGCCTCTCCTGCT', 82934326-1)
 # find_number_of_tandem_repeats_in_reference('CTCCTGTTCACGTAGCCTCTC', 82934566-1)
