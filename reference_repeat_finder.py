@@ -178,9 +178,10 @@ def find_true_repeat_counts():
     repeats = []
     for i in range(len(patterns)):
         print(i)
-        copies = vntrseek_repeats[i] + 5
-        if i < len(patterns) - 1 and len(patterns[i]) * copies > start_points[i+1]:
+        copies = vntrseek_repeats[i] + 1
+        if i < len(patterns) - 1 and len(patterns[i]) * copies + start_points[i] > start_points[i+1]:
             copies += vntrseek_repeats[i+1]
+        copies += 3
         repeat_count, repeat_segments, states = find_number_of_tandem_repeats_in_reference(patterns[i], start_points[i], copies)
         repeats.append(repeat_count)
         if i > 0 and len(patterns[i-1]) * repeats[i-1] > start_points[i]:
