@@ -176,6 +176,7 @@ def find_true_repeat_counts():
         vntrseek_repeats = [int(float(num.strip())) - 1 for num in lines]
 
     repeats = []
+    skipped_vntrs = []
     for i in range(len(patterns)):
         print(i)
         copies = vntrseek_repeats[i] + 2
@@ -184,7 +185,11 @@ def find_true_repeat_counts():
         copies += 3
         repeat_count, repeat_segments, states = find_number_of_tandem_repeats_in_reference(patterns[i], start_points[i], copies)
         repeats.append(repeat_count)
-        if i > 0 and len(patterns[i-1]) * repeats[i-1] + start_points[i-1] > start_points[i]:
+        j = i + 1
+        while j < len(patterns) and len(patterns[i]) * repeat_count + start_points[i] > start_points[j]:
+            skipped_vntrs.append(j)
+            j += 1
+        if i in skipped_vntrs:
             repeat_count = 0
         with open('pattern_repeat_counts.txt', 'a') as out:
             out.write('%s\n' % repeat_count)
