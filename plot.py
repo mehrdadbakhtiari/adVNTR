@@ -149,6 +149,8 @@ def plot_sensitivity_over_fallout():
 
     pattern_results, min_len, max_len = get_pattern_result_map(stat_file)
     for p_num in pattern_results.keys():
+        if int(p_num) % 5 != 4:
+            continue
         # if p_num != '19':
         #     continue
         X = []
@@ -159,7 +161,9 @@ def plot_sensitivity_over_fallout():
             points.append((FP, sens))
             color = cmap((float(length) - min_len) / (max_len - min_len))
         points.sort()
-        if points[len(points)-1][1] > 0.8:
+        if points[len(points)-1][1] < 0.8:
+            continue
+        if points[0][1] > 0.3:
             continue
         for x, y in points:
             # if x > 1000:
@@ -170,7 +174,7 @@ def plot_sensitivity_over_fallout():
     # plt.xscale('log')
     plt.xlabel('False Positives')
     plt.ylabel('Sensitivity')
-    plt.legend(loc=4, prop={'size':9})
+#    plt.legend(loc=4, prop={'size':9})
     # plt.colorbar()
     plt.savefig('%s.png' % stat_file)  # save the figure to file
     plt.close()
@@ -211,5 +215,25 @@ def plot_tandem_copy_number_and_genome_copy_number():
     plt.savefig('CN_in_genome_compare.png')  # save the figure to file
     plt.close()
 
+
+def plot_reference_repeats():
+    with open('vntrseek_repeats.txt') as input:
+        lines = input.readlines()
+        vntrseek_repeats = [int(float(num.strip())) for num in lines]
+    with open('pattern_repeat_counts.txt') as input:
+        lines = input.readlines()
+        our_repeats = [int(num.strip()) for num in lines]
+    import matplotlib.pyplot as plt
+    X = [i+1 for i, j in enumerate(our_repeats)]
+    plt.xlabel('Pattern ID')
+    plt.ylabel('Number of Tandem Repeats in Reference Genome')
+    plt.plot(X, vntrseek_repeats, '-o',color='blue', label='TRF Repeats')
+    plt.plot(X, our_repeats, '--o', color='red', label="Our Method's Repeats")
+    plt.legend(loc=0)
+    plt.savefig('reference_repeats.png')
+    plt.close()
+
+
 # plot_tandem_copy_number_and_genome_copy_number()
-plot_sensitivity_over_fallout()
+# plot_sensitivity_over_fallout()
+plot_reference_repeats()
