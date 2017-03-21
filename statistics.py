@@ -110,7 +110,7 @@ def add_two_copy_to_all_patterns(patterns, start_points):
         SeqIO.write([record], output_handle, 'fasta')
 
 
-def write_cn_over_true_cn_to_files(patterns, start_points):
+def write_cn_over_true_cn_to_files(patterns, start_points, repeat_count):
     # read_files = [['paired_dat1.fasta', 'paired_dat2.fasta'],
     # ['paired_dat1.fasta', 'paired_dat2.fasta', 'edited_chr15_paired_dat1.fasta', 'edited_chr15_paired_dat2.fasta']]
     # out_files = ['original_computed_cn.txt', 'diploid_computed_cn.txt']
@@ -121,11 +121,10 @@ def write_cn_over_true_cn_to_files(patterns, start_points):
                   ['paired_dat1.fasta', 'paired_dat2.fasta'],
                   ['30X_paired_dat1.fasta', '30X_paired_dat2.fasta']]
     directory = ['10X_reads/', 'original_reads/', '30X_reads/']
-    true_cn = []
-    for i in range(len(patterns)):
-        true_cn.append(get_exact_number_of_repeats_from_sequence(patterns[i], start_points[i])[0])
 
     for k in range(len(out_files)):
+        if k != 1:
+            continue
         db_name = 'blast_db'
         if len(directory[k]):
             db_name = directory[k][:len(directory[k]) - 1]
@@ -135,9 +134,11 @@ def write_cn_over_true_cn_to_files(patterns, start_points):
         # make_blast_database(read_files[k], blast_db_name)
 
         for i in range(len(patterns)):
-            calculated_cn = get_copy_number_of_pattern(patterns[i], read_files[k], directory[k])
+            if repeat_count[i] == 0:
+                continue
+            calculated_cn = get_copy_number_of_pattern(patterns[i], read_files[k], directory[k], min_len=50)
             with open(out_files[k], 'a') as outfile:
-                outfile.write('%s %s\n' % (len(patterns[i]), calculated_cn / true_cn[i]))
+                outfile.write('%s %s\n' % (len(patterns[i]), calculated_cn / repeat_count[i]))
 
 
 with open('patterns.txt') as input:
@@ -146,8 +147,11 @@ with open('patterns.txt') as input:
 with open('start_points.txt') as input:
     lines = input.readlines()
     start_points = [int(num.strip())-1 for num in lines]
+with open('pattern_repeat_counts.txt') as input:
+    lines = input.readlines()
+    repeat_count = [int(num.strip()) for num in lines]
 
-# write_cn_over_true_cn_to_files(patterns, start_points)
+write_cn_over_true_cn_to_files(patterns, start_points, repeat_count)
 
 # for i in range(len(patterns)):
 #     print(i)

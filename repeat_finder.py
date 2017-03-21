@@ -101,7 +101,7 @@ def get_blast_matched_ids(query, blast_db_name, word_size=None, max_seq='6000', 
     return matched_ids
 
 
-def get_copy_number_of_pattern(query, fasta_files, directory=''):
+def get_copy_number_of_pattern(query, fasta_files, directory='', min_len=None):
     min_alignment_score = 0.66
     total_length = 100 * 1000 * 1000
 
@@ -111,7 +111,11 @@ def get_copy_number_of_pattern(query, fasta_files, directory=''):
     blast_db_name = directory + db_name
     # make_blast_database(fasta_files, blast_db_name)
 
-    matched_ids = get_blast_matched_ids(query, blast_db_name=blast_db_name)
+    if min_len and len(query) < min_len:
+        blast_pattern = query * int(round(50.0 / len(query) + 0.5))
+    else:
+        blast_pattern = query
+    matched_ids = get_blast_matched_ids(blast_pattern, blast_db_name=blast_db_name, evalue=1.0)
     matched_reads, avg_coverage = find_reads_and_estimate_average_coverage(fasta_files, matched_ids, total_length)
     cn = get_copy_number_of_pattern_in_reads(query, matched_reads, avg_coverage, min_alignment_score)
     return cn
