@@ -134,11 +134,12 @@ def write_cn_over_true_cn_to_files(patterns, start_points, repeat_count):
         # make_blast_database(read_files[k], blast_db_name)
 
         for i in range(len(patterns)):
+            print(i)
             if repeat_count[i] == 0:
                 continue
             calculated_cn = get_copy_number_of_pattern(patterns[i], read_files[k], directory[k], min_len=50)
             with open(out_files[k], 'a') as outfile:
-                outfile.write('%s %s\n' % (len(patterns[i]), calculated_cn / repeat_count[i]))
+                outfile.write('%s %s\n' % (i, calculated_cn / repeat_count[i]))
 
 
 with open('patterns.txt') as input:
