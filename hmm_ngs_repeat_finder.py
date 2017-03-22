@@ -176,9 +176,9 @@ def find_repeat_count(pattern, start_point, repeat_count, visited_states, read_f
     read_length = 0
     total_length = 100 * 1000 * 1000
     for read_file in read_files:
+        print('opening read file')
         reads = SeqIO.parse(read_file, 'fasta')
         for read_segment in reads:
-            print('opening read file')
             if number_of_reads == 0:
                 read_length = len(str(read_segment.seq))
             logp, vpath = hmm.viterbi(str(read_segment.seq))
