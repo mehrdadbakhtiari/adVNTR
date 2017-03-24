@@ -234,6 +234,20 @@ def plot_reference_repeats():
     plt.close()
 
 
+def plot_copy_count_comparison():
+    import matplotlib.pyplot as plt
+    X = [1, 2, 3, 4, 5, 8, 9, 10, 16, 17, 18]
+    blast_y = [3.09, 13.53, 6.12, 6.03, 11.67, 3.77, 10.07, 0.63, 3.10, 11.16, 9.65]
+    hmm_y = [2.63, 11.14, 2.51, 0.91, 10.07, 3.15, 9.47, 0.77, 2.59, 9.18, 1.75]
+    plt.xlabel('Pattern ID')
+    plt.ylabel('Computed Copy Number divided by True Copy Number')
+    plt.plot(X, blast_y, '-o',color='blue', label='Copy Count computed by BLAST')
+    plt.plot(X, hmm_y, '--o', color='red', label="Copy Count cumputed by HMM")
+    plt.legend(loc=0)
+    plt.savefig('copy_count_comparison.png')
+    plt.close()
+
 # plot_tandem_copy_number_and_genome_copy_number()
 # plot_sensitivity_over_fallout()
-plot_reference_repeats()
+# plot_reference_repeats()
+plot_copy_count_comparison()

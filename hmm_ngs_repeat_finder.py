@@ -96,8 +96,9 @@ def build_hmm(patterns, copies=1):
             first_unit_start = i
     mat[model.start_index][first_unit_start] = 0.5
     mat[model.start_index][start_random_ind] = 0.5
-    mat[start_random_ind][start_random_ind] = 0.5
-    mat[start_random_ind][first_unit_start] = 0.5
+    mat[start_random_ind][start_random_ind] = 0.4
+    mat[start_random_ind][first_unit_start] = 0.4
+    mat[start_random_ind][end_random_ind] = 0.2
 
     unit_ends = []
     for i, state in enumerate(model.states):
@@ -120,7 +121,7 @@ def build_hmm(patterns, copies=1):
     ends[model.end_index] = 1.0
     state_names = [state.name for state in states]
     distributions = [state.distribution for state in states]
-    new_model = Model.from_matrix(mat, distributions, starts, ends, name='HMM Model', state_names=state_names)
+    new_model = Model.from_matrix(mat, distributions, starts, ends, name='HMM Model', state_names=state_names, merge=None)
     return new_model
 
 
@@ -171,17 +172,17 @@ def get_number_of_matches_in_a_read(vpath):
 def find_repeat_count(pattern_num, pattern, start_point, repeat_count, visited_states, read_files):
     repeat_segments = extract_repeat_segments_from_visited_states(pattern, start_point, repeat_count, visited_states)
     copies = int(round(150.0 / len(pattern)))
-    hmm = build_hmm(repeat_segments, copies=copies)
+    hmm = build_hmm(repeat_segments * 100, copies=copies)
     total_occurrences = 0
 
-    word_size = '5'
+    word_size = '6'
     if len(pattern) > 30:
-        word_size = '7'
-    blast_ids = get_blast_matched_ids(pattern, 'original_reads/original_reads', max_seq='10000', evalue=1000,
+        word_size = '11'
+    blast_ids = get_blast_matched_ids(pattern, 'original_reads/original_reads', max_seq='10000', evalue=10,
                                       word_size=word_size, search_id=str(pattern_num))
     if len(blast_ids) == 10000:
         with open('errors.txt', 'a') as out:
-            out.write('%s\n', pattern_num)
+            out.write('%s\n' % pattern_num)
 
     number_of_reads = 0
     read_length = 0
@@ -192,16 +193,21 @@ def find_repeat_count(pattern_num, pattern, start_point, repeat_count, visited_s
         for read_segment in reads:
             if number_of_reads == 0:
                 read_length = len(str(read_segment.seq))
+            number_of_reads += 1
             if read_segment.id not in blast_ids:
                 continue
+            occurrence = 0
             logp, vpath = hmm.viterbi(str(read_segment.seq))
-            occurrence = get_number_of_matches_in_a_read(vpath)
+            if vpath and logp > -170:
+                occurrence = get_number_of_matches_in_a_read(vpath)
             logp, vpath = hmm.viterbi(str(read_segment.seq.reverse_complement()))
-            occurrence = max(occurrence, get_number_of_matches_in_a_read(vpath))
+            if vpath and logp > -170:
+                occurrence = max(occurrence, get_number_of_matches_in_a_read(vpath))
             total_occurrences += occurrence
 
             number_of_reads += 1
     avg_coverage = float(number_of_reads * read_length) / total_length
+    print('occurrence: %s, avg_coverage: %s' % (total_occurrences, avg_coverage))
     return total_occurrences / avg_coverage
 
 
@@ -224,5 +230,5 @@ for i in range(len(patterns)):
     if repeat_counts[i] == 0:
         continue
     cn = find_repeat_count(i, patterns[i], start_points[i], repeat_counts[i], visited_states_list[i], read_files)
-    with open('hmm_repeat_count.txt') as output:
+    with open('hmm_repeat_count.txt', 'a') as output:
         output.write('%s %s\n' % (i, cn / repeat_counts[i]))
