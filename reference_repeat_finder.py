@@ -15,7 +15,7 @@ def path_to_alignment(x, y, path):
     return x, y
 
 
-def build_hmm(patterns, copies=1):
+def build_reference_repeat_finder_hmm(patterns, copies=1):
     pattern = patterns[0]
     model = Model(name="HMM Model")
     insert_distribution = DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
@@ -107,8 +107,8 @@ def is_matching_state(state_name):
 
 
 def get_scores_and_segments(corresponding_region_in_ref, patterns, copies=40):
-    model = build_hmm(patterns, copies=copies)
-    single_model = build_hmm(patterns, copies=1)
+    model = build_reference_repeat_finder_hmm(patterns, copies=copies)
+    single_model = build_reference_repeat_finder_hmm(patterns, copies=1)
     logp, path = model.viterbi(corresponding_region_in_ref)
     visited_states = [state.name for idx, state in path[1:-1]]
 
@@ -143,7 +143,7 @@ def find_number_of_tandem_repeats_in_reference(pattern, pattern_start, copies, r
     corresponding_region_in_ref = ref_sequence[pattern_start:pattern_start + len(pattern) * copies].upper()
 
     original_scores, repeat_segments, states = get_scores_and_segments(corresponding_region_in_ref, [pattern], copies)
-    hmm = build_hmm(repeat_segments, copies=1)
+    hmm = build_reference_repeat_finder_hmm(repeat_segments, copies=1)
     scores = []
     for seg in repeat_segments:
         score, temp_path = hmm.viterbi(seg)

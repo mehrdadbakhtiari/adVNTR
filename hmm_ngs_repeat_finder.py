@@ -5,6 +5,134 @@ import numpy as np
 from repeat_finder import get_blast_matched_ids
 
 
+def get_prefix_matcher_hmm(pattern):
+    model = Model(name="Prefix Matcher HMM Model")
+    insert_distribution = DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
+    insert_states = []
+    match_states = []
+    delete_states = []
+    hmm_name = 'prefix'
+    for i in range(len(pattern) + 1):
+        insert_states.append(State(insert_distribution, name='I%s_%s' % (i, hmm_name)))
+
+    for i in range(len(pattern)):
+        distribution_map = {'A': 0.01, 'C': 0.01, 'G': 0.01, 'T': 0.01}
+        distribution_map[pattern[i]] = 0.97
+        match_states.append(State(DiscreteDistribution(distribution_map), name='M%s_%s' % (str(i + 1), hmm_name)))
+
+    for i in range(len(pattern)):
+        delete_states.append(State(None, name='D%s_%s' % (str(i + 1), hmm_name)))
+
+    unit_start = State(None, name='prefix_start_%s' % hmm_name)
+    unit_end = State(None, name='prefix_end_%s' % hmm_name)
+    model.add_states(insert_states + match_states + delete_states + [unit_start, unit_end])
+    last = len(delete_states)-1
+
+    model.add_transition(model.start, unit_start, 1)
+
+    model.add_transition(unit_end, model.end, 1)
+
+    model.add_transition(unit_start, match_states[0], 0.98)
+    model.add_transition(unit_start, delete_states[0], 0.01)
+    model.add_transition(unit_start, insert_states[0], 0.01)
+
+    model.add_transition(insert_states[0], insert_states[0], 0.01)
+    model.add_transition(insert_states[0], delete_states[0], 0.01)
+    model.add_transition(insert_states[0], match_states[0], 0.98)
+
+    model.add_transition(delete_states[last], unit_end, 0.99)
+    model.add_transition(delete_states[last], insert_states[last+1], 0.01)
+
+    model.add_transition(match_states[last], unit_end, 0.99)
+    model.add_transition(match_states[last], insert_states[last+1], 0.01)
+
+    model.add_transition(insert_states[last+1], insert_states[last+1], 0.01)
+    model.add_transition(insert_states[last+1], unit_end, 0.99)
+
+    for i in range(0, len(pattern)):
+        model.add_transition(match_states[i], insert_states[i+1], 0.01)
+        model.add_transition(delete_states[i], insert_states[i+1], 0.01)
+        model.add_transition(insert_states[i+1], insert_states[i+1], 0.01)
+        if i < len(pattern) - 1:
+            model.add_transition(insert_states[i+1], match_states[i+1], 0.98)
+            model.add_transition(insert_states[i+1], delete_states[i+1], 0.01)
+
+            model.add_transition(match_states[i], match_states[i+1], 0.97)
+            model.add_transition(match_states[i], delete_states[i+1], 0.01)
+            model.add_transition(match_states[i], unit_end, 0.01)
+
+            model.add_transition(delete_states[i], delete_states[i+1], 0.01)
+            model.add_transition(delete_states[i], match_states[i+1], 0.98)
+
+    model.bake(merge=None)
+
+    return model
+
+
+def get_suffix_matcher_hmm(pattern):
+    model = Model(name="Suffix Matcher HMM Model")
+    insert_distribution = DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
+    insert_states = []
+    match_states = []
+    delete_states = []
+    hmm_name = 'suffix'
+    for i in range(len(pattern) + 1):
+        insert_states.append(State(insert_distribution, name='I%s_%s' % (i, hmm_name)))
+
+    for i in range(len(pattern)):
+        distribution_map = {'A': 0.01, 'C': 0.01, 'G': 0.01, 'T': 0.01}
+        distribution_map[pattern[i]] = 0.97
+        match_states.append(State(DiscreteDistribution(distribution_map), name='M%s_%s' % (str(i + 1), hmm_name)))
+
+    for i in range(len(pattern)):
+        delete_states.append(State(None, name='D%s_%s' % (str(i + 1), hmm_name)))
+
+    unit_start = State(None, name='suffix_start_%s' % hmm_name)
+    unit_end = State(None, name='suffix_end_%s' % hmm_name)
+    model.add_states(insert_states + match_states + delete_states + [unit_start, unit_end])
+    last = len(delete_states)-1
+
+    model.add_transition(model.start, unit_start, 1)
+
+    model.add_transition(unit_end, model.end, 1)
+
+    model.add_transition(unit_start, delete_states[0], 0.01)
+    model.add_transition(unit_start, insert_states[0], 0.01)
+    for i in range(len(pattern)):
+        model.add_transition(unit_start, match_states[i], 0.98 / len(pattern))
+
+    model.add_transition(insert_states[0], insert_states[0], 0.01)
+    model.add_transition(insert_states[0], delete_states[0], 0.01)
+    model.add_transition(insert_states[0], match_states[0], 0.98)
+
+    model.add_transition(delete_states[last], unit_end, 0.99)
+    model.add_transition(delete_states[last], insert_states[last+1], 0.01)
+
+    model.add_transition(match_states[last], unit_end, 0.99)
+    model.add_transition(match_states[last], insert_states[last+1], 0.01)
+
+    model.add_transition(insert_states[last+1], insert_states[last+1], 0.01)
+    model.add_transition(insert_states[last+1], unit_end, 0.99)
+
+    for i in range(0, len(pattern)):
+        model.add_transition(match_states[i], insert_states[i+1], 0.01)
+        model.add_transition(delete_states[i], insert_states[i+1], 0.01)
+        model.add_transition(insert_states[i+1], insert_states[i+1], 0.01)
+        if i < len(pattern) - 1:
+            model.add_transition(insert_states[i+1], match_states[i+1], 0.98)
+            model.add_transition(insert_states[i+1], delete_states[i+1], 0.01)
+
+            model.add_transition(match_states[i], match_states[i+1], 0.98)
+            model.add_transition(match_states[i], delete_states[i+1], 0.01)
+
+            model.add_transition(delete_states[i], delete_states[i+1], 0.01)
+            model.add_transition(delete_states[i], match_states[i+1], 0.98)
+
+    model.bake(merge=None)
+
+    return model
+
+
 def build_hmm(patterns, copies=1):
     pattern = patterns[0]
     model = Model(name="HMM Model")
