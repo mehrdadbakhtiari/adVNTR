@@ -1,3 +1,5 @@
+from typing import re
+
 from Bio import Seq, SeqIO
 from pomegranate import DiscreteDistribution, State
 from pomegranate import HiddenMarkovModel as Model
@@ -133,9 +135,9 @@ def get_suffix_matcher_hmm(pattern):
     return model
 
 
-def build_hmm(patterns, copies=1):
+def get_constant_number_of_repeats_matcher_hmm(patterns, copies):
     pattern = patterns[0]
-    model = Model(name="HMM Model")
+    model = Model(name="Repeating Pattern Matcher HMM Model")
     insert_distribution = DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
 
     last_end = None
@@ -205,16 +207,21 @@ def build_hmm(patterns, copies=1):
         # model.fit(patterns, algorithm='baum-welch', transition_pseudocount=1, use_pseudocount=True)
         fit_patterns = [pattern * copies for pattern in patterns]
         model.fit(fit_patterns, algorithm='viterbi', transition_pseudocount=1, use_pseudocount=True)
+    return model
 
-    start_random_matches = State(insert_distribution, name='start_random_matches')
-    end_random_matches = State(insert_distribution, name='end_random_matches')
+
+def get_variable_number_of_repeats_matcher_hmm(patterns, copies=1):
+    model = get_constant_number_of_repeats_matcher_hmm(patterns, copies)
+
+    start_repeats_matches = State(None, name='start_repeating_pattern_match')
+    end_repeats_matches = State(None, name='end_repeating_pattern_match')
     mat = model.dense_transition_matrix()
     states = model.states
-    states.append(start_random_matches)
-    states.append(end_random_matches)
+    states.append(start_repeats_matches)
+    states.append(end_repeats_matches)
     states_count = len(mat)
-    start_random_ind = states_count
-    end_random_ind = states_count + 1
+    start_repeats_ind = states_count
+    end_repeats_ind = states_count + 1
     mat = np.c_[mat, np.zeros(states_count), np.zeros(states_count)]
     mat = np.r_[mat, [np.zeros(states_count + 2)]]
     mat = np.r_[mat, [np.zeros(states_count + 2)]]
@@ -222,11 +229,9 @@ def build_hmm(patterns, copies=1):
     for i in range(len(mat[model.start_index])):
         if mat[model.start_index][i] != 0:
             first_unit_start = i
-    mat[model.start_index][first_unit_start] = 0.5
-    mat[model.start_index][start_random_ind] = 0.5
-    mat[start_random_ind][start_random_ind] = 0.4
-    mat[start_random_ind][first_unit_start] = 0.4
-    mat[start_random_ind][end_random_ind] = 0.2
+    mat[model.start_index][first_unit_start] = 0.0
+    mat[model.start_index][start_repeats_ind] = 1
+    mat[start_repeats_ind][first_unit_start] = 1
 
     unit_ends = []
     for i, state in enumerate(model.states):
@@ -238,10 +243,9 @@ def build_hmm(patterns, copies=1):
             if mat[unit_end][j] != 0:
                 next_state = j
         mat[unit_end][next_state] = 0.5
-        mat[unit_end][end_random_ind] = 0.5
+        mat[unit_end][end_repeats_ind] = 0.5
 
-    mat[end_random_ind][end_random_ind] = 0.5
-    mat[end_random_ind][model.end_index] = 0.5
+    mat[end_repeats_ind][model.end_index] = 1
 
     starts = np.zeros(states_count + 2)
     starts[model.start_index] = 1.0
@@ -249,8 +253,18 @@ def build_hmm(patterns, copies=1):
     ends[model.end_index] = 1.0
     state_names = [state.name for state in states]
     distributions = [state.distribution for state in states]
-    new_model = Model.from_matrix(mat, distributions, starts, ends, name='HMM Model', state_names=state_names, merge=None)
+    new_model = Model.from_matrix(mat, distributions, starts, ends, name='Repeat Matcher HMM Model', state_names=state_names, merge=None)
     return new_model
+
+
+def get_VNTR_matcher_hmm(patterns, copies, left_flanking_region, right_flanking_region):
+    left_flanking_matcher = get_suffix_matcher_hmm(left_flanking_region)
+    right_flanking_matcher = get_prefix_matcher_hmm(right_flanking_region)
+    repeats_matcher = get_variable_number_of_repeats_matcher_hmm(patterns, copies)
+    left_flanking_matcher.concatenate(repeats_matcher)
+    left_flanking_matcher.concatenate(right_flanking_matcher)
+    left_flanking_matcher.bake(merge=None)
+    return left_flanking_matcher
 
 
 def is_matching_state(state_name):
@@ -286,6 +300,16 @@ def extract_repeat_segments_from_visited_states(pattern, pattern_start, copies, 
     return repeat_segments
 
 
+def get_flanking_regions(start_point, end_point, flanking_region_size, ref_file_name='chr15.fa'):
+    fasta_sequences = SeqIO.parse(open(ref_file_name), 'fasta')
+    ref_sequence = ''
+    for fasta in fasta_sequences:
+        name, ref_sequence = fasta.id, str(fasta.seq)
+    left_flanking = ref_sequence[start_point - flanking_region_size:start_point].upper()
+    right_flanking = ref_sequence[end_point:end_point + flanking_region_size].upper()
+    return left_flanking, right_flanking
+
+
 def get_number_of_matches_in_a_read(vpath):
     visited_states = [state.name for idx, state in vpath[1:-1]]
     result = 0
@@ -300,7 +324,10 @@ def get_number_of_matches_in_a_read(vpath):
 def find_repeat_count(pattern_num, pattern, start_point, repeat_count, visited_states, read_files):
     repeat_segments = extract_repeat_segments_from_visited_states(pattern, start_point, repeat_count, visited_states)
     copies = int(round(150.0 / len(pattern)))
-    hmm = build_hmm(repeat_segments * 100, copies=copies)
+    flanking_region_size = 150 - len(pattern)
+    end_point = start_point + sum([len(e) for e in repeat_segments])
+    left_flanking_region, right_flanking_region = get_flanking_regions(start_point, end_point, flanking_region_size)
+    hmm = get_VNTR_matcher_hmm(repeat_segments * 100, copies, left_flanking_region, right_flanking_region)
     total_occurrences = 0
 
     word_size = '6'
