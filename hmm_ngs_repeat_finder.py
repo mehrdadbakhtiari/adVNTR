@@ -5,7 +5,7 @@ from pomegranate import DiscreteDistribution, State
 from pomegranate import HiddenMarkovModel as Model
 import numpy as np
 from repeat_finder import get_blast_matched_ids
-
+from sam_utils import get_related_reads_and_read_count_in_samfile
 
 def get_prefix_matcher_hmm(pattern):
     model = Model(name="Prefix Matcher HMM Model")
@@ -330,14 +330,18 @@ def find_repeat_count(pattern_num, pattern, start_point, repeat_count, visited_s
     hmm = get_VNTR_matcher_hmm(repeat_segments * 100, copies, left_flanking_region, right_flanking_region)
     total_occurrences = 0
 
-    word_size = '6'
-    if len(pattern) > 30:
-        word_size = '11'
-    blast_ids = get_blast_matched_ids(pattern, 'original_reads/original_reads', max_seq='10000', evalue=10,
+    word_size = max(6, int(len(pattern)/3))
+    if word_size > 11:
+        word_size = 11
+    word_size = str(word_size)
+    blast_ids = get_blast_matched_ids(pattern, 'original_reads/original_reads', max_seq='1000000', evalue=10000,
                                       word_size=word_size, search_id=str(pattern_num))
-    if len(blast_ids) == 10000:
+    if len(blast_ids) == 1000 * 1000:
         with open('errors.txt', 'a') as out:
             out.write('%s\n' % pattern_num)
+
+    samfile = 'original_reads/paired_dat.sam'
+    related_reads, read_count = get_related_reads_and_read_count_in_samfile(pattern, start_point, read_file=samfile, end_point=end_point)
 
     number_of_reads = 0
     read_length = 0
