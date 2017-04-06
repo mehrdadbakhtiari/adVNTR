@@ -21,11 +21,11 @@ def get_related_reads_and_read_count_in_samfile(pattern, pattern_start, repeats=
     samfile = pysam.AlignmentFile(read_file, "r")
     read_count = 0
     if pattern_end is None:
-        pattern_end = pattern_start + (repeats-1) * pattern_length
+        pattern_end = pattern_start + (repeats) * pattern_length
     for read in samfile.fetch():
         read_count += 1
         start = read.reference_start
-        if pattern_start - 150 + pattern_length < int(start) < pattern_end:
+        if pattern_start - 150 + pattern_length < int(start) < pattern_end - pattern_length:
             read_number = '/1'
             if read.is_read2:
                 read_number = '/2'
