@@ -87,9 +87,13 @@ def get_blast_matched_ids(query, blast_db_name, word_size=None, max_seq='6000', 
             word_size = '7'
         else:
             word_size = '11'
+    if len(query) <= 15:
+        task = 'blastn-short'
+    else:
+        task = 'blastn'
     blastn_cline = NcbiblastnCommandline(query=query_file, db=blast_db_name, outfmt='"6 sallseqid"', dust='no',
                                          out=result_file, num_threads="4", word_size=word_size, max_target_seqs=max_seq,
-                                         evalue=evalue)
+                                         evalue=evalue, task=task)
     blastn_cline()
 
     with open(result_file) as result_input:

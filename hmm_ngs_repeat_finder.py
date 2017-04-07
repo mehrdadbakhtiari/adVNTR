@@ -1,3 +1,4 @@
+from itertools import repeat
 from math import log
 from Bio import Seq, SeqIO
 from pomegranate import DiscreteDistribution, State
@@ -317,7 +318,7 @@ def get_number_of_matches_in_a_read(vpath):
     for i in range(len(visited_states)):
         if visited_states[i].startswith('unit_start'):
             start_counting = True
-        if start_counting and visited_states[i].startswith('unit_end'):
+        if visited_states[i].startswith('unit_end'):
             result += 1
     if result < 2:
         result = 0
@@ -333,19 +334,25 @@ def find_repeat_count(pattern_num, pattern, start_point, repeat_count, visited_s
     hmm = get_VNTR_matcher_hmm(repeat_segments * 100, copies, left_flanking_region, right_flanking_region)
     total_occurrences = 0
 
-    word_size = max(6, int(len(pattern)/3))
+    word_size = int(len(pattern)/3)
     if word_size > 11:
         word_size = 11
     word_size = str(word_size)
-    blast_ids = get_blast_matched_ids(pattern, 'original_reads/original_reads', max_seq='1000000', evalue=10000,
-                                      word_size=word_size, search_id=str(pattern_num))
+    blast_ids = set([])
+    for repeat_segment in repeat_segments:
+        blast_ids |= get_blast_matched_ids(repeat_segment, 'original_reads/original_reads', max_seq='50000', evalue=1,
+                                          word_size=word_size, search_id=str(pattern_num))
+
     print('blast selected ', len(blast_ids), ' reads')
-    if len(blast_ids) == 1000 * 1000:
+    if len(blast_ids) == 50 * 1000:
         with open('errors.txt', 'a') as out:
-            out.write('%s\n' % pattern_num)
+            out.write('maximum number of read selected in filtering for pattern %s\n' % pattern_num)
 
     samfile = 'original_reads/paired_dat.sam'
     related_reads, read_count = get_related_reads_and_read_count_in_samfile(pattern, start_point, read_file=samfile, pattern_end=end_point)
+    for re_read in related_reads:
+        if re_read not in blast_ids:
+            print('FN in filtering')
 
     min_score = 0
     for seg in repeat_segments:
@@ -355,7 +362,7 @@ def find_repeat_count(pattern_num, pattern, start_point, repeat_count, visited_s
     different_read_score_reads = {}
     different_flanking_score_reads = {}
     different_read_score_occurrences = {}
-    for i in range(-12, 3):
+    for i in range(-15, 3):
         different_read_score_occurrences[int(min_score) + i * 8] = 0
     different_flanking_score_occurrences = {log(0.8): 0, log(0.7): 0, log(0.6): 0, log(0.5): 0, log(0.4): 0}
     print('different_read_score_occurrences: ', different_read_score_occurrences)
@@ -379,18 +386,19 @@ def find_repeat_count(pattern_num, pattern, start_point, repeat_count, visited_s
                 logp = rev_logp
                 vpath = rev_vpath
             occurrence = get_number_of_matches_in_a_read(vpath)
-            for s_threshold in different_read_score_occurrences.keys():
-                if logp > s_threshold:
-                    different_read_score_occurrences[s_threshold] += occurrence
-                    if s_threshold not in different_read_score_reads.keys():
-                        different_read_score_reads[s_threshold] = []
-                    different_read_score_reads[s_threshold].append(read_segment.id)
-            for s_threshold in different_flanking_score_occurrences.keys():
-                if logp > min_score_of_single_unit * occurrence + s_threshold * (150-occurrence*len(pattern)):
-                    different_flanking_score_occurrences[s_threshold] += occurrence
-                    if s_threshold not in different_flanking_score_reads.keys():
-                        different_flanking_score_reads[s_threshold] = []
-                    different_flanking_score_reads[s_threshold].append(read_segment.id)
+            if occurrence > 0:
+                for s_threshold in different_read_score_occurrences.keys():
+                    if logp > s_threshold:
+                        different_read_score_occurrences[s_threshold] += occurrence
+                        if s_threshold not in different_read_score_reads.keys():
+                            different_read_score_reads[s_threshold] = []
+                        different_read_score_reads[s_threshold].append(read_segment.id)
+                for s_threshold in different_flanking_score_occurrences.keys():
+                    if logp > min_score_of_single_unit * occurrence + s_threshold * (150-occurrence*len(pattern)):
+                        different_flanking_score_occurrences[s_threshold] += occurrence
+                        if s_threshold not in different_flanking_score_reads.keys():
+                            different_flanking_score_reads[s_threshold] = []
+                        different_flanking_score_reads[s_threshold].append(read_segment.id)
             total_occurrences += occurrence
 
             number_of_reads += 1
@@ -407,12 +415,12 @@ def find_repeat_count(pattern_num, pattern, start_point, repeat_count, visited_s
         # print('TP:', len(TP), 'FP:', len(FP), 'selected:', len(selected_reads))
         # print('FN:', len(FN))
         sensitivity = float(len(TP)) / len(related_reads) if len(related_reads) > 0 else 0
-        if sensitivity > 0.9 and sensitivity < 1:
+        if sensitivity > 0.85 and sensitivity < 1:
             print('sensitivity ', sensitivity, ' FN:', FN[0], ' FP:', FP[0])
         with open('FP_and_sensitivity_HMM_read_scoring_method.txt', 'a') as outfile:
             outfile.write('%s\t%s\t%s\t%s\t%s\t%s\n' % (len(FP), sensitivity, s_threshold, pattern_num, len(pattern), len(TP)))
         occurrences = different_read_score_occurrences[s_threshold]
-        if sensitivity > 0.9 and abs(repeat_count - occurrences / avg_coverage) < min_error:
+        if sensitivity > 0.85 and abs(repeat_count - occurrences / avg_coverage) < min_error:
             min_error = abs(repeat_count - occurrences / avg_coverage)
             cn = occurrences / avg_coverage
     for s_threshold in different_flanking_score_reads.keys():
@@ -423,7 +431,7 @@ def find_repeat_count(pattern_num, pattern, start_point, repeat_count, visited_s
         with open('FP_and_sensitivity_HMM_joint_scoring_method.txt', 'a') as outfile:
             outfile.write('%s\t%s\t%s\t%s\t%s\t%s\n' % (len(FP), sensitivity, s_threshold, pattern_num, len(pattern), len(TP)))
         occurrences = different_flanking_score_occurrences[s_threshold]
-        if sensitivity > 0.9 and abs(repeat_count - occurrences / avg_coverage) < min_error:
+        if sensitivity > 0.85 and abs(repeat_count - occurrences / avg_coverage) < min_error:
             min_error = abs(repeat_count - occurrences / avg_coverage)
             cn = occurrences / avg_coverage
 
