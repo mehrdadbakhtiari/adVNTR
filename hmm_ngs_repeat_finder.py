@@ -313,8 +313,11 @@ def get_flanking_regions(start_point, end_point, flanking_region_size, ref_file_
 def get_number_of_matches_in_a_read(vpath):
     visited_states = [state.name for idx, state in vpath[1:-1]]
     result = 0
+    start_counting = False
     for i in range(len(visited_states)):
-        if visited_states[i].startswith('unit_end'):
+        if visited_states[i].startswith('unit_start'):
+            start_counting = True
+        if start_counting and visited_states[i].startswith('unit_end'):
             result += 1
     if result < 2:
         result = 0
