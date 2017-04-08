@@ -419,12 +419,12 @@ def find_repeat_count(pattern_num, pattern, start_point, repeat_count, visited_s
         # print('TP:', len(TP), 'FP:', len(FP), 'selected:', len(selected_reads))
         # print('FN:', len(FN))
         sensitivity = float(len(TP)) / len(related_reads) if len(related_reads) > 0 else 0
-        if sensitivity > 0.85 and sensitivity < 1:
+        if sensitivity > 0.85 and sensitivity < 1 and len(FN) > 0 and len(FP) > 0:
             print('sensitivity ', sensitivity, ' FN:', FN[0], ' FP:', FP[0])
         with open('FP_and_sensitivity_HMM_read_scoring_method.txt', 'a') as outfile:
             outfile.write('%s\t%s\t%s\t%s\t%s\t%s\n' % (len(FP), sensitivity, s_threshold, pattern_num, len(pattern), len(TP)))
         occurrences = different_read_score_occurrences[s_threshold]
-        if sensitivity > 0.85 and abs(repeat_count - occurrences / avg_coverage) < min_error:
+        if sensitivity > 0.6 and abs(repeat_count - occurrences / avg_coverage) < min_error:
             min_error = abs(repeat_count - occurrences / avg_coverage)
             cn = occurrences / avg_coverage
     for s_threshold in different_flanking_score_reads.keys():
@@ -435,7 +435,7 @@ def find_repeat_count(pattern_num, pattern, start_point, repeat_count, visited_s
         with open('FP_and_sensitivity_HMM_joint_scoring_method.txt', 'a') as outfile:
             outfile.write('%s\t%s\t%s\t%s\t%s\t%s\n' % (len(FP), sensitivity, s_threshold, pattern_num, len(pattern), len(TP)))
         occurrences = different_flanking_score_occurrences[s_threshold]
-        if sensitivity > 0.85 and abs(repeat_count - occurrences / avg_coverage) < min_error:
+        if sensitivity > 0.6 and abs(repeat_count - occurrences / avg_coverage) < min_error:
             min_error = abs(repeat_count - occurrences / avg_coverage)
             cn = occurrences / avg_coverage
 
