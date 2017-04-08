@@ -320,14 +320,12 @@ def get_number_of_matches_in_a_read(vpath):
             start_counting = True
         if visited_states[i].startswith('unit_end'):
             result += 1
-    if result < 2:
-        result = 0
     return result
 
 
 def find_repeat_count(pattern_num, pattern, start_point, repeat_count, visited_states, read_files):
     repeat_segments = extract_repeat_segments_from_visited_states(pattern, start_point, repeat_count, visited_states)
-    copies = round(150.0 / len(pattern) + 0.5)
+    copies = int(round(150.0 / len(pattern) + 0.5))
     flanking_region_size = 150 - len(pattern)
     end_point = start_point + sum([len(e) for e in repeat_segments])
     left_flanking_region, right_flanking_region = get_flanking_regions(start_point, end_point, flanking_region_size)
