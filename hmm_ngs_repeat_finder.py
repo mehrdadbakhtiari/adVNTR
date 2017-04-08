@@ -360,7 +360,7 @@ def find_repeat_count(pattern_num, pattern, start_point, repeat_count, visited_s
     different_read_score_reads = {}
     different_flanking_score_reads = {}
     different_read_score_occurrences = {}
-    for i in range(-15, 3):
+    for i in range(-13, 13):
         different_read_score_occurrences[int(min_score) + i * 8] = 0
     different_flanking_score_occurrences = {log(0.8): 0, log(0.7): 0, log(0.6): 0, log(0.5): 0, log(0.4): 0}
     print('different_read_score_occurrences: ', different_read_score_occurrences)
@@ -384,16 +384,22 @@ def find_repeat_count(pattern_num, pattern, start_point, repeat_count, visited_s
                 logp = rev_logp
                 vpath = rev_vpath
             occurrence = get_number_of_matches_in_a_read(vpath)
-            if occurrence > 0:
+            min_occ_to_add_read = 1
+            if len(pattern) < 50:
+                min_occ_to_add_read = 2
+            if occurrence >= min_occ_to_add_read:
+                min_occ_to_count = min_occ_to_add_read
+                if len(pattern) < 24:
+                    min_occ_to_count = 3
                 for s_threshold in different_read_score_occurrences.keys():
                     if logp > s_threshold:
-                        different_read_score_occurrences[s_threshold] += occurrence
+                        different_read_score_occurrences[s_threshold] += occurrence if occurrence > min_occ_to_count else 0
                         if s_threshold not in different_read_score_reads.keys():
                             different_read_score_reads[s_threshold] = []
                         different_read_score_reads[s_threshold].append(read_segment.id)
                 for s_threshold in different_flanking_score_occurrences.keys():
                     if logp > min_score_of_single_unit * occurrence + s_threshold * (150-occurrence*len(pattern)):
-                        different_flanking_score_occurrences[s_threshold] += occurrence
+                        different_flanking_score_occurrences[s_threshold] += occurrence if occurrence > min_occ_to_count else 0
                         if s_threshold not in different_flanking_score_reads.keys():
                             different_flanking_score_reads[s_threshold] = []
                         different_flanking_score_reads[s_threshold].append(read_segment.id)
