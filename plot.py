@@ -236,13 +236,26 @@ def plot_reference_repeats():
 
 def plot_copy_count_comparison():
     import matplotlib.pyplot as plt
-    X = [1, 2, 3, 4, 5, 8, 9, 10, 16, 17, 18]
-    blast_y = [3.09, 13.53, 6.12, 6.03, 11.67, 3.77, 10.07, 0.63, 3.10, 11.16, 9.65]
-    hmm_y = [2.63, 11.14, 2.51, 0.91, 10.07, 3.15, 9.47, 0.77, 2.59, 9.18, 1.75]
+    with open('vntr_coverage_ratio.txt') as input:
+        lines = input.readlines()
+        X = [line.strip().split()[0] for line in lines]
+        vntr_coverage_ratio = [line.strip().split()[1] for line in lines]
+    with open('hmm_repeat_count.txt') as input:
+        lines = input.readlines()
+        hmm_y = [line.strip().split()[1] for line in lines]
+    with open('blast_repeat_count_ratio.txt') as input:
+        lines = input.readlines()
+        blast_y = []
+        for i, line in enumerate(lines):
+            line = line.strip().split()
+            if str(i) in X:
+                blast_y.append(line[1])
     plt.xlabel('Pattern ID')
     plt.ylabel('Computed Copy Number divided by True Copy Number')
     plt.plot(X, blast_y, '-o',color='blue', label='Copy Count computed by BLAST')
     plt.plot(X, hmm_y, '--o', color='red', label="Copy Count cumputed by HMM")
+    plt.plot(X, vntr_coverage_ratio, color='green', label="VNTR Coverage in NGS Reads")
+    plt.plot([X[0], X[-1]], [1, 1], color='black', label="Y = 1")
     plt.legend(loc=0)
     plt.savefig('copy_count_comparison.png')
     plt.close()
