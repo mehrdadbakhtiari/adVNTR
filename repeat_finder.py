@@ -107,7 +107,7 @@ def get_blast_matched_ids(query, blast_db_name, word_size=None, max_seq='6000', 
 
 def get_copy_number_of_pattern(query, fasta_files, directory='', min_len=None):
     min_alignment_score = 0.66
-    total_length = 100 * 1000 * 1000
+    total_length = 102531392
 
     db_name = 'blast_db'
     if len(directory):

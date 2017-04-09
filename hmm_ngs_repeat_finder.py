@@ -368,7 +368,7 @@ def find_repeat_count(pattern_num, pattern, start_point, repeat_count, visited_s
 
     number_of_reads = 0
     read_length = 0
-    total_length = 100 * 1000 * 1000
+    total_length = 102531392
     for read_file in read_files:
         print('opening read file')
         reads = SeqIO.parse(read_file, 'fasta')
