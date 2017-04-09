@@ -33,3 +33,20 @@ def get_related_reads_and_read_count_in_samfile(pattern, pattern_start, repeats=
             related_reads.append(name)
     related_reads = set(related_reads)
     return related_reads, read_count
+
+
+def get_VNTR_coverage_over_total_coverage(start_point, end_point, read_file='original_reads/paired_dat.sam', ref_length=102531392):
+    samfile = pysam.AlignmentFile(read_file, "r")
+    read_count = 0
+    avg_read_size = 0
+    VNTR_bp_in_reads = 0
+    for read in samfile.fetch():
+        avg_read_size = (len(read.seq) + avg_read_size * read_count) / (read_count + 1)
+        read_count += 1
+        if start_point <= read.reference_start < end_point or start_point < read.reference_end <= end_point:
+            end = min(read.reference_end, end_point)
+            start = max(read.reference_start, start_point)
+            VNTR_bp_in_reads += end - start
+    total_coverage = float(read_count * avg_read_size) / ref_length
+    VNTR_coverage = VNTR_bp_in_reads / float(end_point - start_point)
+    return VNTR_coverage / total_coverage

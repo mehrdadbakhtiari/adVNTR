@@ -5,7 +5,7 @@ from pomegranate import DiscreteDistribution, State
 from pomegranate import HiddenMarkovModel as Model
 import numpy as np
 from repeat_finder import get_blast_matched_ids
-from sam_utils import get_related_reads_and_read_count_in_samfile
+from sam_utils import get_related_reads_and_read_count_in_samfile, get_VNTR_coverage_over_total_coverage
 
 
 def get_prefix_matcher_hmm(pattern):
@@ -460,6 +460,11 @@ for i in range(len(patterns)):
     print(i)
     if repeat_counts[i] == 0:
         continue
-    cn = find_repeat_count(i+1, patterns[i], start_points[i], repeat_counts[i], visited_states_list[i], read_files)
-    with open('hmm_repeat_count.txt', 'a') as output:
-        output.write('%s %s\n' % (i, cn / repeat_counts[i]))
+    # cn = find_repeat_count(i+1, patterns[i], start_points[i], repeat_counts[i], visited_states_list[i], read_files)
+    # with open('hmm_repeat_count.txt', 'a') as output:
+    #     output.write('%s %s\n' % (i, cn / repeat_counts[i]))
+    repeat_segments = extract_repeat_segments_from_visited_states(patterns[i], start_points[i], repeat_counts[i], visited_states_list[i])
+    end_point = start_points[i] + sum([len(e) for e in repeat_segments])
+    VNTR_coverage_ratio = get_VNTR_coverage_over_total_coverage(start_points[i], end_point)
+    with open('vntr_coverage_ratio.txt', 'a') as output:
+        output.write('%s %s\n' % (i, VNTR_coverage_ratio))
