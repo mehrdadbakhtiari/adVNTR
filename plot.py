@@ -255,7 +255,51 @@ def plot_copy_count_comparison():
     plt.savefig('copy_count_comparison.png')
     plt.close()
 
+
+def plot_FP_for_specific_sensitivity(sensitivity=0.9):
+    hmm_fps = {}
+    blast_fps = {}
+    with open('FP_and_sensitivity_evalue_min_len50.0.txt') as input:
+        lines = [line.strip() for line in input.readlines() if line.strip() != '']
+        for line in lines:
+            FP, sens, _, pattern_id, pattern_len, _ = line.split()
+            sens = float(sens)
+            FP = int(FP)
+            pattern_id = int(pattern_id)
+            if sens >= sensitivity:
+                if pattern_id not in blast_fps.keys():
+                    blast_fps[pattern_id] = FP
+                blast_fps[pattern_id] = min(blast_fps[pattern_id], FP)
+    with open('FP_and_sensitivity_HMM_read_scoring_method.txt') as input:
+        lines = [line.strip() for line in input.readlines() if line.strip() != '']
+        for line in lines:
+            FP, sens, _, pattern_id, pattern_len, _ = line.split()
+            sens = float(sens)
+            FP = int(FP)
+            pattern_id = int(pattern_id)
+            if sens >= sensitivity:
+                if pattern_id not in hmm_fps.keys():
+                    hmm_fps[pattern_id] = FP
+                hmm_fps[pattern_id] = min(hmm_fps[pattern_id], FP)
+
+    X = sorted(list(set(hmm_fps.keys()) & set(blast_fps.keys())))
+    blast_fps_y = []
+    hmm_fps_y = []
+    for x in X:
+        blast_fps_y.append(blast_fps[x])
+        hmm_fps_y.append(hmm_fps[x])
+    import matplotlib.pyplot as plt
+    plt.xlabel('Pattern ID')
+    plt.ylabel('False Positives for Sensitivity of 0.9')
+    plt.plot(X, blast_fps_y, '-o',color='blue', label='BLAST False Positives')
+    plt.plot(X, hmm_fps_y, '-o',color='red', label='HMM False Positives')
+    plt.legend(loc=0)
+    plt.savefig('false_positives_for_sensitivity_of_09.png')
+    plt.close()
+
+
 # plot_tandem_copy_number_and_genome_copy_number()
 # plot_sensitivity_over_fallout()
 # plot_reference_repeats()
-plot_copy_count_comparison()
+# plot_copy_count_comparison()
+plot_FP_for_specific_sensitivity()
