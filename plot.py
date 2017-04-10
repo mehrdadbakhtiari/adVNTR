@@ -236,13 +236,8 @@ def plot_reference_repeats():
 
 def plot_copy_count_comparison():
     import matplotlib.pyplot as plt
-    with open('vntr_coverage_ratio.txt') as input:
-        lines = input.readlines()
-        X = [line.strip().split()[0] for line in lines]
-        vntr_coverage_ratio = [line.strip().split()[1] for line in lines]
-    with open('hmm_repeat_count.txt') as input:
-        lines = input.readlines()
-        hmm_y = [line.strip().split()[1] for line in lines]
+    X, vntr_coverage_ratio = get_x_and_y_from_file('vntr_coverage_ratio.txt')
+    _, hmm_y = get_x_and_y_from_file('hmm_repeat_count.txt')
     with open('blast_repeat_count_ratio.txt') as input:
         lines = input.readlines()
         blast_y = []
