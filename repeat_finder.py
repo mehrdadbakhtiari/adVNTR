@@ -1,10 +1,6 @@
-from acgt_filter import *
-from blast_wrapper import *
-from Bio.Alphabet import IUPAC
 from Bio import pairwise2, Seq, SeqRecord, SeqIO
 from Bio.Blast.Applications import NcbiblastnCommandline
 import os
-# import time
 
 
 def find_exact_match_from_candid_reads(query, candid_reads, min_similarity_score):

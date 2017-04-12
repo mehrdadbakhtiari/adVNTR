@@ -1,5 +1,5 @@
-from Bio import Seq, SeqIO
-from pomegranate import DiscreteDistribution, DirichletDistribution, State
+from Bio import SeqIO
+from pomegranate import DiscreteDistribution, State
 from pomegranate import HiddenMarkovModel as Model
 
 
