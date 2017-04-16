@@ -2,6 +2,11 @@ import pysam
 
 
 def get_read_seq_from_samfile(read_name, read_file):
+    read = get_read_from_samfile(read_name, read_file)
+    return read.query
+
+
+def get_read_from_samfile(read_name, read_file):
     result = None
     samfile = pysam.AlignmentFile(read_file, "r")
     for read in samfile.fetch():
@@ -10,7 +15,7 @@ def get_read_seq_from_samfile(read_name, read_file):
             read_number = '/2'
         name = read.qname + read_number
         if name == read_name:
-            result = read.query
+            result = read
             break
     return result
 
@@ -25,7 +30,8 @@ def get_related_reads_and_read_count_in_samfile(pattern, pattern_start, repeats=
     for read in samfile.fetch():
         read_count += 1
         start = read.reference_start
-        if pattern_start - 150 + pattern_length < int(start) < pattern_end - pattern_length:
+        offset = 0
+        if pattern_start - 150 + offset < int(start) < pattern_end - offset:
             read_number = '/1'
             if read.is_read2:
                 read_number = '/2'
