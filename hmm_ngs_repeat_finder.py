@@ -5,6 +5,11 @@ from hmm_utils import *
 from sam_utils import get_related_reads_and_read_count_in_samfile, get_VNTR_coverage_over_total_coverage
 
 
+class VNTRFinder:
+    def __init__(self, pattern, reference_start_pos, reference_repeat_count, reference_visited_states, ref_file_name='chr15.fa'):
+        self.reference_file_name = ref_file_name
+
+
 def get_VNTR_matcher_hmm(patterns, copies, left_flanking_region, right_flanking_region):
     left_flanking_matcher = get_suffix_matcher_hmm(left_flanking_region)
     right_flanking_matcher = get_prefix_matcher_hmm(right_flanking_region)
@@ -67,7 +72,7 @@ def get_number_of_matches_in_a_read(vpath):
 def find_repeat_count(pattern_num, pattern, start_point, repeat_count, visited_states, read_files):
     repeat_segments = extract_repeat_segments_from_visited_states(pattern, start_point, repeat_count, visited_states)
     copies = int(round(150.0 / len(pattern) + 0.5))
-    flanking_region_size = 150 - len(pattern)
+    flanking_region_size = 150 - 1
     end_point = start_point + sum([len(e) for e in repeat_segments])
     left_flanking_region, right_flanking_region = get_flanking_regions(start_point, end_point, flanking_region_size)
     hmm = get_VNTR_matcher_hmm(repeat_segments * 100, copies, left_flanking_region, right_flanking_region)
@@ -201,11 +206,12 @@ for i in range(len(patterns)):
     print(i)
     if repeat_counts[i] == 0:
         continue
-    # cn = find_repeat_count(i+1, patterns[i], start_points[i], repeat_counts[i], visited_states_list[i], read_files)
-    # with open('hmm_repeat_count.txt', 'a') as output:
-    #     output.write('%s %s\n' % (i, cn / repeat_counts[i]))
-    repeat_segments = extract_repeat_segments_from_visited_states(patterns[i], start_points[i], repeat_counts[i], visited_states_list[i])
-    end_point = start_points[i] + sum([len(e) for e in repeat_segments])
-    VNTR_coverage_ratio = get_VNTR_coverage_over_total_coverage(start_points[i], end_point)
-    with open('vntr_coverage_ratio.txt', 'a') as output:
-        output.write('%s %s\n' % (i, VNTR_coverage_ratio))
+    cn = find_repeat_count(i+1, patterns[i], start_points[i], repeat_counts[i], visited_states_list[i], read_files)
+    with open('hmm_repeat_count.txt', 'a') as output:
+        output.write('%s %s\n' % (i, cn / repeat_counts[i]))
+    vntr_fidner = VNTRFinder(patterns[i], start_points[i], repeat_counts[i], visited_states_list[i])
+    # repeat_segments = extract_repeat_segments_from_visited_states(patterns[i], start_points[i], repeat_counts[i], visited_states_list[i])
+    # end_point = start_points[i] + sum([len(e) for e in repeat_segments])
+    # VNTR_coverage_ratio = get_VNTR_coverage_over_total_coverage(start_points[i], end_point)
+    # with open('vntr_coverage_ratio.txt', 'a') as output:
+    #     output.write('%s %s\n' % (i, VNTR_coverage_ratio))
