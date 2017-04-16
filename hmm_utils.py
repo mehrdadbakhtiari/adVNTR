@@ -9,6 +9,18 @@ def is_matching_state(state_name):
     return False
 
 
+def get_number_of_matched_repeats_in_a_vpath(vpath):
+    visited_states = [state.name for idx, state in vpath[1:-1]]
+    result = 0
+    start_counting = False
+    for i in range(len(visited_states)):
+        if visited_states[i].startswith('unit_start'):
+            start_counting = True
+        if visited_states[i].startswith('unit_end'):
+            result += 1
+    return result
+
+
 def get_prefix_matcher_hmm(pattern):
     model = Model(name="Prefix Matcher HMM Model")
     insert_distribution = DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
