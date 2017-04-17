@@ -119,7 +119,7 @@ class VNTRFinder:
                 if logp < rev_logp:
                     logp = rev_logp
                     vpath = rev_vpath
-                occurrence = get_number_of_matched_repeats_in_a_vpath(vpath)
+                occurrence = get_number_of_repeat_bp_matches_in_vpath(vpath) / float(len(self.pattern))
                 min_occ_to_add_read = 1
                 if len(self.pattern) < 50:
                     min_occ_to_add_read = 2
@@ -194,7 +194,7 @@ with open('visited_states.txt') as input:
 read_files = ['original_reads/paired_dat1.fasta', 'original_reads/paired_dat2.fasta']
 for i in range(len(patterns)):
     print(i)
-    if repeat_counts[i] == 0:
+    if repeat_counts[i] == 0 or (i != 67 and i != 68):
         continue
     vntr_fidner = VNTRFinder(i+1, patterns[i], start_points[i], repeat_counts[i], visited_states_list[i])
     cn = vntr_fidner.find_repeat_count(read_files)

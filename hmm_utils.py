@@ -9,14 +9,16 @@ def is_matching_state(state_name):
     return False
 
 
-def get_number_of_matched_repeats_in_a_vpath(vpath):
+def get_number_of_repeat_bp_matches_in_vpath(vpath):
     visited_states = [state.name for idx, state in vpath[1:-1]]
     result = 0
-    start_counting = False
+    counting = False
     for i in range(len(visited_states)):
-        if visited_states[i].startswith('unit_start'):
-            start_counting = True
-        if visited_states[i].startswith('unit_end'):
+        if visited_states[i].startswith('start_repeating_pattern_match'):
+            counting = True
+        if visited_states[i] == 'end_repeating_pattern_match':
+            counting = False
+        if is_matching_state(visited_states[i]) and counting:
             result += 1
     return result
 
