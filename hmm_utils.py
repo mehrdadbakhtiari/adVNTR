@@ -240,17 +240,33 @@ def get_variable_number_of_repeats_matcher_hmm(patterns, copies=1):
     mat = np.r_[mat, [np.zeros(states_count + 2)]]
     mat = np.r_[mat, [np.zeros(states_count + 2)]]
 
+    unit_ends = []
+    first_repeat_matches = []
+    matches_states = []
+    for i, state in enumerate(model.states):
+        if state.name.startswith('unit_end'):
+            unit_ends.append(i)
+        if state.name[0] == 'M' and state.name.split('_')[-1] == '0':
+            first_repeat_matches.append(i)
+        if state.name[0] == 'M':
+            matches_states.append(i)
+
     for i in range(len(mat[model.start_index])):
         if mat[model.start_index][i] != 0:
             first_unit_start = i
     mat[model.start_index][first_unit_start] = 0.0
     mat[model.start_index][start_repeats_ind] = 1
-    mat[start_repeats_ind][first_unit_start] = 1
+    mat[start_repeats_ind][first_unit_start] = 0.3
+    for first_repeat_match in first_repeat_matches:
+        mat[start_repeats_ind][first_repeat_match] = 0.7 / len(first_repeat_matches)
 
-    unit_ends = []
-    for i, state in enumerate(model.states):
-        if state.name.startswith('unit_end'):
-            unit_ends.append(i)
+    for match_state in matches_states:
+        to_end = 0.7 / len(matches_states)
+        total = 1 + to_end
+        for next in range(len(mat[match_state])):
+            if mat[match_state][next] != 0:
+                mat[match_state][next] /=  total
+        mat[match_state][end_repeats_ind] = to_end
 
     for unit_end in unit_ends:
         for j in range(len(mat[unit_end])):

@@ -51,7 +51,7 @@ class VNTRFinder:
         return repeat_segments
 
     def get_flanking_regions(self, start_point, end_point, flanking_region_size):
-        fasta_sequences = SeqIO.parse(open(self.ref_file_name), 'fasta')
+        fasta_sequences = SeqIO.parse(open(self.reference_file_name), 'fasta')
         ref_sequence = ''
         for fasta in fasta_sequences:
             name, ref_sequence = fasta.id, str(fasta.seq)
@@ -62,7 +62,7 @@ class VNTRFinder:
     def find_repeat_count(self, read_files):
         repeat_segments = self.extract_repeat_segments_from_visited_states()
         copies = int(round(150.0 / len(self.pattern) + 0.5))
-        flanking_region_size = 150 - 1
+        flanking_region_size = 150 - 10
         end_point = self.ref_start_pos + sum([len(e) for e in repeat_segments])
         left_flanking_region, right_flanking_region = self.get_flanking_regions(self.ref_start_pos, end_point, flanking_region_size)
         hmm = self.get_VNTR_matcher_hmm(repeat_segments * 100, copies, left_flanking_region, right_flanking_region)

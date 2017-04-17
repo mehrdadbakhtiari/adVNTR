@@ -1,12 +1,12 @@
 import pysam
 
 
-def get_read_seq_from_samfile(read_name, read_file):
+def get_read_seq_from_samfile(read_name, read_file='original_reads/paired_dat.sam'):
     read = get_read_from_samfile(read_name, read_file)
     return read.query
 
 
-def get_read_from_samfile(read_name, read_file):
+def get_read_from_samfile(read_name, read_file='original_reads/paired_dat.sam'):
     result = None
     samfile = pysam.AlignmentFile(read_file, "r")
     for read in samfile.fetch():
