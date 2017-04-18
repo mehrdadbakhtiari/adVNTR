@@ -119,23 +119,24 @@ class VNTRFinder:
                 if logp < rev_logp:
                     logp = rev_logp
                     vpath = rev_vpath
-                occurrence = get_number_of_repeat_bp_matches_in_vpath(vpath) / float(len(self.pattern))
-                min_occ_to_add_read = 1
+                repeat_bps = get_number_of_repeat_bp_matches_in_vpath(vpath)
+                min_bp_to_add_read = 2
                 if len(self.pattern) < 50:
-                    min_occ_to_add_read = 2
-                if occurrence >= min_occ_to_add_read:
-                    min_occ_to_count = min_occ_to_add_read
+                    min_bp_to_add_read = 2
+                occurrence = repeat_bps / float(len(self.pattern))
+                if repeat_bps >= min_bp_to_add_read:
+                    min_match_bp_to_count = min_bp_to_add_read
                     if len(self.pattern) < 24:
-                        min_occ_to_count = 3
+                        min_match_bp_to_count = min_bp_to_add_read
                     for s_threshold in different_read_score_occurrences.keys():
                         if logp > s_threshold:
-                            different_read_score_occurrences[s_threshold] += occurrence if occurrence > min_occ_to_count else 0
+                            different_read_score_occurrences[s_threshold] += occurrence if repeat_bps > min_match_bp_to_count else 0
                             if s_threshold not in different_read_score_reads.keys():
                                 different_read_score_reads[s_threshold] = []
                             different_read_score_reads[s_threshold].append(read_segment.id)
                     for s_threshold in different_flanking_score_occurrences.keys():
                         if logp > min_score_of_single_unit * occurrence + s_threshold * (150-occurrence*len(self.pattern)):
-                            different_flanking_score_occurrences[s_threshold] += occurrence if occurrence > min_occ_to_count else 0
+                            different_flanking_score_occurrences[s_threshold] += occurrence if repeat_bps > min_match_bp_to_count else 0
                             if s_threshold not in different_flanking_score_reads.keys():
                                 different_flanking_score_reads[s_threshold] = []
                             different_flanking_score_reads[s_threshold].append(read_segment.id)
@@ -194,7 +195,7 @@ with open('visited_states.txt') as input:
 read_files = ['original_reads/paired_dat1.fasta', 'original_reads/paired_dat2.fasta']
 for i in range(len(patterns)):
     print(i)
-    if repeat_counts[i] == 0 or (i != 67 and i != 68):
+    if repeat_counts[i] == 0:
         continue
     vntr_fidner = VNTRFinder(i+1, patterns[i], start_points[i], repeat_counts[i], visited_states_list[i])
     cn = vntr_fidner.find_repeat_count(read_files)
