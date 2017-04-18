@@ -298,6 +298,26 @@ def plot_FP_for_specific_sensitivity(sensitivity=0.9):
     plt.close()
 
 
+def plot_coverage_ratio_histogram():
+    m = {}
+
+    from math import log
+    with open('vntr_coverage_ratio.txt') as input:
+        lines = input.readlines()
+        for line in lines:
+            index, ratio = line.strip().split()
+            ratio = log(float(ratio), 2)
+            if ratio not in m.keys():
+                m[ratio] = []
+            m[ratio].append(index)
+    l = list(m.keys())
+    xbins = [-0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+    import matplotlib.pyplot as plt
+    plt.hist(l, xbins, color='blue')
+    plt.xlabel('log(coverage ratio)')
+    plt.ylabel('# VNTR')
+    plt.savefig('coverage_ratio.png')
+
 # plot_tandem_copy_number_and_genome_copy_number()
 # plot_sensitivity_over_fallout()
 # plot_reference_repeats()
