@@ -97,7 +97,7 @@ def plot_coverage_comparison():
     plt.close()
 
 
-def get_x_and_y_from_file(file_name):
+def get_x_and_y_from_file(file_name, exclude_x=None):
     points = []
     X = []
     Y = []
@@ -112,6 +112,8 @@ def get_x_and_y_from_file(file_name):
 
     points.sort()
     for x, y in points:
+        if exclude_x and x in exclude_x:
+            continue
         X.append(x)
         Y.append(y)
     return X, Y
@@ -234,29 +236,23 @@ def plot_reference_repeats():
     plt.close()
 
 
-def plot_copy_count_comparison():
+def plot_copy_count_comparison(eliminated_nodes):
     import matplotlib.pyplot as plt
-    X, vntr_coverage_ratio = get_x_and_y_from_file('vntr_coverage_ratio.txt')
-    _, hmm_y = get_x_and_y_from_file('hmm_repeat_count.txt')
-    with open('blast_repeat_count_ratio.txt') as input:
-        lines = input.readlines()
-        blast_y = []
-        for i, line in enumerate(lines):
-            line = line.strip().split()
-            if str(i) in X:
-                blast_y.append(line[1])
+    from math import log
+    X, vntr_coverage_ratio = get_x_and_y_from_file('vntr_coverage_ratio.txt', exclude_x=eliminated_nodes)
+    _, hmm_y = get_x_and_y_from_file('hmm_repeat_count.txt', exclude_x=eliminated_nodes)
+    hmm_y = [log(y, 2) for y in hmm_y]
     plt.xlabel('Pattern ID')
-    plt.ylabel('Computed Copy Number divided by True Copy Number')
-    plt.plot(X, blast_y, '-o',color='blue', label='Copy Count computed by BLAST')
-    plt.plot(X, hmm_y, '--o', color='red', label="Copy Count cumputed by HMM")
-    plt.plot(X, vntr_coverage_ratio, color='green', label="VNTR Coverage in NGS Reads")
-    plt.plot([X[0], X[-1]], [1, 1], color='black', label="Y = 1")
-    plt.legend(loc=0)
-    plt.savefig('copy_count_comparison.png')
+    plt.ylabel('Log of Computed Copy Number divided by True Copy Number')
+    plt.plot(X, hmm_y, '--o', color='red', label="Log of Estimared Copy Count Divided by True Copy Count")
+    # plt.ylim([0.6, 2])
+    # plt.plot(X, vntr_coverage_ratio, color='green', label="VNTR Coverage Ratio in NGS Reads")
+    plt.legend(loc=0, fontsize = 'x-small')
+    plt.savefig('copy_count_comparison_log.png')
     plt.close()
 
 
-def plot_FP_for_specific_sensitivity(sensitivity=0.9):
+def plot_FP_for_specific_sensitivity(eliminated_nodes, sensitivity=0.95):
     hmm_fps = {}
     blast_fps = {}
     with open('FP_and_sensitivity_evalue_min_len50.0.txt') as input:
@@ -266,6 +262,8 @@ def plot_FP_for_specific_sensitivity(sensitivity=0.9):
             sens = float(sens)
             FP = int(FP)
             pattern_id = int(pattern_id)
+            if pattern_id - 1 in eliminated_nodes:
+                continue
             if sens >= sensitivity:
                 if pattern_id not in blast_fps.keys():
                     blast_fps[pattern_id] = FP
@@ -277,22 +275,25 @@ def plot_FP_for_specific_sensitivity(sensitivity=0.9):
             sens = float(sens)
             FP = int(FP)
             pattern_id = int(pattern_id)
+            if pattern_id - 1 in eliminated_nodes:
+                continue
             if sens >= sensitivity:
                 if pattern_id not in hmm_fps.keys():
                     hmm_fps[pattern_id] = FP
                 hmm_fps[pattern_id] = min(hmm_fps[pattern_id], FP)
 
-    X = sorted(list(set(hmm_fps.keys()) & set(blast_fps.keys())))
+    # X = sorted(list(set(hmm_fps.keys()) & set(blast_fps.keys())))
+    X = sorted(list(hmm_fps.keys()))
     blast_fps_y = []
     hmm_fps_y = []
     for x in X:
-        blast_fps_y.append(blast_fps[x])
+        # blast_fps_y.append(blast_fps[x])
         hmm_fps_y.append(hmm_fps[x])
     import matplotlib.pyplot as plt
     plt.xlabel('Pattern ID')
     plt.ylabel('False Positives for Sensitivity of 0.9')
-    plt.plot(X, blast_fps_y, '-o',color='blue', label='BLAST False Positives')
-    plt.plot(X, hmm_fps_y, '-o',color='red', label='HMM False Positives')
+    # plt.plot(X, blast_fps_y, '-o',color='blue', label='BLAST False Positives')
+    plt.plot(X, hmm_fps_y, '-o',color='red', label='False Positive Selected Reads')
     plt.legend(loc=0)
     plt.savefig('false_positives_for_sensitivity_of_09.png')
     plt.close()
@@ -318,8 +319,18 @@ def plot_coverage_ratio_histogram():
     plt.ylabel('# VNTR')
     plt.savefig('coverage_ratio.png')
 
+
+edges = [(1, 8), (1, 16), (2, 17), (4, 18), (8, 16), (30, 32), (30, 33), (32, 33), (34, 40), (38, 57), (38, 59),
+         (38, 67), (57, 59), (57, 67), (59, 67)] + [(5, 53), (47, 19), (71, 3), (31, 9)]
+eliminated_nodes = []
+for a, b in edges:
+    if a-1 not in eliminated_nodes:
+        eliminated_nodes.append(a-1)
+    if b-1 not in eliminated_nodes:
+        eliminated_nodes.append(b-1)
+
 # plot_tandem_copy_number_and_genome_copy_number()
 # plot_sensitivity_over_fallout()
 # plot_reference_repeats()
-# plot_copy_count_comparison()
-plot_FP_for_specific_sensitivity()
+# plot_copy_count_comparison(eliminated_nodes)
+plot_FP_for_specific_sensitivity(eliminated_nodes)
