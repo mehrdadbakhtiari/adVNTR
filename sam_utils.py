@@ -6,6 +6,12 @@ def get_read_seq_from_samfile(read_name, read_file='original_reads/paired_dat.sa
     return read.query
 
 
+def get_reads_seq_from_samfile(read_names, read_file='original_reads/paired_dat.sam'):
+    reads = get_reads_from_samfile(read_names, read_file)
+    result = [(name, read.query) for name, read in reads]
+    return result
+
+
 def get_read_from_samfile(read_name, read_file='original_reads/paired_dat.sam'):
     result = None
     samfile = pysam.AlignmentFile(read_file, "r")
@@ -17,6 +23,20 @@ def get_read_from_samfile(read_name, read_file='original_reads/paired_dat.sam'):
         if name == read_name:
             result = read
             break
+    return result
+
+
+def get_reads_from_samfile(read_names, read_file='original_reads/paired_dat.sam'):
+    result = []
+    samfile = pysam.AlignmentFile(read_file, "r")
+    for read in samfile.fetch():
+        read_number = '/1'
+        if read.is_read2:
+            read_number = '/2'
+        name = read.qname + read_number
+        for read_name in read_names:
+            if name == read_name:
+                result.append((name, read))
     return result
 
 
