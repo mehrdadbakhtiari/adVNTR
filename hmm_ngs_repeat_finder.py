@@ -3,6 +3,7 @@ from Bio import SeqIO
 from repeat_finder import get_blast_matched_ids
 from hmm_utils import *
 from sam_utils import get_related_reads_and_read_count_in_samfile, get_VNTR_coverage_over_total_coverage
+from vntr_graph import plot_graph_components, get_nodes_and_edges_of_vntr_graph
 
 
 class VNTRFinder:
@@ -13,6 +14,10 @@ class VNTRFinder:
         self.ref_repeat_count = ref_repeat_count
         self.ref_visited_states = ref_visited_states
         self.reference_file_name = ref_file_name
+        self.repeat_segments = self.extract_repeat_segments_from_visited_states()
+        self.reference_end_pos = self.ref_start_pos + sum([len(e) for e in self.repeat_segments])
+        flanking_region_size = 150 - 10
+        self.left_flanking_region, self.right_flanking_region = self.get_flanking_regions(self.ref_start_pos, flanking_region_size)
 
     def get_VNTR_matcher_hmm(self, patterns, copies, left_flanking_region, right_flanking_region):
         left_flanking_matcher = get_suffix_matcher_hmm(left_flanking_region)
@@ -50,30 +55,22 @@ class VNTRFinder:
             added += l
         return repeat_segments
 
-    def get_flanking_regions(self, start_point, end_point, flanking_region_size):
+    def get_flanking_regions(self, start_point, flanking_region_size=140):
         fasta_sequences = SeqIO.parse(open(self.reference_file_name), 'fasta')
         ref_sequence = ''
         for fasta in fasta_sequences:
             name, ref_sequence = fasta.id, str(fasta.seq)
         left_flanking = ref_sequence[start_point - flanking_region_size:start_point].upper()
-        right_flanking = ref_sequence[end_point:end_point + flanking_region_size].upper()
+        right_flanking = ref_sequence[self.reference_end_pos:self.reference_end_pos + flanking_region_size].upper()
         return left_flanking, right_flanking
 
-    def find_repeat_count(self, read_files):
-        repeat_segments = self.extract_repeat_segments_from_visited_states()
-        copies = int(round(150.0 / len(self.pattern) + 0.5))
-        flanking_region_size = 150 - 10
-        end_point = self.ref_start_pos + sum([len(e) for e in repeat_segments])
-        left_flanking_region, right_flanking_region = self.get_flanking_regions(self.ref_start_pos, end_point, flanking_region_size)
-        hmm = self.get_VNTR_matcher_hmm(repeat_segments * 100, copies, left_flanking_region, right_flanking_region)
-        total_occurrences = 0
-
+    def filter_reads_with_keyword_matching(self):
         word_size = int(len(self.pattern)/3)
         if word_size > 11:
             word_size = 11
         word_size = str(word_size)
         blast_ids = set([])
-        for repeat_segment in repeat_segments:
+        for repeat_segment in self.repeat_segments:
             blast_ids |= get_blast_matched_ids(repeat_segment, 'original_reads/original_reads', max_seq='50000',
                                                evalue=1, word_size=word_size, search_id=str(self.id))
 
@@ -81,15 +78,23 @@ class VNTRFinder:
         if len(blast_ids) == 50 * 1000:
             with open('errors.txt', 'a') as out:
                 out.write('maximum number of read selected in filtering for pattern %s\n' % self.id)
+        return blast_ids
+
+    def find_repeat_count(self, read_files):
+        copies = int(round(150.0 / len(self.pattern) + 0.5))
+        hmm = self.get_VNTR_matcher_hmm(self.repeat_segments * 100, copies, self.left_flanking_region, self.right_flanking_region)
+
+        blast_ids = self.filter_reads_with_keyword_matching()
 
         samfile = 'original_reads/paired_dat.sam'
-        related_reads, read_count = get_related_reads_and_read_count_in_samfile(self.pattern, self.ref_start_pos, read_file=samfile, pattern_end=end_point)
+        related_reads, read_count = get_related_reads_and_read_count_in_samfile(self.pattern, self.ref_start_pos,
+                                                                                read_file=samfile, pattern_end=self.reference_end_pos)
         for re_read in related_reads:
             if re_read not in blast_ids:
                 print('FN in filtering')
 
         min_score = 0
-        for seg in repeat_segments:
+        for seg in self.repeat_segments:
             min_score = min(min_score, hmm.viterbi((seg * copies)[:150])[0])
             print(min_score)
         min_score_of_single_unit = min_score / copies - 5
@@ -140,7 +145,6 @@ class VNTRFinder:
                             if s_threshold not in different_flanking_score_reads.keys():
                                 different_flanking_score_reads[s_threshold] = []
                             different_flanking_score_reads[s_threshold].append(read_segment.id)
-                total_occurrences += occurrence
 
                 number_of_reads += 1
 
@@ -156,6 +160,8 @@ class VNTRFinder:
             # print('TP:', len(TP), 'FP:', len(FP), 'selected:', len(selected_reads))
             # print('FN:', len(FN))
             sensitivity = float(len(TP)) / len(related_reads) if len(related_reads) > 0 else 0
+            if sensitivity > 0.9:
+                print(s_threshold, sensitivity, len(FP))
             if sensitivity > 0.85 and sensitivity < 1 and len(FN) > 0 and len(FP) > 0:
                 print('sensitivity ', sensitivity, ' FN:', FN[0], ' FP:', FP[0])
             with open('FP_and_sensitivity_HMM_read_scoring_method.txt', 'a') as outfile:
@@ -193,16 +199,23 @@ with open('visited_states.txt') as input:
     visited_states_list = [states.strip().split() for states in lines]
 
 read_files = ['original_reads/paired_dat1.fasta', 'original_reads/paired_dat2.fasta']
+vntrs = []
 for i in range(len(patterns)):
     print(i)
     if repeat_counts[i] == 0:
         continue
-    vntr_fidner = VNTRFinder(i+1, patterns[i], start_points[i], repeat_counts[i], visited_states_list[i])
-    cn = vntr_fidner.find_repeat_count(read_files)
-    with open('hmm_repeat_count.txt', 'a') as output:
-        output.write('%s %s\n' % (i, cn / repeat_counts[i]))
+    vntr_finder = VNTRFinder(i+1, patterns[i], start_points[i], repeat_counts[i], visited_states_list[i])
+    # vntrs.append(vntr_finder)
+
+    # cn = vntr_finder.find_repeat_count(read_files)
+    # with open('hmm_repeat_count.txt', 'a') as output:
+    #     output.write('%s %s\n' % (i, cn / repeat_counts[i]))
     # repeat_segments = extract_repeat_segments_from_visited_states(patterns[i], start_points[i], repeat_counts[i], visited_states_list[i])
     # end_point = start_points[i] + sum([len(e) for e in repeat_segments])
     # VNTR_coverage_ratio = get_VNTR_coverage_over_total_coverage(start_points[i], end_point)
     # with open('vntr_coverage_ratio.txt', 'a') as output:
     #     output.write('%s %s\n' % (i, VNTR_coverage_ratio))
+
+print(len(vntrs))
+nodes, edges = get_nodes_and_edges_of_vntr_graph(vntrs)
+plot_graph_components(nodes, edges)

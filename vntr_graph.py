@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import networkx as nx
+from Bio import pairwise2
 
 
 def plot_graph_components(nodes, edges, output_file_name='labels_and_colors.png'):
@@ -46,3 +47,23 @@ def plot_graph_components(nodes, edges, output_file_name='labels_and_colors.png'
     # nx.draw_networkx_labels(G,pos,labels,font_size=14)
     plt.axis('off')
     plt.savefig(output_file_name)
+
+
+def get_nodes_and_edges_of_vntr_graph(vntrs):
+    edges = []
+    nodes = []
+    for i in range(len(vntrs)):
+        nodes.append(vntrs[i].id)
+        for j in range(i + 1, len(vntrs)):
+            structure1 = vntrs[i].left_flanking_region[120:] + vntrs[i].pattern + vntrs[i].right_flanking_region[:20]
+            structure2 = vntrs[j].left_flanking_region[120:] + vntrs[j].pattern + vntrs[j].right_flanking_region[:20]
+            alignment_score = pairwise2.align.localms(structure1, structure2, 1, -1, -2, -2, score_only=True)
+            if float(alignment_score) / len(structure1) > 0.7 or float(alignment_score) / len(structure2) > 0.7:
+                edges.append((vntrs[i].id, vntrs[j].id))
+
+    nodes = [1, 2, 3, 4, 5, 8, 9, 10, 12, 16, 17, 18, 19, 21, 22, 24, 25, 28, 29, 30, 31, 32, 33, 34, 38, 40, 47, 53,
+             57, 59, 66, 67, 68, 69, 70, 71]
+    edges = [(1, 8), (1, 16), (2, 17), (4, 18), (8, 16), (30, 32), (30, 33), (32, 33), (34, 40), (34, 47), (38, 57),
+             (38, 59), (38, 67), (40, 47), (57, 59), (57, 67), (59, 67)]
+
+    return nodes, edges
