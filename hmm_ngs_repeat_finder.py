@@ -100,15 +100,11 @@ class VNTRFinder:
                 print('FN in filtering')
 
         min_score = self.get_min_score_to_select_the_read(hmm, copies)
-        min_score_of_single_unit = min_score / copies - 5
         different_read_score_reads = {}
-        different_flanking_score_reads = {}
         different_read_score_occurrences = {}
         for i in range(-13, 13):
             different_read_score_occurrences[int(min_score) + i * 8] = 0
-        different_flanking_score_occurrences = {log(0.8): 0, log(0.7): 0, log(0.6): 0, log(0.5): 0, log(0.4): 0}
         print('different_read_score_occurrences: ', different_read_score_occurrences)
-        print('different_flanking_score_occurrences: ', different_flanking_score_occurrences)
 
         number_of_reads = 0
         read_length = 0
@@ -142,12 +138,6 @@ class VNTRFinder:
                             if s_threshold not in different_read_score_reads.keys():
                                 different_read_score_reads[s_threshold] = []
                             different_read_score_reads[s_threshold].append(read_segment.id)
-                    for s_threshold in different_flanking_score_occurrences.keys():
-                        if logp > min_score_of_single_unit * occurrence + s_threshold * (150-occurrence*len(self.pattern)):
-                            different_flanking_score_occurrences[s_threshold] += occurrence if repeat_bps >= min_match_bp_to_count else 0
-                            if s_threshold not in different_flanking_score_reads.keys():
-                                different_flanking_score_reads[s_threshold] = []
-                            different_flanking_score_reads[s_threshold].append(read_segment.id)
 
                 number_of_reads += 1
 
@@ -170,17 +160,6 @@ class VNTRFinder:
             with open('FP_and_sensitivity_HMM_read_scoring_method.txt', 'a') as outfile:
                 outfile.write('%s\t%s\t%s\t%s\t%s\t%s\n' % (len(FP), sensitivity, s_threshold, self.id, len(self.pattern), len(TP)))
             occurrences = different_read_score_occurrences[s_threshold]
-            if sensitivity > 0.6 and abs(self.ref_repeat_count - occurrences / avg_coverage) < min_error:
-                min_error = abs(self.ref_repeat_count - occurrences / avg_coverage)
-                cn = occurrences / avg_coverage
-        for s_threshold in different_flanking_score_reads.keys():
-            selected_reads = different_flanking_score_reads[s_threshold]
-            TP = [read for read in selected_reads if read in related_reads]
-            FP = [read for read in selected_reads if read not in TP]
-            sensitivity = float(len(TP)) / len(related_reads) if len(related_reads) > 0 else 0
-            with open('FP_and_sensitivity_HMM_joint_scoring_method.txt', 'a') as outfile:
-                outfile.write('%s\t%s\t%s\t%s\t%s\t%s\n' % (len(FP), sensitivity, s_threshold, self.id, len(self.pattern), len(TP)))
-            occurrences = different_flanking_score_occurrences[s_threshold]
             if sensitivity > 0.6 and abs(self.ref_repeat_count - occurrences / avg_coverage) < min_error:
                 min_error = abs(self.ref_repeat_count - occurrences / avg_coverage)
                 cn = occurrences / avg_coverage
