@@ -80,6 +80,12 @@ class VNTRFinder:
                 out.write('maximum number of read selected in filtering for pattern %s\n' % self.id)
         return blast_ids
 
+    def get_min_score_to_select_the_read(self, hmm, copies):
+        min_score = 0
+        for seg in self.repeat_segments:
+            min_score = min(min_score, hmm.viterbi((seg * copies)[:150])[0])
+        return min_score
+
     def find_repeat_count(self, read_files):
         copies = int(round(150.0 / len(self.pattern) + 0.5))
         hmm = self.get_VNTR_matcher_hmm(self.repeat_segments * 100, copies, self.left_flanking_region, self.right_flanking_region)
@@ -93,10 +99,7 @@ class VNTRFinder:
             if re_read not in blast_ids:
                 print('FN in filtering')
 
-        min_score = 0
-        for seg in self.repeat_segments:
-            min_score = min(min_score, hmm.viterbi((seg * copies)[:150])[0])
-            print(min_score)
+        min_score = self.get_min_score_to_select_the_read(hmm, copies)
         min_score_of_single_unit = min_score / copies - 5
         different_read_score_reads = {}
         different_flanking_score_reads = {}
