@@ -135,13 +135,13 @@ class VNTRFinder:
                         min_match_bp_to_count = min_bp_to_add_read
                     for s_threshold in different_read_score_occurrences.keys():
                         if logp > s_threshold:
-                            different_read_score_occurrences[s_threshold] += occurrence if repeat_bps > min_match_bp_to_count else 0
+                            different_read_score_occurrences[s_threshold] += occurrence if repeat_bps >= min_match_bp_to_count else 0
                             if s_threshold not in different_read_score_reads.keys():
                                 different_read_score_reads[s_threshold] = []
                             different_read_score_reads[s_threshold].append(read_segment.id)
                     for s_threshold in different_flanking_score_occurrences.keys():
                         if logp > min_score_of_single_unit * occurrence + s_threshold * (150-occurrence*len(self.pattern)):
-                            different_flanking_score_occurrences[s_threshold] += occurrence if repeat_bps > min_match_bp_to_count else 0
+                            different_flanking_score_occurrences[s_threshold] += occurrence if repeat_bps >= min_match_bp_to_count else 0
                             if s_threshold not in different_flanking_score_reads.keys():
                                 different_flanking_score_reads[s_threshold] = []
                             different_flanking_score_reads[s_threshold].append(read_segment.id)
