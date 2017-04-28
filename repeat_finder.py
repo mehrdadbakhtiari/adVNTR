@@ -1,6 +1,5 @@
-from Bio import pairwise2, Seq, SeqRecord, SeqIO
-from Bio.Blast.Applications import NcbiblastnCommandline
-import os
+from Bio import pairwise2, Seq, SeqIO
+from blast_wrapper import get_blast_matched_ids
 
 
 def find_exact_match_from_candid_reads(query, candid_reads, min_similarity_score):
@@ -68,37 +67,6 @@ def get_copy_number_of_pattern_in_reads(query, matched_reads, average_coverage=2
         rc_query_occurrence = get_number_of_occurrence_of_pattern_in_text(read, rc_query, min_similarity)
         occurrence += max(query_occurrence, rc_query_occurrence)
     return float(occurrence) / average_coverage
-
-
-def get_blast_matched_ids(query, blast_db_name, word_size=None, max_seq='6000', reward='1', penalty='-1', gapopen='2',
-                          gapextend='1', evalue=10.0, search_id=''):
-    query_file = 'blast_tmp/' + search_id + '_query.fasta'
-    result_file = 'blast_tmp/' + search_id + '_blast_result.txt'
-    with open(query_file, "w") as output_handle:
-        my_rec = SeqRecord.SeqRecord(seq=Seq.Seq(query), id='query', description='')
-        SeqIO.write([my_rec], output_handle, 'fasta')
-
-    if word_size is None:
-        if len(query) < 30:
-            word_size = '7'
-        else:
-            word_size = '11'
-    if len(query) <= 15:
-        task = 'blastn-short'
-    else:
-        task = 'blastn'
-    blastn_cline = NcbiblastnCommandline(query=query_file, db=blast_db_name, outfmt='"6 sallseqid"', dust='no',
-                                         out=result_file, num_threads="4", word_size=word_size, max_target_seqs=max_seq,
-                                         evalue=evalue, task=task)
-    blastn_cline()
-
-    with open(result_file) as result_input:
-        ids = result_input.readlines()
-        matched_ids = set([seq_id.strip() for seq_id in ids])
-    os.remove(result_file) if os.path.exists(result_file) else None
-    os.remove(query_file) if os.path.exists(query_file) else None
-
-    return matched_ids
 
 
 def get_copy_number_of_pattern(query, fasta_files, directory='', min_len=None):

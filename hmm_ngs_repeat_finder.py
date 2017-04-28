@@ -1,6 +1,5 @@
-from math import log
 from Bio import SeqIO
-from repeat_finder import get_blast_matched_ids
+from blast_wrapper import get_blast_matched_ids
 from hmm_utils import *
 from sam_utils import get_related_reads_and_read_count_in_samfile, get_VNTR_coverage_over_total_coverage
 from vntr_graph import plot_graph_components, get_nodes_and_edges_of_vntr_graph
