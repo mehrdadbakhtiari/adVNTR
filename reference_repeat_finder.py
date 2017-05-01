@@ -1,5 +1,5 @@
 from Bio import SeqIO
-from hmm_utils import is_matching_state, build_reference_repeat_finder_hmm
+from hmm_utils import build_reference_repeat_finder_hmm, get_repeat_segments_from_visited_states_and_region
 
 
 class ReferenceVNTR:
@@ -9,34 +9,14 @@ class ReferenceVNTR:
         self.estimated_repeats = estimated_repeats
         self.chromosome = chromosome.lower()
 
-    def get_scores_and_segments(self, corresponding_region_in_ref):
+    def get_scores_and_segments(self, region_in_ref):
         patterns = [self.pattern]
         model = build_reference_repeat_finder_hmm(patterns, copies=self.estimated_repeats)
-        single_model = build_reference_repeat_finder_hmm(patterns, copies=1)
-        logp, path = model.viterbi(corresponding_region_in_ref)
+        logp, path = model.viterbi(region_in_ref)
         visited_states = [state.name for idx, state in path[1:-1]]
+        repeat_segments = get_repeat_segments_from_visited_states_and_region(visited_states, region_in_ref)
 
-        lengths = []
-        prev_start = None
-        for i in range(len(visited_states)):
-            if visited_states[i].startswith('unit_end') and prev_start is not None:
-                current_len = 0
-                for j in range(prev_start, i):
-                    if is_matching_state(visited_states[j]):
-                        current_len += 1
-                lengths.append(current_len)
-            if visited_states[i].startswith('unit_start'):
-                prev_start = i
-
-        repeat_segments = []
-        scores = []
-        added = 0
-        for l in lengths:
-            repeat_segments.append(self, corresponding_region_in_ref[added:added+l])
-            score, temp_path = single_model.viterbi(corresponding_region_in_ref[added:added+l])
-            scores.append(score)
-            added += l
-        return scores, repeat_segments, visited_states
+        return repeat_segments, visited_states
 
     def get_corresponding_region_in_ref(self):
         ref_file_name = self.chromosome + '.fa'
@@ -50,7 +30,7 @@ class ReferenceVNTR:
 
     def find_number_of_tandem_repeats_in_reference(self):
         corresponding_region_in_ref = self.get_corresponding_region_in_ref()
-        original_scores, repeat_segments, states = self.get_scores_and_segments(corresponding_region_in_ref)
+        repeat_segments, states = self.get_scores_and_segments(corresponding_region_in_ref)
         hmm = build_reference_repeat_finder_hmm(repeat_segments, copies=1)
         scores = []
         for seg in repeat_segments:
@@ -58,18 +38,6 @@ class ReferenceVNTR:
             scores.append(score)
 
         return len(repeat_segments), repeat_segments, states
-
-
-def plot_segment_scores(scores, pattern):
-    import matplotlib.pyplot as plt
-    X = [i for i, score in enumerate(scores)]
-    Y = [score for i, score in enumerate(scores)]
-    plt.plot(X, Y, color='blue', label=pattern)
-    plt.xlabel('pattern number')
-    plt.ylabel('logp')
-    plt.legend(loc=0)
-    plt.savefig('hmm_p_%s_fitted_by_first20.png' % pattern)  # save the figure to file
-    plt.close()
 
 
 def find_true_repeat_counts():

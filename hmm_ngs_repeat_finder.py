@@ -33,25 +33,9 @@ class VNTRFinder:
         for fasta in fasta_sequences:
             name, ref_sequence = fasta.id, str(fasta.seq)
         pattern_start = self.ref_start_pos
-        corresponding_region_in_ref = ref_sequence[pattern_start:pattern_start + (len(self.pattern) + 5) * self.ref_repeat_count].upper()
+        region_in_ref = ref_sequence[pattern_start:pattern_start + (len(self.pattern) + 5) * self.ref_repeat_count].upper()
+        repeat_segments = get_repeat_segments_from_visited_states_and_region(self.ref_visited_states, region_in_ref)
 
-        lengths = []
-        prev_start = None
-        for i in range(len(self.ref_visited_states)):
-            if self.ref_visited_states[i].startswith('unit_end') and prev_start is not None:
-                current_len = 0
-                for j in range(prev_start, i):
-                    if is_matching_state(self.ref_visited_states[j]):
-                        current_len += 1
-                lengths.append(current_len)
-            if self.ref_visited_states[i].startswith('unit_start'):
-                prev_start = i
-
-        repeat_segments = []
-        added = 0
-        for l in lengths:
-            repeat_segments.append(corresponding_region_in_ref[added:added+l])
-            added += l
         return repeat_segments
 
     def get_flanking_regions(self, start_point, flanking_region_size=140):
