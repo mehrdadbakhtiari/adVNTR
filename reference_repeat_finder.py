@@ -3,7 +3,8 @@ from hmm_utils import build_reference_repeat_finder_hmm, get_repeat_segments_fro
 
 
 class ReferenceVNTR:
-    def __init__(self, pattern, start_point, estimated_repeats, chromosome='chr15'):
+    def __init__(self, id, pattern, start_point, estimated_repeats=None, chromosome='chr15'):
+        self.id = id
         self.pattern = pattern
         self.start_point = start_point
         self.estimated_repeats = estimated_repeats
@@ -16,7 +17,7 @@ class ReferenceVNTR:
         visited_states = [state.name for idx, state in path[1:-1]]
         repeat_segments = get_repeat_segments_from_visited_states_and_region(visited_states, region_in_ref)
 
-        return repeat_segments, visited_states
+        return repeat_segments
 
     def get_corresponding_region_in_ref(self):
         ref_file_name = self.chromosome + '.fa'
@@ -30,48 +31,44 @@ class ReferenceVNTR:
 
     def find_number_of_tandem_repeats_in_reference(self):
         corresponding_region_in_ref = self.get_corresponding_region_in_ref()
-        repeat_segments, states = self.get_scores_and_segments(corresponding_region_in_ref)
+        repeat_segments = self.get_scores_and_segments(corresponding_region_in_ref)
         hmm = build_reference_repeat_finder_hmm(repeat_segments, copies=1)
         scores = []
         for seg in repeat_segments:
             score, temp_path = hmm.viterbi(seg)
             scores.append(score)
 
-        return len(repeat_segments), repeat_segments, states
+        return len(repeat_segments), repeat_segments
 
 
 def find_true_repeat_counts():
-    with open('patterns.txt') as input:
-        patterns = input.readlines()
-        patterns = [pattern.strip() for pattern in patterns]
-    with open('start_points.txt') as input:
-        lines = input.readlines()
-        start_points = [int(num.strip()) - 1 for num in lines]
-    with open('vntrseek_repeats.txt') as input:
-        lines = input.readlines()
-        vntrseek_repeats = [int(float(num.strip())) - 1 for num in lines]
 
-    repeats = []
+    vntrs = []
+    with open ('repeats_length_patterns_chromosomes_starts.txt') as input:
+        input_lines = [line.strip() for line in input.readlines() if line.strip() != '']
+        for vntr_id, line in enumerate(input_lines):
+            vntrseek_repeat, _, pattern, chr, start = line.split()
+            estimated_repeats = int(vntrseek_repeat) + 2
+            vntrs.append(ReferenceVNTR(vntr_id, pattern, int(start), estimated_repeats, chr))
+
     skipped_vntrs = []
-    for i in range(len(patterns)):
+    for i in range(len(vntrs)):
         print(i)
-        estimated_repeats = vntrseek_repeats[i] + 2
-        if i < len(patterns) - 1 and len(patterns[i]) * estimated_repeats + start_points[i] > start_points[i+1]:
-            estimated_repeats += vntrseek_repeats[i+1]
-        estimated_repeats += 3
-        reference_vntr = ReferenceVNTR(patterns[i], start_points[i], estimated_repeats)
-        repeat_count, repeat_segments, states = reference_vntr.find_number_of_tandem_repeats_in_reference()
-        repeats.append(repeat_count)
+        estimated_end_point = len(vntrs[i].pattern) * vntrs[i].estimated_repeats + vntrs[i].start_point
+        if i < len(vntrs) - 1 and vntrs[i].chromosome == vntrs[i+1].chromosome and estimated_end_point > vntrs[i+1].start_point:
+            vntrs[i].estimated_repeats += vntrs[i+1].estimated_repeats
+        vntrs[i].estimated_repeats += 3
+        repeat_count, repeat_segments = vntrs[i].find_number_of_tandem_repeats_in_reference()
         if i in skipped_vntrs:
             repeat_count = 0
         else:
             j = i + 1
-            while j < len(patterns) and len(patterns[i]) * repeat_count + start_points[i] > start_points[j]:
+            end_point = len(vntrs[i].pattern) * repeat_count + vntrs[i].start_point
+            while j < len(vntrs) and vntrs[i].chromosome == vntrs[j].chromosome and end_point > vntrs[j].start_point:
                 skipped_vntrs.append(j)
                 j += 1
-        with open('pattern_repeat_counts.txt', 'a') as out:
-            out.write('%s\n' % repeat_count)
-        with open('visited_states.txt', 'a') as out:
-            out.write('%s\n' % ' '.join(states))
+        comma_separated_segments = ','.join(repeat_segments)
+        with open('repeats_and_segments.txt', 'a') as out:
+            out.write('%s %s' % (repeat_count, comma_separated_segments))
 
 find_true_repeat_counts()
