@@ -54,22 +54,22 @@ class ReferenceVNTR:
 
         return repeat_segments
 
-    def get_corresponding_region_in_ref(self):
+    def __get_reference_chromosome_sequence(self):
         ref_file_name = HG19_DIR + self.chromosome + '.fa'
         fasta_sequences = SeqIO.parse(open(ref_file_name), 'fasta')
         ref_sequence = ''
         for fasta in fasta_sequences:
             name, ref_sequence = fasta.id, str(fasta.seq)
+        return ref_sequence
+
+    def get_corresponding_region_in_ref(self):
+        ref_sequence = self.__get_reference_chromosome_sequence()
         estimated_length = len(self.pattern) * self.estimated_repeats
         corresponding_region_in_ref = ref_sequence[self.start_point:self.start_point + estimated_length].upper()
         return corresponding_region_in_ref
 
     def get_flanking_regions(self, flanking_region_size=140):
-        ref_file_name = HG19_DIR + self.chromosome + '.fa'
-        fasta_sequences = SeqIO.parse(open(ref_file_name), 'fasta')
-        ref_sequence = ''
-        for fasta in fasta_sequences:
-            name, ref_sequence = fasta.id, str(fasta.seq)
+        ref_sequence = self.__get_reference_chromosome_sequence()
         left_flanking = ref_sequence[self.start_point - flanking_region_size:self.start_point].upper()
         end_of_repeats = self.start_point + sum([len(e) for e in self.repeat_segments])
         right_flanking = ref_sequence[end_of_repeats:end_of_repeats + flanking_region_size].upper()
