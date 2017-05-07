@@ -293,9 +293,11 @@ def plot_FP_for_specific_sensitivity(eliminated_nodes, sensitivity=0.95):
     plt.xlabel('Pattern ID')
     plt.ylabel('False Positives for Sensitivity of 0.9')
     # plt.plot(X, blast_fps_y, '-o',color='blue', label='BLAST False Positives')
-    plt.plot(X, hmm_fps_y, '-o',color='red', label='False Positive Selected Reads')
+    print(X)
+    print(hmm_fps_y)
+    # plt.plot(X, hmm_fps_y, '-o',color='red', label='False Positive Selected Reads')
     plt.legend(loc=0)
-    plt.savefig('false_positives_for_sensitivity_of_09.png')
+    # plt.savefig('false_positives_for_sensitivity_of_09.png')
     plt.close()
 
 
