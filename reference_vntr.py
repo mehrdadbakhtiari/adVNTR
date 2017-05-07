@@ -3,23 +3,29 @@ from hmm_utils import build_reference_repeat_finder_hmm, get_repeat_segments_fro
 
 
 class ReferenceVNTR:
-    def __init__(self, id, pattern, start_point, estimated_repeats=None, chromosome='chr15'):
+    def __init__(self, vntr_id, pattern, start_point, estimated_repeats=None, chromosome='chr15'):
         self.non_overlapping = True
         self.has_homologous = False
-        self.id = id
+        self.id = vntr_id
         self.pattern = pattern
         self.start_point = start_point
         self.estimated_repeats = estimated_repeats
         self.chromosome = chromosome
         self.repeat_segments = None
+        self.left_flanking_region = None
+        self.right_flanking_region = None
 
     def init_from_vntrseek_data(self):
         corresponding_region_in_ref = self.get_corresponding_region_in_ref()
         repeat_segments = self.find_repeat_segments(corresponding_region_in_ref)
         self.repeat_segments = repeat_segments
+        flanking_region_size = 150 - 10
+        self.left_flanking_region, self.right_flanking_region = self.get_flanking_regions(flanking_region_size)
 
-    def init_from_xml(self, repeat_segments):
+    def init_from_xml(self, repeat_segments, left_flanking_region, right_flanking_region):
         self.repeat_segments = repeat_segments
+        self.left_flanking_region = left_flanking_region
+        self.right_flanking_region = right_flanking_region
 
     def is_non_overlapping(self):
         return self.non_overlapping
@@ -57,15 +63,26 @@ class ReferenceVNTR:
         corresponding_region_in_ref = ref_sequence[self.start_point:self.start_point + estimated_length].upper()
         return corresponding_region_in_ref
 
+    def get_flanking_regions(self, flanking_region_size=140):
+        ref_file_name = self.chromosome + '.fa'
+        fasta_sequences = SeqIO.parse(open(ref_file_name), 'fasta')
+        ref_sequence = ''
+        for fasta in fasta_sequences:
+            name, ref_sequence = fasta.id, str(fasta.seq)
+        left_flanking = ref_sequence[self.start_point - flanking_region_size:self.start_point].upper()
+        end_of_repeats = self.start_point + sum([len(e) for e in self.repeat_segments])
+        right_flanking = ref_sequence[end_of_repeats:end_of_repeats + flanking_region_size].upper()
+        return left_flanking, right_flanking
+
 
 def find_non_overlapping_vntrs(vntrseek_output='repeats_length_patterns_chromosomes_starts.txt'):
     vntrs = []
-    with open (vntrseek_output) as input:
-        input_lines = [line.strip() for line in input.readlines() if line.strip() != '']
+    with open(vntrseek_output) as input_file:
+        input_lines = [line.strip() for line in input_file.readlines() if line.strip() != '']
         for vntr_id, line in enumerate(input_lines):
-            vntrseek_repeat, _, pattern, chr, start = line.split()
+            vntrseek_repeat, _, pattern, chromosome, start = line.split()
             estimated_repeats = int(vntrseek_repeat) + 5
-            vntrs.append(ReferenceVNTR(vntr_id, pattern, int(start)-1, estimated_repeats, chr))
+            vntrs.append(ReferenceVNTR(vntr_id, pattern, int(start)-1, estimated_repeats, chromosome))
 
     skipped_vntrs = []
     for i in range(len(vntrs)):
@@ -100,21 +117,23 @@ def process_vntrseek_data():
     for vntr in vntrs:
         comma_separated_segments = ','.join(vntr.get_repeat_segments())
         with open('repeats_and_segments.txt', 'a') as out:
-            out.write('%s %s %s' % (vntr.id, vntr.is_non_overlapping(), comma_separated_segments))
+            out.write('%s %s %s %s %s\n' % (vntr.id, vntr.is_non_overlapping(), vntr.left_flanking_region,
+                                            vntr.right_flanking_region, comma_separated_segments))
 
 
-def load_non_overlapping_vntrs_data(vntrseek_output='repeats_length_patterns_chromosomes_starts.txt'):
+def load_processed_vntrs_data(vntrseek_output='repeats_length_patterns_chromosomes_starts.txt'):
     vntrs = []
-    with open (vntrseek_output) as input:
-        vntrseek_data = [line.strip() for line in input.readlines() if line.strip() != '']
-    with open('repeats_and_segments.txt') as input:
-        segments_lines = input.readlines()
+    with open(vntrseek_output) as input_file:
+        vntrseek_data = [line.strip() for line in input_file.readlines() if line.strip() != '']
+    with open('repeats_and_segments.txt') as input_file:
+        segments_lines = input_file.readlines()
     for vntr_id in range(len(vntrseek_data)):
-        id, repeats, segments = segments_lines[vntr_id].split()
+        _id, non_overlapping, left_flanking_region, right_flanking_region, segments = segments_lines[vntr_id].split()
         repeat_segments = segments.split(',')
-        vntrseek_repeat, _, pattern, chr, start = vntrseek_data[vntr_id].split()
-        vntr = ReferenceVNTR(vntr_id, pattern, int(start)-1, vntrseek_repeat, chr)
-        vntr.init_from_xml(repeat_segments)
+        vntrseek_repeat, _, pattern, chromosome, start = vntrseek_data[vntr_id].split()
+        vntr = ReferenceVNTR(vntr_id, pattern, int(start)-1, vntrseek_repeat, chromosome)
+        vntr.init_from_xml(repeat_segments, left_flanking_region, right_flanking_region)
+        vntr.non_overlapping = non_overlapping
         vntrs.append(vntr)
     return vntrs
 

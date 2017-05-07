@@ -3,6 +3,7 @@ from blast_wrapper import get_blast_matched_ids
 from hmm_utils import *
 from sam_utils import get_related_reads_and_read_count_in_samfile, get_VNTR_coverage_over_total_coverage
 from vntr_graph import plot_graph_components, get_nodes_and_edges_of_vntr_graph
+from reference_vntr import identify_homologous_vntrs, load_processed_vntrs_data
 
 
 class VNTRFinder:
@@ -15,8 +16,6 @@ class VNTRFinder:
         self.reference_file_name = ref_file_name
         self.repeat_segments = self.extract_repeat_segments_from_visited_states()
         self.reference_end_pos = self.ref_start_pos + sum([len(e) for e in self.repeat_segments])
-        flanking_region_size = 150 - 10
-        self.left_flanking_region, self.right_flanking_region = self.get_flanking_regions(self.ref_start_pos, flanking_region_size)
 
     def get_VNTR_matcher_hmm(self, patterns, copies, left_flanking_region, right_flanking_region):
         left_flanking_matcher = get_suffix_matcher_hmm(left_flanking_region)
@@ -37,15 +36,6 @@ class VNTRFinder:
         repeat_segments = get_repeat_segments_from_visited_states_and_region(self.ref_visited_states, region_in_ref)
 
         return repeat_segments
-
-    def get_flanking_regions(self, start_point, flanking_region_size=140):
-        fasta_sequences = SeqIO.parse(open(self.reference_file_name), 'fasta')
-        ref_sequence = ''
-        for fasta in fasta_sequences:
-            name, ref_sequence = fasta.id, str(fasta.seq)
-        left_flanking = ref_sequence[start_point - flanking_region_size:start_point].upper()
-        right_flanking = ref_sequence[self.reference_end_pos:self.reference_end_pos + flanking_region_size].upper()
-        return left_flanking, right_flanking
 
     def filter_reads_with_keyword_matching(self):
         word_size = int(len(self.pattern)/3)
@@ -164,7 +154,8 @@ with open('visited_states.txt') as input:
     visited_states_list = [states.strip().split() for states in lines]
 
 read_files = ['original_reads/paired_dat1.fasta', 'original_reads/paired_dat2.fasta']
-vntrs = []
+vntrs = load_processed_vntrs_data()
+vntrs = identify_homologous_vntrs(vntrs)
 for i in range(len(patterns)):
     print(i)
     if repeat_counts[i] == 0:
