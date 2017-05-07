@@ -55,10 +55,7 @@ def get_nodes_and_edges_of_vntr_graph(vntrs):
     for i in range(len(vntrs)):
         nodes.append(vntrs[i].id)
         for j in range(i + 1, len(vntrs)):
-            structure1 = vntrs[i].left_flanking_region[120:] + vntrs[i].pattern + vntrs[i].right_flanking_region[:20]
-            structure2 = vntrs[j].left_flanking_region[120:] + vntrs[j].pattern + vntrs[j].right_flanking_region[:20]
-            alignment_score = pairwise2.align.localms(structure1, structure2, 1, -1, -2, -2, score_only=True)
-            if float(alignment_score) / len(structure1) > 0.7 or float(alignment_score) / len(structure2) > 0.7:
+            if vntrs[i].is_homologous(vntrs[j]):
                 edges.append((vntrs[i].id, vntrs[j].id))
 
     nodes = [1, 2, 3, 4, 5, 8, 9, 10, 12, 16, 17, 18, 19, 21, 22, 24, 25, 28, 29, 30, 31, 32, 33, 34, 38, 40, 47, 53,
