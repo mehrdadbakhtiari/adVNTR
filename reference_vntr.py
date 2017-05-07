@@ -65,7 +65,7 @@ def find_non_overlapping_vntrs(vntrseek_output='repeats_length_patterns_chromoso
         for vntr_id, line in enumerate(input_lines):
             vntrseek_repeat, _, pattern, chr, start = line.split()
             estimated_repeats = int(vntrseek_repeat) + 5
-            vntrs.append(ReferenceVNTR(vntr_id, pattern, int(start), estimated_repeats, chr))
+            vntrs.append(ReferenceVNTR(vntr_id, pattern, int(start)-1, estimated_repeats, chr))
 
     skipped_vntrs = []
     for i in range(len(vntrs)):
@@ -113,7 +113,7 @@ def load_non_overlapping_vntrs_data(vntrseek_output='repeats_length_patterns_chr
         id, repeats, segments = segments_lines[vntr_id].split()
         repeat_segments = segments.split(',')
         vntrseek_repeat, _, pattern, chr, start = vntrseek_data[vntr_id].split()
-        vntr = ReferenceVNTR(vntr_id, pattern, int(start), vntrseek_repeat, chr)
+        vntr = ReferenceVNTR(vntr_id, pattern, int(start)-1, vntrseek_repeat, chr)
         vntr.init_from_xml(repeat_segments)
         vntrs.append(vntr)
     return vntrs
