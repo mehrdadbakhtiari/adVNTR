@@ -1,5 +1,6 @@
 from Bio import SeqIO, pairwise2
 from hmm_utils import build_reference_repeat_finder_hmm, get_repeat_segments_from_visited_states_and_region
+from settings import *
 
 
 class ReferenceVNTR:
@@ -54,7 +55,7 @@ class ReferenceVNTR:
         return repeat_segments
 
     def get_corresponding_region_in_ref(self):
-        ref_file_name = self.chromosome + '.fa'
+        ref_file_name = HG19_DIR + self.chromosome + '.fa'
         fasta_sequences = SeqIO.parse(open(ref_file_name), 'fasta')
         ref_sequence = ''
         for fasta in fasta_sequences:
@@ -64,7 +65,7 @@ class ReferenceVNTR:
         return corresponding_region_in_ref
 
     def get_flanking_regions(self, flanking_region_size=140):
-        ref_file_name = self.chromosome + '.fa'
+        ref_file_name = HG19_DIR + self.chromosome + '.fa'
         fasta_sequences = SeqIO.parse(open(ref_file_name), 'fasta')
         ref_sequence = ''
         for fasta in fasta_sequences:
@@ -75,15 +76,21 @@ class ReferenceVNTR:
         return left_flanking, right_flanking
 
 
-def find_non_overlapping_vntrs(vntrseek_output='repeats_length_patterns_chromosomes_starts.txt'):
+def load_unprocessed_vntrseek_data(vntrseek_output, chr='chr15'):
     vntrs = []
     with open(vntrseek_output) as input_file:
         input_lines = [line.strip() for line in input_file.readlines() if line.strip() != '']
         for vntr_id, line in enumerate(input_lines):
             vntrseek_repeat, _, pattern, chromosome, start = line.split()
-            estimated_repeats = int(vntrseek_repeat) + 5
+            estimated_repeats = int(float(vntrseek_repeat) + 5)
+            if chr and chromosome != chr:
+                continue
             vntrs.append(ReferenceVNTR(vntr_id, pattern, int(start)-1, estimated_repeats, chromosome))
+    return vntrs
 
+
+def find_non_overlapping_vntrs(vntrseek_output='repeats_length_patterns_chromosomes_starts.txt'):
+    vntrs = load_unprocessed_vntrseek_data(vntrseek_output)
     skipped_vntrs = []
     for i in range(len(vntrs)):
         print(i)
