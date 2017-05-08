@@ -1,7 +1,7 @@
 from Bio import SeqIO
 from blast_wrapper import get_blast_matched_ids
 from hmm_utils import *
-from sam_utils import get_related_reads_and_read_count_in_samfile#, get_VNTR_coverage_over_total_coverage
+from sam_utils import get_related_reads_and_read_count_in_samfile  #, get_VNTR_coverage_over_total_coverage
 from vntr_graph import plot_graph_components, get_nodes_and_edges_of_vntr_graph
 from reference_vntr import identify_homologous_vntrs, load_processed_vntrs_data
 
@@ -109,21 +109,22 @@ class VNTRFinder:
         min_error = 1000
         for s_threshold in different_read_score_reads.keys():
             selected_reads = different_read_score_reads[s_threshold]
-            TP = [read for read in selected_reads if read in related_reads]
-            FP = [read for read in selected_reads if read not in TP]
-            FN = [read for read in related_reads if read not in selected_reads]
-            # print('TP:', len(TP), 'FP:', len(FP), 'selected:', len(selected_reads))
-            # print('FN:', len(FN))
-            sensitivity = float(len(TP)) / len(related_reads) if len(related_reads) > 0 else 0
+            true_positives = [read for read in selected_reads if read in related_reads]
+            false_positives = [read for read in selected_reads if read not in true_positives]
+            false_negatives = [read for read in related_reads if read not in selected_reads]
+            # print('TP:', len(true_positives), 'FP:', len(false_positives), 'selected:', len(selected_reads))
+            # print('FN:', len(false_negatives))
+            sensitivity = float(len(true_positives)) / len(related_reads) if len(related_reads) > 0 else 0
             if sensitivity > 0.9:
-                print(s_threshold, sensitivity, len(FP))
-            if 1 > sensitivity > 0.85 and len(FN) > 0 and len(FP) > 0:
-                print('sensitivity ', sensitivity, ' FN:', FN[0], ' FP:', FP[0])
+                print(s_threshold, sensitivity, len(false_positives))
+            if 1 > sensitivity > 0.85 and len(false_negatives) > 0 and len(false_positives) > 0:
+                print('sensitivity ', sensitivity, ' FN:', false_negatives[0], ' FP:', false_positives[0])
             with open('FP_and_sensitivity_HMM_read_scoring_method.txt', 'a') as outfile:
-                outfile.write('%s\t%s\t%s\t%s\t%s\t%s\n' % (len(FP), sensitivity, s_threshold, self.reference_vntr.id, len(self.reference_vntr.pattern), len(TP)))
+                outfile.write('%s\t%s\t%s\t%s\t%s\t%s\n' % (len(false_positives), sensitivity, s_threshold, self.reference_vntr.id, len(self.reference_vntr.pattern), len(true_positives)))
             occurrences = different_read_score_occurrences[s_threshold]
-            if sensitivity > 0.6 and abs(len(self.reference_vntr.get_repeat_segments()) - occurrences / avg_coverage) < min_error:
-                min_error = abs(len(self.reference_vntr.get_repeat_segments()) - occurrences / avg_coverage)
+            error = abs(len(self.reference_vntr.get_repeat_segments()) - occurrences / avg_coverage)
+            if sensitivity > 0.6 and error < min_error:
+                min_error = error
                 cn = occurrences / avg_coverage
 
         return cn
