@@ -34,6 +34,9 @@ class ReferenceVNTR:
     def has_homologous_vntr(self):
         return self.has_homologous
 
+    def get_length(self):
+        return sum([len(e) for e in self.repeat_segments])
+
     def get_repeat_segments(self):
         return self.repeat_segments
 
@@ -71,7 +74,7 @@ class ReferenceVNTR:
     def get_flanking_regions(self, flanking_region_size=140):
         ref_sequence = self.__get_reference_chromosome_sequence()
         left_flanking = ref_sequence[self.start_point - flanking_region_size:self.start_point].upper()
-        end_of_repeats = self.start_point + sum([len(e) for e in self.repeat_segments])
+        end_of_repeats = self.start_point + self.get_length()
         right_flanking = ref_sequence[end_of_repeats:end_of_repeats + flanking_region_size].upper()
         return left_flanking, right_flanking
 
@@ -140,7 +143,7 @@ def load_processed_vntrs_data(vntrseek_output='repeats_length_patterns_chromosom
         vntrseek_repeat, _, pattern, chromosome, start = vntrseek_data[vntr_id].split()
         vntr = ReferenceVNTR(vntr_id, pattern, int(start)-1, chromosome, vntrseek_repeat)
         vntr.init_from_xml(repeat_segments, left_flanking_region, right_flanking_region)
-        vntr.non_overlapping = non_overlapping
+        vntr.non_overlapping = True if non_overlapping == 'True' else False
         vntrs.append(vntr)
     return vntrs
 
