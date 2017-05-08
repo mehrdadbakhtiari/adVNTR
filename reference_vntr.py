@@ -4,14 +4,14 @@ from settings import *
 
 
 class ReferenceVNTR:
-    def __init__(self, vntr_id, pattern, start_point, estimated_repeats=None, chromosome='chr15'):
+    def __init__(self, vntr_id, pattern, start_point, chromosome, estimated_repeats=None):
         self.non_overlapping = True
         self.has_homologous = False
         self.id = vntr_id
         self.pattern = pattern
         self.start_point = start_point
-        self.estimated_repeats = estimated_repeats
         self.chromosome = chromosome
+        self.estimated_repeats = estimated_repeats
         self.repeat_segments = None
         self.left_flanking_region = None
         self.right_flanking_region = None
@@ -76,7 +76,7 @@ class ReferenceVNTR:
         return left_flanking, right_flanking
 
 
-def load_unprocessed_vntrseek_data(vntrseek_output, chr='chr15'):
+def load_unprocessed_vntrseek_data(vntrseek_output, chr=None):
     vntrs = []
     with open(vntrseek_output) as input_file:
         input_lines = [line.strip() for line in input_file.readlines() if line.strip() != '']
@@ -85,7 +85,7 @@ def load_unprocessed_vntrseek_data(vntrseek_output, chr='chr15'):
             estimated_repeats = int(float(vntrseek_repeat) + 5)
             if chr and chromosome != chr:
                 continue
-            vntrs.append(ReferenceVNTR(vntr_id, pattern, int(start)-1, estimated_repeats, chromosome))
+            vntrs.append(ReferenceVNTR(vntr_id, pattern, int(start)-1, chromosome, estimated_repeats))
     return vntrs
 
 
@@ -138,7 +138,7 @@ def load_processed_vntrs_data(vntrseek_output='repeats_length_patterns_chromosom
         _id, non_overlapping, left_flanking_region, right_flanking_region, segments = segments_lines[vntr_id].split()
         repeat_segments = segments.split(',')
         vntrseek_repeat, _, pattern, chromosome, start = vntrseek_data[vntr_id].split()
-        vntr = ReferenceVNTR(vntr_id, pattern, int(start)-1, vntrseek_repeat, chromosome)
+        vntr = ReferenceVNTR(vntr_id, pattern, int(start)-1, chromosome, vntrseek_repeat)
         vntr.init_from_xml(repeat_segments, left_flanking_region, right_flanking_region)
         vntr.non_overlapping = non_overlapping
         vntrs.append(vntr)
