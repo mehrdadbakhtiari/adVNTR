@@ -2,26 +2,41 @@ from Bio import SeqIO
 from blast_wrapper import get_blast_matched_ids
 from hmm_utils import *
 from sam_utils import get_related_reads_and_read_count_in_samfile  #, get_VNTR_coverage_over_total_coverage
+import settings
 from vntr_graph import plot_graph_components, get_nodes_and_edges_of_vntr_graph
 from reference_vntr import identify_homologous_vntrs, load_processed_vntrs_data
+
+import os
 
 
 class VNTRFinder:
     def __init__(self, reference_vntr):
         self.reference_vntr = reference_vntr
 
-    def get_VNTR_matcher_hmm(self, copies):
+    def get_vntr_matcher_hmm(self, copies):
+        stored_hmm_file = settings.TRAINED_HMMS_DIR + self.reference_vntr.id + '.json'
+        if settings.USE_TRAINED_HMMS and os.path.isfile(stored_hmm_file):
+            model = Model()
+            with open(stored_hmm_file, 'r') as infile:
+                json_str = infile.readline()
+            model.from_json(json_str)
+            return model
+
         patterns = self.reference_vntr.get_repeat_segments() * 100
         left_flanking_region = self.reference_vntr.left_flanking_region
         right_flanking_region = self.reference_vntr.right_flanking_region
 
-        left_flanking_matcher = get_suffix_matcher_hmm(left_flanking_region)
+        vntr_matcher = get_suffix_matcher_hmm(left_flanking_region)
         right_flanking_matcher = get_prefix_matcher_hmm(right_flanking_region)
         repeats_matcher = get_variable_number_of_repeats_matcher_hmm(patterns, copies)
-        left_flanking_matcher.concatenate(repeats_matcher)
-        left_flanking_matcher.concatenate(right_flanking_matcher)
-        left_flanking_matcher.bake(merge=None)
-        return left_flanking_matcher
+        vntr_matcher.concatenate(repeats_matcher)
+        vntr_matcher.concatenate(right_flanking_matcher)
+        vntr_matcher.bake(merge=None)
+
+        json_str = vntr_matcher.to_json()
+        with open(stored_hmm_file, 'w') as outfile:
+            outfile.write(json_str)
+        return vntr_matcher
 
     def filter_reads_with_keyword_matching(self):
         word_size = int(len(self.reference_vntr.pattern)/3)
@@ -47,7 +62,7 @@ class VNTRFinder:
 
     def find_repeat_count(self, short_read_files):
         copies = int(round(150.0 / len(self.reference_vntr.pattern) + 0.5))
-        hmm = self.get_VNTR_matcher_hmm(copies)
+        hmm = self.get_vntr_matcher_hmm(copies)
 
         blast_ids = self.filter_reads_with_keyword_matching()
 

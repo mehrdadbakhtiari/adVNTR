@@ -3,6 +3,7 @@ import shlex
 import os
 from Bio.Blast.Applications import NcbiblastnCommandline
 from Bio import Seq, SeqRecord, SeqIO
+import settings
 
 
 def make_blast_database(fasta_files, db_name):
@@ -18,10 +19,9 @@ def make_blast_database(fasta_files, db_name):
     call(['blastdb_aliastool'] + merge_db_args)
 
 
-def get_blast_matched_ids(query, blast_db_name, word_size=None, max_seq='6000', reward='1', penalty='-1', gapopen='2',
-                          gapextend='1', evalue=10.0, search_id=''):
-    query_file = 'blast_tmp/' + search_id + '_query.fasta'
-    result_file = 'blast_tmp/' + search_id + '_blast_result.txt'
+def get_blast_matched_ids(query, blast_db_name, word_size=None, max_seq='6000', evalue=10.0, search_id=''):
+    query_file = settings.BLAST_TMP_DIR + search_id + '_query.fasta'
+    result_file = settings.BLAST_TMP_DIR + search_id + '_blast_result.txt'
     with open(query_file, "w") as output_handle:
         my_rec = SeqRecord.SeqRecord(seq=Seq.Seq(query), id='query', description='')
         SeqIO.write([my_rec], output_handle, 'fasta')
