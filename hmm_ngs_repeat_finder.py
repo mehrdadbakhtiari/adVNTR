@@ -13,15 +13,7 @@ class VNTRFinder:
     def __init__(self, reference_vntr):
         self.reference_vntr = reference_vntr
 
-    def get_vntr_matcher_hmm(self, copies):
-        stored_hmm_file = settings.TRAINED_HMMS_DIR + self.reference_vntr.id + '.json'
-        if settings.USE_TRAINED_HMMS and os.path.isfile(stored_hmm_file):
-            model = Model()
-            with open(stored_hmm_file, 'r') as infile:
-                json_str = infile.readline()
-            model.from_json(json_str)
-            return model
-
+    def build_vntr_matcher_hmm(self, copies):
         patterns = self.reference_vntr.get_repeat_segments() * 100
         left_flanking_region = self.reference_vntr.left_flanking_region
         right_flanking_region = self.reference_vntr.right_flanking_region
@@ -32,6 +24,18 @@ class VNTRFinder:
         vntr_matcher.concatenate(repeats_matcher)
         vntr_matcher.concatenate(right_flanking_matcher)
         vntr_matcher.bake(merge=None)
+        return vntr_matcher
+
+    def get_vntr_matcher_hmm(self, copies):
+        stored_hmm_file = settings.TRAINED_HMMS_DIR + self.reference_vntr.id + '.json'
+        if settings.USE_TRAINED_HMMS and os.path.isfile(stored_hmm_file):
+            model = Model()
+            with open(stored_hmm_file, 'r') as infile:
+                json_str = infile.readline()
+            model.from_json(json_str)
+            return model
+
+        vntr_matcher = self.build_vntr_matcher_hmm(copies)
 
         json_str = vntr_matcher.to_json()
         with open(stored_hmm_file, 'w') as outfile:
