@@ -113,9 +113,11 @@ def find_non_overlapping_vntrs(vntrseek_output='repeats_length_patterns_chromoso
     return vntrs
 
 
-def identify_homologous_vntrs(vntrs):
+def identify_homologous_vntrs(vntrs, chr=None):
     for i in range(len(vntrs)):
         for j in range(i + 1, len(vntrs)):
+            if chr and (chr != vntrs[i].chromosome or chr != vntrs[j].chromosome):
+                continue
             if vntrs[i].is_homologous_vntr(vntrs[j]):
                 vntrs[i].has_homologous = True
                 vntrs[j].has_homologous = True
@@ -148,4 +150,4 @@ def load_processed_vntrs_data(vntrseek_output='repeats_length_patterns_chromosom
     return vntrs
 
 
-process_vntrseek_data()
+# process_vntrseek_data()

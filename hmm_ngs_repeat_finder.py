@@ -27,12 +27,10 @@ class VNTRFinder:
         return vntr_matcher
 
     def get_vntr_matcher_hmm(self, copies):
-        stored_hmm_file = settings.TRAINED_HMMS_DIR + self.reference_vntr.id + '.json'
+        stored_hmm_file = settings.TRAINED_HMMS_DIR + str(self.reference_vntr.id) + '.json'
         if settings.USE_TRAINED_HMMS and os.path.isfile(stored_hmm_file):
             model = Model()
-            with open(stored_hmm_file, 'r') as infile:
-                json_str = infile.readline()
-            model.from_json(json_str)
+            model = model.from_json(stored_hmm_file)
             return model
 
         vntr_matcher = self.build_vntr_matcher_hmm(copies)
@@ -151,7 +149,7 @@ class VNTRFinder:
 
 read_files = ['original_reads/paired_dat1.fasta', 'original_reads/paired_dat2.fasta']
 vntrs = load_processed_vntrs_data()
-vntrs = identify_homologous_vntrs(vntrs)
+vntrs = identify_homologous_vntrs(vntrs, 'chr15')
 for i in range(len(vntrs)):
     if vntrs[i].chromosome != 'chr15':
         continue
@@ -159,6 +157,9 @@ for i in range(len(vntrs)):
     if not vntrs[i].is_non_overlapping() or vntrs[i].has_homologous_vntr():
         continue
     vntr_finder = VNTRFinder(vntrs[i])
+    # copies = int(round(150.0 / len(vntr_finder.reference_vntr.pattern) + 0.5))
+    # hmm = vntr_finder.get_vntr_matcher_hmm(copies)
+
     # vntrs.append(vntr_finder)
 
     # cn = vntr_finder.find_repeat_count(read_files)
