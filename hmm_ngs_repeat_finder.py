@@ -56,14 +56,15 @@ class VNTRFinder:
                 out.write('maximum number of read selected in filtering for pattern %s\n' % self.reference_vntr.id)
         return blast_ids
 
-    def get_min_score_to_select_the_read(self, hmm, copies):
+    def get_min_score_to_select_the_read(self, hmm, copies, read_length=150):
         min_score = 0
         for seg in self.reference_vntr.get_repeat_segments():
-            min_score = min(min_score, hmm.viterbi((seg * copies)[:150])[0])
+            min_score = min(min_score, hmm.viterbi((seg * copies)[:read_length])[0])
         return min_score
 
     def find_repeat_count(self, short_read_files):
-        copies = int(round(150.0 / len(self.reference_vntr.pattern) + 0.5))
+        read_length = 150
+        copies = int(round(float(read_length) / len(self.reference_vntr.pattern) + 0.5))
         hmm = self.get_vntr_matcher_hmm(copies)
 
         blast_ids = self.filter_reads_with_keyword_matching()
@@ -78,7 +79,7 @@ class VNTRFinder:
             if re_read not in blast_ids:
                 print('FN in filtering')
 
-        min_score = self.get_min_score_to_select_the_read(hmm, copies)
+        min_score = self.get_min_score_to_select_the_read(hmm, copies, read_length)
         different_read_score_reads = {}
         different_read_score_occurrences = {}
         for score_diff in range(-13, 13):
@@ -134,13 +135,13 @@ class VNTRFinder:
             sensitivity = float(len(true_positives)) / len(related_reads) if len(related_reads) > 0 else 0
             if sensitivity > 0.9:
                 print(s_threshold, sensitivity, len(false_positives))
-            if 1 > sensitivity > 0.85 and len(false_negatives) > 0 and len(false_positives) > 0:
+            if 1 > sensitivity > 0.9 and len(false_negatives) > 0 and len(false_positives) > 0:
                 print('sensitivity ', sensitivity, ' FN:', false_negatives[0], ' FP:', false_positives[0])
             with open('FP_and_sensitivity_HMM_read_scoring_method.txt', 'a') as outfile:
                 outfile.write('%s\t%s\t%s\t%s\t%s\t%s\n' % (len(false_positives), sensitivity, s_threshold, self.reference_vntr.id, len(self.reference_vntr.pattern), len(true_positives)))
             occurrences = different_read_score_occurrences[s_threshold]
             error = abs(len(self.reference_vntr.get_repeat_segments()) - occurrences / avg_coverage)
-            if sensitivity > 0.6 and error < min_error:
+            if sensitivity > 0.9 and error < min_error:
                 min_error = error
                 cn = occurrences / avg_coverage
 
@@ -148,21 +149,17 @@ class VNTRFinder:
 
 
 read_files = ['original_reads/paired_dat1.fasta', 'original_reads/paired_dat2.fasta']
-vntrs = load_processed_vntrs_data()
-vntrs = identify_homologous_vntrs(vntrs, 'chr15')
-for i in range(len(vntrs)):
-    if vntrs[i].chromosome != 'chr15':
+reference_vntrs = load_processed_vntrs_data()
+reference_vntrs = identify_homologous_vntrs(reference_vntrs, 'chr15')
+for i in range(len(reference_vntrs)):
+    if reference_vntrs[i].chromosome != 'chr15':
         continue
     print(i)
-    if not vntrs[i].is_non_overlapping() or vntrs[i].has_homologous_vntr():
+    if not reference_vntrs[i].is_non_overlapping() or reference_vntrs[i].has_homologous_vntr():
         continue
-    vntr_finder = VNTRFinder(vntrs[i])
-    # copies = int(round(150.0 / len(vntr_finder.reference_vntr.pattern) + 0.5))
-    # hmm = vntr_finder.get_vntr_matcher_hmm(copies)
+    vntr_finder = VNTRFinder(reference_vntrs[i])
+    cn = vntr_finder.find_repeat_count(read_files)
 
-    # vntrs.append(vntr_finder)
-
-    # cn = vntr_finder.find_repeat_count(read_files)
     # with open('hmm_repeat_count.txt', 'a') as output:
     #     output.write('%s %s\n' % (i, cn / repeat_counts[i]))
     # end_point = start_points[i] + sum([len(e) for e in repeat_segments])
@@ -170,6 +167,6 @@ for i in range(len(vntrs)):
     # with open('vntr_coverage_ratio.txt', 'a') as output:
     #     output.write('%s %s\n' % (i, VNTR_coverage_ratio))
 
-print(len(vntrs))
-nodes, edges = get_nodes_and_edges_of_vntr_graph(vntrs)
-plot_graph_components(nodes, edges)
+# print(len(reference_vntrs))
+# nodes, edges = get_nodes_and_edges_of_vntr_graph(reference_vntrs)
+# plot_graph_components(nodes, edges)

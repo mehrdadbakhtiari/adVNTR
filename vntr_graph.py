@@ -55,7 +55,7 @@ def get_nodes_and_edges_of_vntr_graph(vntrs):
     for i in range(len(vntrs)):
         nodes.append(vntrs[i].id)
         for j in range(i + 1, len(vntrs)):
-            if vntrs[i].is_homologous(vntrs[j]):
+            if vntrs[i].is_homologous_vntr(vntrs[j]):
                 edges.append((vntrs[i].id, vntrs[j].id))
 
     nodes = [1, 2, 3, 4, 5, 8, 9, 10, 12, 16, 17, 18, 19, 21, 22, 24, 25, 28, 29, 30, 31, 32, 33, 34, 38, 40, 47, 53,
