@@ -44,7 +44,7 @@ class ReferenceVNTR:
         structure1 = self.left_flanking_region[120:] + self.pattern + self.right_flanking_region[:20]
         structure2 = another.left_flanking_region[120:] + another.pattern + another.right_flanking_region[:20]
         alignment_score = pairwise2.align.localms(structure1, structure2, 1, -1, -1, -1, score_only=True)
-        if float(alignment_score) / len(structure1) > 0.8 or float(alignment_score) / len(structure2) > 0.8:
+        if float(alignment_score) / len(structure1) > 0.66 or float(alignment_score) / len(structure2) > 0.66:
             return True
         return False
 
