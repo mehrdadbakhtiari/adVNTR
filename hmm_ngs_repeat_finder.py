@@ -58,8 +58,10 @@ class VNTRFinder:
 
     def get_min_score_to_select_the_read(self, hmm, copies, read_length=150):
         min_score = 0
-        for seg in self.reference_vntr.get_repeat_segments():
-            min_score = min(min_score, hmm.viterbi((seg * copies)[:read_length])[0])
+        repeat_segments = self.reference_vntr.get_repeat_segments()
+        for i in range(len(repeat_segments) - copies + 1):
+            read = ''.join(repeat_segments[i:i+copies])
+            min_score = min(min_score, hmm.viterbi(read[:read_length])[0])
         return min_score
 
     def find_repeat_count(self, short_read_files):
@@ -125,7 +127,7 @@ class VNTRFinder:
 
         cn = 10000
         min_error = 1000
-        for s_threshold in different_read_score_reads.keys():
+        for s_threshold in sorted(different_read_score_reads.keys()):
             selected_reads = different_read_score_reads[s_threshold]
             true_positives = [read for read in selected_reads if read in related_reads]
             false_positives = [read for read in selected_reads if read not in true_positives]
