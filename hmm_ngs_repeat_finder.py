@@ -15,8 +15,9 @@ class VNTRFinder:
 
     def build_vntr_matcher_hmm(self, copies):
         patterns = self.reference_vntr.get_repeat_segments() * 100
-        left_flanking_region = self.reference_vntr.left_flanking_region
-        right_flanking_region = self.reference_vntr.right_flanking_region
+        flanking_region_size = 140
+        left_flanking_region = self.reference_vntr.left_flanking_region[-flanking_region_size:]
+        right_flanking_region = self.reference_vntr.right_flanking_region[:flanking_region_size]
 
         vntr_matcher = get_suffix_matcher_hmm(left_flanking_region)
         right_flanking_matcher = get_prefix_matcher_hmm(right_flanking_region)
@@ -162,8 +163,8 @@ for i in range(len(reference_vntrs)):
     vntr_finder = VNTRFinder(reference_vntrs[i])
     cn = vntr_finder.find_repeat_count(read_files)
 
-    # with open('hmm_repeat_count.txt', 'a') as output:
-    #     output.write('%s %s\n' % (i, cn / repeat_counts[i]))
+    with open('hmm_repeat_count.txt', 'a') as output:
+        output.write('%s %s\n' % (i, cn / len(reference_vntrs[i].get_repeat_segments())))
     # end_point = start_points[i] + sum([len(e) for e in repeat_segments])
     # VNTR_coverage_ratio = get_VNTR_coverage_over_total_coverage(start_points[i], end_point)
     # with open('vntr_coverage_ratio.txt', 'a') as output:

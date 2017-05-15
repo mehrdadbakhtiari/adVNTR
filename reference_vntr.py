@@ -20,7 +20,7 @@ class ReferenceVNTR:
         corresponding_region_in_ref = self.get_corresponding_region_in_ref()
         repeat_segments = self.find_repeat_segments(corresponding_region_in_ref)
         self.repeat_segments = repeat_segments
-        flanking_region_size = 150 - 10
+        flanking_region_size = 500
         self.left_flanking_region, self.right_flanking_region = self.get_flanking_regions(flanking_region_size)
 
     def init_from_xml(self, repeat_segments, left_flanking_region, right_flanking_region):
@@ -41,8 +41,8 @@ class ReferenceVNTR:
         return self.repeat_segments
 
     def is_homologous_vntr(self, another):
-        structure1 = self.left_flanking_region[120:] + self.pattern + self.right_flanking_region[:20]
-        structure2 = another.left_flanking_region[120:] + another.pattern + another.right_flanking_region[:20]
+        structure1 = self.left_flanking_region[-20:] + self.pattern + self.right_flanking_region[:20]
+        structure2 = another.left_flanking_region[-20:] + another.pattern + another.right_flanking_region[:20]
         alignment_score = pairwise2.align.localms(structure1, structure2, 1, -1, -1, -1, score_only=True)
         if float(alignment_score) / len(structure1) > 0.66 or float(alignment_score) / len(structure2) > 0.66:
             return True
@@ -116,7 +116,7 @@ def find_non_overlapping_vntrs(vntrseek_output='repeats_length_patterns_chromoso
 def identify_homologous_vntrs(vntrs, chr=None):
     for i in range(len(vntrs)):
         for j in range(i + 1, len(vntrs)):
-            if chr and (chr != vntrs[i].chromosome or chr != vntrs[j].chromosome):
+            if chr and (chr != vntrs[i].chromosome and chr != vntrs[j].chromosome):
                 continue
             if vntrs[i].is_homologous_vntr(vntrs[j]):
                 vntrs[i].has_homologous = True
