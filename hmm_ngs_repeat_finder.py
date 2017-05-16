@@ -52,7 +52,7 @@ class VNTRFinder:
                                                evalue=10, word_size=word_size, search_id=str(self.reference_vntr.id))
 
         print('blast selected ', len(blast_ids), ' reads')
-        if len(blast_ids) == len(self.reference_vntr.get_repeat_segments) * 50 * 1000:
+        if len(blast_ids) == len(self.reference_vntr.get_repeat_segments()) * 50 * 1000:
             with open('errors.txt', 'a') as out:
                 out.write('maximum number of read selected in filtering for pattern %s\n' % self.reference_vntr.id)
         return blast_ids
