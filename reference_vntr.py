@@ -79,16 +79,16 @@ class ReferenceVNTR:
         return left_flanking, right_flanking
 
 
-def load_unprocessed_vntrseek_data(vntrseek_output, chr=None):
+def load_unprocessed_vntrseek_data(vntrseek_output, chromosome=None):
     vntrs = []
     with open(vntrseek_output) as input_file:
         input_lines = [line.strip() for line in input_file.readlines() if line.strip() != '']
         for vntr_id, line in enumerate(input_lines):
-            vntrseek_repeat, _, pattern, chromosome, start = line.split()
+            vntrseek_repeat, _, pattern, chromosome_number, start = line.split()
             estimated_repeats = int(float(vntrseek_repeat) + 5)
-            if chr and chromosome != chr:
+            if chromosome and chromosome_number != chromosome:
                 continue
-            vntrs.append(ReferenceVNTR(vntr_id, pattern, int(start)-1, chromosome, estimated_repeats))
+            vntrs.append(ReferenceVNTR(vntr_id, pattern, int(start)-1, chromosome_number, estimated_repeats))
     return vntrs
 
 
@@ -113,10 +113,10 @@ def find_non_overlapping_vntrs(vntrseek_output='repeats_length_patterns_chromoso
     return vntrs
 
 
-def identify_homologous_vntrs(vntrs, chr=None):
+def identify_homologous_vntrs(vntrs, chromosome=None):
     for i in range(len(vntrs)):
         for j in range(i + 1, len(vntrs)):
-            if chr and (chr != vntrs[i].chromosome and chr != vntrs[j].chromosome):
+            if chromosome and (chromosome != vntrs[i].chromosome and chromosome != vntrs[j].chromosome):
                 continue
             if vntrs[i].is_homologous_vntr(vntrs[j]):
                 vntrs[i].has_homologous = True

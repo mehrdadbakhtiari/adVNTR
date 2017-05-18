@@ -10,6 +10,7 @@ import os
 
 
 class VNTRFinder:
+    """Find the VNTR structure of a reference VNTR in NGS data of the donor."""
     def __init__(self, reference_vntr):
         self.reference_vntr = reference_vntr
 
@@ -161,10 +162,10 @@ for i in range(len(reference_vntrs)):
     if not reference_vntrs[i].is_non_overlapping() or reference_vntrs[i].has_homologous_vntr():
         continue
     vntr_finder = VNTRFinder(reference_vntrs[i])
-    cn = vntr_finder.find_repeat_count(read_files)
+    copy_number = vntr_finder.find_repeat_count(read_files)
 
     with open('hmm_repeat_count.txt', 'a') as output:
-        output.write('%s %s\n' % (i, cn / len(reference_vntrs[i].get_repeat_segments())))
+        output.write('%s %s\n' % (i, copy_number / len(reference_vntrs[i].get_repeat_segments())))
     # end_point = start_points[i] + sum([len(e) for e in repeat_segments])
     # VNTR_coverage_ratio = get_VNTR_coverage_over_total_coverage(start_points[i], end_point)
     # with open('vntr_coverage_ratio.txt', 'a') as output:
