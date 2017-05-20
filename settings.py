@@ -1,5 +1,6 @@
 
 HG19_DIR = './hg19_chromosomes/'
+CHROMOSOMES = ['chr' + str(chr_number) for chr_number in list(range(1, 23))] + ['chrX', 'chrY']
 
 USE_TRAINED_HMMS = True
 TRAINED_HMMS_DIR = 'trained_HMMs/'
