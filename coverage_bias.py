@@ -24,14 +24,14 @@ class CoverageBiasDetector:
                 gc_map[chromosome][window_number] = gc_content
         return gc_map
 
-    def add_bp_to_coverage_map(self, covered_bps, window_number, read_start, read_end):
+    def add_bp_to_coverage_map(self, covered_bps, chromosome, window_number, read_start, read_end):
         start = max(window_number * GC_CONTENT_WINDOW_SIZE, read_start)
         end = min(window_number * GC_CONTENT_WINDOW_SIZE + GC_CONTENT_WINDOW_SIZE, read_end)
-        if window_number not in covered_bps:
-            covered_bps[window_number] = 0
-            covered_bps[window_number] += end - start
+        if window_number not in covered_bps[chromosome]:
+            covered_bps[chromosome][window_number] = 0
+        covered_bps[chromosome][window_number] += end - start
         if read_end > window_number * GC_CONTENT_WINDOW_SIZE + GC_CONTENT_WINDOW_SIZE:
-            self.add_bp_to_coverage_map(covered_bps, window_number+1, end, read_end)
+            self.add_bp_to_coverage_map(covered_bps, chromosome, window_number+1, end, read_end)
 
     def get_gc_content_coverage_map(self):
         reference_gc_map = self.get_gc_contents_of_reference_windows()
@@ -41,7 +41,9 @@ class CoverageBiasDetector:
             covered_bps[chromosome] = {}
         for read in samfile.fetch():
             window_number = read.reference_start / GC_CONTENT_WINDOW_SIZE
-            self.add_bp_to_coverage_map(covered_bps, window_number, read.reference_start, read.reference_end)
+            read_start = read.reference_start
+            read_end = read.reference_end
+            self.add_bp_to_coverage_map(covered_bps, read.reference_name, window_number, read_start, read_end)
 
 
 class CoverageCorrector:
