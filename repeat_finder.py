@@ -1,5 +1,6 @@
 from Bio import pairwise2, Seq, SeqIO
 from blast_wrapper import get_blast_matched_ids
+import settings
 
 
 def find_exact_match_from_candid_reads(query, candid_reads, min_similarity_score):
@@ -71,7 +72,7 @@ def get_copy_number_of_pattern_in_reads(query, matched_reads, average_coverage=2
 
 def get_copy_number_of_pattern(query, fasta_files, directory='', min_len=None):
     min_alignment_score = 0.66
-    total_length = 102531392
+    total_length = settings.GENOME_LENGTH
 
     db_name = 'blast_db'
     if len(directory):

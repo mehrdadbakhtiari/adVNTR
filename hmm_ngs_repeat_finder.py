@@ -92,7 +92,6 @@ class VNTRFinder:
 
         number_of_reads = 0
         read_length = 0
-        total_length = 102531392
         for read_file in short_read_files:
             print('opening read file')
             reads = SeqIO.parse(read_file, 'fasta')
@@ -125,7 +124,7 @@ class VNTRFinder:
 
                 number_of_reads += 1
 
-        avg_coverage = float(number_of_reads * read_length) / total_length
+        avg_coverage = float(number_of_reads * read_length) / settings.GENOME_LENGTH
 
         cn = 10000
         min_error = 1000
