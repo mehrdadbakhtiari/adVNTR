@@ -49,8 +49,8 @@ class CoverageBiasDetector:
         for chromosome in covered_bps.keys():
             for window_number in covered_bps[chromosome]:
                 windows_gc = reference_gc_map[chromosome][window_number]
-                windows_gc = int(windows_gc * 100)
-                windows_coverage = covered_bps[chromosome][window_number]
+                windows_gc = int(windows_gc * 10)
+                windows_coverage = covered_bps[chromosome][window_number] / GC_CONTENT_WINDOW_SIZE
                 if windows_gc not in gc_coverage_map:
                     gc_coverage_map[windows_gc] = []
                 gc_coverage_map[windows_gc].append(windows_coverage)

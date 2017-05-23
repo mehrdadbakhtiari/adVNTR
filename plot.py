@@ -330,13 +330,15 @@ def plot_gc_content_violin_plot():
     bias_detector = CoverageBiasDetector('original_reads/paired_dat.sam')
     gc_coverage_map = bias_detector.get_gc_content_coverage_map()
     data = []
-    for gc_content in range(0, 101):
+    pos = []
+    for gc_content in range(0, 10):
+        pos.append(gc_content * 10)
         data.append([float('nan'), float('nan')])
         if gc_content in gc_coverage_map:
             data[gc_content] = gc_coverage_map[gc_content]
-    plt.violinplot(data)
+    plt.violinplot(data, pos, widths=0.7, showmeans=True)
     plt.xlabel('GC Content Percentage')
-    plt.ylabel('coverage')
+    plt.ylabel('Coverage')
     plt.savefig('gc_coverage_violinplot_simulated.png')
 
 
