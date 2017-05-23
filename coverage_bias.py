@@ -45,6 +45,18 @@ class CoverageBiasDetector:
             read_end = read.reference_end
             self.add_bp_to_coverage_map(covered_bps, read.reference_name, window_number, read_start, read_end)
 
+        gc_coverage_map = {}
+        for chromosome in covered_bps.keys:
+            for window_number in covered_bps[chromosome]:
+                windows_gc = reference_gc_map[chromosome][window_number]
+                windows_gc = int(windows_gc * 100)
+                windows_coverage = covered_bps[chromosome][window_number]
+                if windows_gc not in gc_coverage_map:
+                    gc_coverage_map[windows_gc] = []
+                gc_coverage_map[windows_gc].append(windows_coverage)
+
+        return gc_coverage_map
+
 
 class CoverageCorrector:
     """Normalize the coverage based on the coverage distribution."""

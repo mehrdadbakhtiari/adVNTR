@@ -322,6 +322,22 @@ def plot_coverage_ratio_histogram():
     plt.savefig('coverage_ratio.png')
 
 
+def plot_gc_content_violin_plot():
+    from coverage_bias import CoverageBiasDetector
+    import matplotlib.pyplot as plt
+    bias_detector = CoverageBiasDetector('original_reads/paired_dat.sam')
+    gc_coverage_map = bias_detector.get_gc_content_coverage_map()
+    data = []
+    for gc_content in range(0, 101):
+        data.append([])
+        if gc_content in gc_coverage_map:
+            data[gc_content] = gc_coverage_map[gc_content]
+    plt.violinplot(data)
+    plt.xlabel('GC Content Percentage')
+    plt.ylabel('coverage')
+    plt.savefig('gc_coverage_violinplot_simulated.png')
+
+
 edges = [(1, 8), (1, 16), (2, 17), (4, 18), (8, 16), (30, 32), (30, 33), (32, 33), (34, 40), (34, 47), (38, 57),
          (38, 59), (38, 67), (40, 47), (57, 59), (57, 67), (59, 67)] + [(5, 53), (47, 19), (71, 3), (31, 9)]
 eliminated_nodes = []
@@ -335,4 +351,5 @@ for a, b in edges:
 # plot_sensitivity_over_fallout()
 # plot_reference_repeats()
 # plot_copy_count_comparison(eliminated_nodes)
-plot_FP_for_specific_sensitivity(eliminated_nodes)
+# plot_FP_for_specific_sensitivity(eliminated_nodes)
+plot_gc_content_violin_plot()
