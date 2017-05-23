@@ -331,7 +331,7 @@ def plot_gc_content_violin_plot():
     gc_coverage_map = bias_detector.get_gc_content_coverage_map()
     data = []
     for gc_content in range(0, 101):
-        data.append([])
+        data.append([float('nan'), float('nan')])
         if gc_content in gc_coverage_map:
             data[gc_content] = gc_coverage_map[gc_content]
     plt.violinplot(data)
