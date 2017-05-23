@@ -336,7 +336,7 @@ def plot_gc_content_violin_plot():
         data.append([float('nan'), float('nan')])
         if gc_content in gc_coverage_map:
             data[gc_content] = gc_coverage_map[gc_content]
-    plt.violinplot(data, pos, widths=0.7, showmeans=True)
+    plt.violinplot(data, pos, widths=7, showmeans=True)
     plt.xlabel('GC Content Percentage')
     plt.ylabel('Coverage')
     plt.savefig('gc_coverage_violinplot_simulated.png')
