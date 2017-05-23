@@ -324,6 +324,8 @@ def plot_coverage_ratio_histogram():
 
 def plot_gc_content_violin_plot():
     from coverage_bias import CoverageBiasDetector
+    import matplotlib
+    matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     bias_detector = CoverageBiasDetector('original_reads/paired_dat.sam')
     gc_coverage_map = bias_detector.get_gc_content_coverage_map()
