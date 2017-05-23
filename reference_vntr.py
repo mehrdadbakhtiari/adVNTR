@@ -1,6 +1,5 @@
 from Bio import pairwise2
 from hmm_utils import build_reference_repeat_finder_hmm, get_repeat_segments_from_visited_states_and_region
-from settings import *
 from utils import *
 
 
