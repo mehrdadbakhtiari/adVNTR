@@ -42,8 +42,9 @@ class CoverageBiasDetector:
         for read in samfile.fetch():
             window_number = read.reference_start / GC_CONTENT_WINDOW_SIZE
             read_start = read.reference_start
-            read_end = read.reference_end
-            self.add_bp_to_coverage_map(covered_bps, read.reference_name, window_number, read_start, read_end)
+            read_end = read.reference_end if read.reference_end else read_start + len(read)
+            if read.reference_name in CHROMOSOMES:
+                self.add_bp_to_coverage_map(covered_bps, read.reference_name, window_number, read_start, read_end)
 
         gc_coverage_map = {}
         for chromosome in covered_bps.keys():
