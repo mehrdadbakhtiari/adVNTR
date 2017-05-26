@@ -84,4 +84,24 @@ class CoverageBiasDetector:
 
 class CoverageCorrector:
     """Normalize the coverage based on the coverage distribution."""
-    pass
+
+    def __init__(self, gc_coverage_map):
+        """
+        :param gc_coverage_map: The map of coverage distribution for each GC content,
+            which is found by CoverageBiasDetector
+        """
+        self.gc_coverage_map = gc_coverage_map
+
+    def get_sequencing_mean_coverage(self):
+        windows_coverages = []
+        for gc_content, coverages in self.gc_coverage_map.items():
+            windows_coverages.append(coverages)
+        return sum(windows_coverages) / float(len(windows_coverages))
+
+    def get_mean_coverage_of_gc_content(self, gc_content):
+        return sum(self.gc_coverage_map[gc_content]) / float(len(self.gc_coverage_map[gc_content]))
+
+    def get_scaled_coverage(self, reference_vntr, observed_coverage):
+        gc_content = get_gc_content(''.join(reference_vntr.get_repeat_segments()))
+        scale_ratio = self.get_sequencing_mean_coverage() / self.get_mean_coverage_of_gc_content(gc_content)
+        return observed_coverage * scale_ratio
