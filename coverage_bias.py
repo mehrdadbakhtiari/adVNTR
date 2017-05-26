@@ -17,9 +17,6 @@ class CoverageBiasDetector:
         self.chromosome = chromosome
         self.alignment_reference = alignment_reference
 
-    def get_sam_file_from_read_files(self):
-        pass
-
     def get_gc_contents_of_reference_windows(self):
         gc_map = {}
         for chromosome in self.chromosome or CHROMOSOMES:
