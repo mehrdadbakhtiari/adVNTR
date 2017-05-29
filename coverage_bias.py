@@ -49,7 +49,7 @@ class CoverageBiasDetector:
         if self.chromosome and self.alignment_reference != 'HG19':
             reference = self.chromosome[3:]
 
-        for read in samfile.fetch(reference):
+        for read in samfile.fetch(reference, until_eof=True):
             window_number = read.reference_start / GC_CONTENT_WINDOW_SIZE
             read_start = read.reference_start
             read_end = read.reference_end if read.reference_end else read_start + len(read.seq)
