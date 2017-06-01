@@ -1,10 +1,12 @@
 from Bio import SeqIO
+
 from blast_wrapper import get_blast_matched_ids, make_blast_database
+from coverage_bias import CoverageBiasDetector, CoverageCorrector
 from hmm_utils import *
-from sam_utils import get_related_reads_and_read_count_in_samfile  #, get_VNTR_coverage_over_total_coverage
+from sam_utils import get_related_reads_and_read_count_in_samfile, extract_unmapped_reads_to_fasta_file
+from reference_vntr import identify_homologous_vntrs, load_processed_vntrs_data
 import settings
 # from vntr_graph import plot_graph_components, get_nodes_and_edges_of_vntr_graph
-from reference_vntr import identify_homologous_vntrs, load_processed_vntrs_data
 
 import os
 
@@ -29,10 +31,12 @@ class VNTRFinder:
         vntr_matcher.bake(merge=None)
         return vntr_matcher
 
-    def get_vntr_matcher_hmm(self, copies):
+    def get_vntr_matcher_hmm(self, read_length):
         """Try to load trained HMM for this VNTR
         If there was no trained HMM, it will build one and store it for later usage
         """
+        copies = int(round(float(read_length) / len(self.reference_vntr.pattern) + 0.5))
+
         stored_hmm_file = settings.TRAINED_HMMS_DIR + str(self.reference_vntr.id) + '.json'
         if settings.USE_TRAINED_HMMS and os.path.isfile(stored_hmm_file):
             model = Model()
@@ -46,16 +50,15 @@ class VNTRFinder:
             outfile.write(json_str)
         return vntr_matcher
 
-    def filter_reads_with_keyword_matching(self, short_read_files):
+    def filter_reads_with_keyword_matching(self, working_directory, short_read_files):
         word_size = int(len(self.reference_vntr.pattern)/3)
         if word_size > 11:
             word_size = 11
         word_size = str(word_size)
         blast_ids = set([])
 
-        dir = '/'.join(short_read_files[0].split('/')[:-1]) + '/'
-        db_name = dir[:-1]
-        blast_db_name = dir + db_name
+        db_name = working_directory[:-1]
+        blast_db_name = working_directory + db_name
         if not os.path.exists(blast_db_name + '.nal'):
             make_blast_database(short_read_files, blast_db_name)
         for repeat_segment in self.reference_vntr.get_repeat_segments():
@@ -85,7 +88,7 @@ class VNTRFinder:
 
     def get_min_score_to_select_a_read(self):
         """Try to load the minimum score for this VNTR
-        If the score was not precomputed, it writes an error and returns 0
+        If the score was not precomputed, it outputs an error and returns 0
         """
         with open('id_score_to_select.txt', 'r') as infile:
             id_score_pairs = [(line.split()[0], line.split()[1]) for line in infile.readlines() if line.strip() != '']
@@ -97,50 +100,70 @@ class VNTRFinder:
 
         return id_score_map[self.reference_vntr.id]
 
-    def find_repeat_count(self, short_read_files):
-        read_length = 150
-        copies = int(round(float(read_length) / len(self.reference_vntr.pattern) + 0.5))
-        hmm = self.get_vntr_matcher_hmm(copies)
+    def find_repeat_count_from_alignment_file(self, alignment_file, working_directory='./'):
 
-        filtered_read_ids = self.filter_reads_with_keyword_matching(short_read_files)
+        unmapped_read_file = working_directory + 'unmapped.fasta'
+        extract_unmapped_reads_to_fasta_file(alignment_file, unmapped_read_file, working_directory)
+
+        if working_directory == './':
+            working_directory = os.path.dirname(alignment_file)
+        filtered_read_ids = self.filter_reads_with_keyword_matching(working_directory, unmapped_read_file)
 
         min_score_to_count_read = self.get_min_score_to_select_a_read()
         selected_reads = []
         counted_vntr_base_pairs = 0
 
         number_of_reads = 0
-        read_length = 0
+        read_length = 150
+        hmm = None
         min_repeat_bp_to_add_read = 2
         if len(self.reference_vntr.pattern) < 30:
             min_repeat_bp_to_add_read = 2
         min_repeat_bp_to_count_repeats = 2
-        for read_file in short_read_files:
-            print('opening a read file')
-            reads = SeqIO.parse(read_file, 'fasta')
-            for read_segment in reads:
-                if number_of_reads == 0:
-                    read_length = len(str(read_segment.seq))
-                number_of_reads += 1
-                if read_segment.id not in filtered_read_ids:
-                    continue
-                logp, vpath = hmm.viterbi(str(read_segment.seq))
-                rev_logp, rev_vpath = hmm.viterbi(str(read_segment.seq.reverse_complement()))
-                if logp < rev_logp:
-                    logp = rev_logp
-                    vpath = rev_vpath
-                repeat_bps = get_number_of_repeat_bp_matches_in_vpath(vpath)
-                if logp > min_score_to_count_read:
-                    if repeat_bps > min_repeat_bp_to_count_repeats:
-                        counted_vntr_base_pairs += repeat_bps
-                    if repeat_bps > min_repeat_bp_to_add_read:
-                        selected_reads.append(read_segment.id)
 
-                number_of_reads += 1
+        reads = SeqIO.parse(unmapped_read_file, 'fasta')
+        for read_segment in reads:
+            if number_of_reads == 0:
+                read_length = len(str(read_segment.seq))
+            number_of_reads += 1
+            if not hmm:
+                hmm = self.get_vntr_matcher_hmm(read_length=read_length)
 
-        avg_coverage = float(number_of_reads * read_length) / settings.GENOME_LENGTH
+            if read_segment.id not in filtered_read_ids:
+                continue
+            logp, vpath = hmm.viterbi(str(read_segment.seq))
+            rev_logp, rev_vpath = hmm.viterbi(str(read_segment.seq.reverse_complement()))
+            if logp < rev_logp:
+                logp = rev_logp
+                vpath = rev_vpath
+            repeat_bps = get_number_of_repeat_bp_matches_in_vpath(vpath)
+            if logp > min_score_to_count_read:
+                if repeat_bps > min_repeat_bp_to_count_repeats:
+                    counted_vntr_base_pairs += repeat_bps
+                if repeat_bps > min_repeat_bp_to_add_read:
+                    selected_reads.append(read_segment.id)
+
+            number_of_reads += 1
+
         pattern_occurrences = counted_vntr_base_pairs / float(len(self.reference_vntr.pattern))
-        print('pattern_occurrences and avg_coverage: ', pattern_occurrences, avg_coverage)
-        return pattern_occurrences / avg_coverage
+        bias_detector = CoverageBiasDetector(alignment_file, self.reference_vntr.chromosome, 'GRCh37')
+        coverage_bias_corrector = CoverageCorrector(bias_detector.get_gc_content_coverage_map())
+
+        observed_copy_number = pattern_occurrences / coverage_bias_corrector.get_sequencing_mean_coverage()
+        scaled_copy_number = coverage_bias_corrector.get_scaled_coverage(self.reference_vntr, observed_copy_number)
+        print('observed copy number and scaled copy number: ', observed_copy_number, scaled_copy_number)
+        return scaled_copy_number
+
+    def find_repeat_count_from_short_reads(self, short_read_files, working_directory='./'):
+        """
+        Map short read sequencing data to human reference genome (hg19) and call find_repeat_count_from_alignment_file
+        :param short_read_files: short read sequencing data
+        :param working_directory: directory for generating the outputs
+        """
+        if working_directory == './':
+            working_directory = os.path.dirname(short_read_files[0])
+        alignment_file = ''
+        self.find_repeat_count_from_alignment_file(alignment_file, working_directory)
 
     def find_accuracy(self, samfile='original_reads/paired_dat.sam'):
         """Find sensitivity and false positive reads for a set of simulated data
@@ -183,7 +206,7 @@ for i in range(len(reference_vntrs)):
     if reference_vntrs[i].id not in accurate_vntr_list:
         continue
     vntr_finder = VNTRFinder(reference_vntrs[i])
-    copy_number = vntr_finder.find_repeat_count(read_files)
+    copy_number = vntr_finder.find_repeat_count_from_short_reads(read_files)
     # vntr_finder.find_accuracy()
 
     with open('hmm_repeat_count.txt', 'a') as output:

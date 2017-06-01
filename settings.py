@@ -11,3 +11,5 @@ BLAST_TMP_DIR = 'blast_tmp/'
 
 GC_CONTENT_WINDOW_SIZE = 100
 OUTLIER_COVERAGE = 200
+
+SEQTK_DIR = '../seqtk/seqtk'
