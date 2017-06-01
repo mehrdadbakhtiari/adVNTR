@@ -104,14 +104,16 @@ class VNTRFinder:
 
         unmapped_read_file = working_directory + 'unmapped.fasta'
         extract_unmapped_reads_to_fasta_file(alignment_file, unmapped_read_file, working_directory)
+        print('unmapped reads extracted')
 
         if working_directory == './':
             working_directory = os.path.dirname(alignment_file)
         filtered_read_ids = self.filter_reads_with_keyword_matching(working_directory, unmapped_read_file)
+        print('unmapped reads filtered')
 
         min_score_to_count_read = self.get_min_score_to_select_a_read()
         selected_reads = []
-        counted_vntr_base_pairs = 0
+        vntr_bp_in_unmapped_reads = 0
 
         number_of_reads = 0
         read_length = 150
@@ -139,13 +141,28 @@ class VNTRFinder:
             repeat_bps = get_number_of_repeat_bp_matches_in_vpath(vpath)
             if logp > min_score_to_count_read:
                 if repeat_bps > min_repeat_bp_to_count_repeats:
-                    counted_vntr_base_pairs += repeat_bps
+                    vntr_bp_in_unmapped_reads += repeat_bps
                 if repeat_bps > min_repeat_bp_to_add_read:
                     selected_reads.append(read_segment.id)
 
             number_of_reads += 1
+        print('vntr base pairs in unmapped reads:', vntr_bp_in_unmapped_reads)
 
-        pattern_occurrences = counted_vntr_base_pairs / float(len(self.reference_vntr.pattern))
+        vntr_bp_in_mapped_reads = 0
+        vntr_start = self.reference_vntr.start_point
+        vntr_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
+        region_start = vntr_start - settings.MAX_INSERT_SIZE
+        region_end = vntr_end + settings.MAX_INSERT_SIZE
+        chromosome = self.reference_vntr.chromosome[3:]
+        for read in alignment_file.fetch(chromosome, region_start, region_end):
+            if vntr_start <= read.reference_start < vntr_end or vntr_start < read.reference_end <= vntr_end:
+                end = min(read.reference_end, vntr_end)
+                start = max(read.reference_start, vntr_start)
+                vntr_bp_in_mapped_reads += end - start
+        print('vntr base pairs in mapped reads:', vntr_bp_in_mapped_reads)
+
+        total_counted_vntr_bp = vntr_bp_in_unmapped_reads + vntr_bp_in_mapped_reads
+        pattern_occurrences = total_counted_vntr_bp / float(len(self.reference_vntr.pattern))
         bias_detector = CoverageBiasDetector(alignment_file, self.reference_vntr.chromosome, 'GRCh37')
         coverage_bias_corrector = CoverageCorrector(bias_detector.get_gc_content_coverage_map())
 
@@ -163,7 +180,7 @@ class VNTRFinder:
         if working_directory == './':
             working_directory = os.path.dirname(short_read_files[0])
         alignment_file = ''
-        self.find_repeat_count_from_alignment_file(alignment_file, working_directory)
+        return self.find_repeat_count_from_alignment_file(alignment_file, working_directory)
 
     def find_accuracy(self, samfile='original_reads/paired_dat.sam'):
         """Find sensitivity and false positive reads for a set of simulated data
@@ -194,6 +211,7 @@ class VNTRFinder:
 
 
 read_files = ['original_reads/paired_dat1.fasta', 'original_reads/paired_dat2.fasta']
+alignment_file = '12878_reads_1/CEUTrio.HiSeq.WGS.b37_decoy.NA12878.clean.dedup.recal.20120117.bam'
 reference_vntrs = load_processed_vntrs_data()
 reference_vntrs = identify_homologous_vntrs(reference_vntrs, 'chr15')
 accurate_vntr_list = [271, 281, 283, 287, 288, 325, 327, 328, 329]
@@ -206,7 +224,8 @@ for i in range(len(reference_vntrs)):
     if reference_vntrs[i].id not in accurate_vntr_list:
         continue
     vntr_finder = VNTRFinder(reference_vntrs[i])
-    copy_number = vntr_finder.find_repeat_count_from_short_reads(read_files)
+    # copy_number = vntr_finder.find_repeat_count_from_short_reads(read_files)
+    copy_number = vntr_finder.find_repeat_count_from_alignment_file(alignment_file)
     # vntr_finder.find_accuracy()
 
     with open('hmm_repeat_count.txt', 'a') as output:
