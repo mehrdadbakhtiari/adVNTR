@@ -1,5 +1,12 @@
 import pysam
+import os
 import settings
+
+
+def extract_unmapped_reads_to_fasta_file(alignment_file, read_file, working_directory='./'):
+    unmapped_sam_file = working_directory + 'unmapped.sam'
+    os.system('samtools view -f4 %s > %s' % (alignment_file, unmapped_sam_file))
+    os.system('samtools bam2fq %s | %s seq -A > %s' % (unmapped_sam_file, settings.SEQTK_DIR, read_file))
 
 
 def get_read_seq_from_samfile(read_name, read_file='original_reads/paired_dat.sam'):
@@ -62,7 +69,7 @@ def get_related_reads_and_read_count_in_samfile(pattern, pattern_start, repeats=
     return related_reads, read_count
 
 
-def get_VNTR_coverage_over_total_coverage(start_point, end_point, read_file='original_reads/paired_dat.sam'):
+def get_vntr_coverage_over_total_coverage(start_point, end_point, read_file='original_reads/paired_dat.sam'):
     samfile = pysam.AlignmentFile(read_file, "r")
     read_count = 0
     avg_read_size = 0
