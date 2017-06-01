@@ -3,10 +3,14 @@ import os
 import settings
 
 
-def extract_unmapped_reads_to_fasta_file(alignment_file, read_file, working_directory='./'):
-    unmapped_sam_file = working_directory + 'unmapped.sam'
-    os.system('samtools view -f4 %s > %s' % (alignment_file, unmapped_sam_file))
-    os.system('samtools bam2fq %s | %s seq -A > %s' % (unmapped_sam_file, settings.SEQTK_DIR, read_file))
+def extract_unmapped_reads_to_fasta_file(alignment_file, working_directory='./'):
+    base_name = os.path.basename(alignment_file).rsplit('.', 1)[0]
+    unmapped_read_file = working_directory + base_name + '.fasta'
+    unmapped_sam_file = working_directory + base_name + '.sam'
+    if not os.path.exists(unmapped_sam_file):
+        os.system('samtools view -f4 %s > %s' % (alignment_file, unmapped_sam_file))
+    os.system('samtools bam2fq %s | %s seq -A > %s' % (unmapped_sam_file, settings.SEQTK_DIR, unmapped_read_file))
+    return unmapped_read_file
 
 
 def get_read_seq_from_samfile(read_name, read_file='original_reads/paired_dat.sam'):

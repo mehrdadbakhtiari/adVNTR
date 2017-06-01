@@ -102,12 +102,12 @@ class VNTRFinder:
 
     def find_repeat_count_from_alignment_file(self, alignment_file, working_directory='./'):
 
-        unmapped_read_file = working_directory + 'unmapped.fasta'
-        extract_unmapped_reads_to_fasta_file(alignment_file, unmapped_read_file, working_directory)
+        if working_directory == './':
+            working_directory = os.path.dirname(alignment_file) + '/'
+
+        unmapped_read_file = extract_unmapped_reads_to_fasta_file(alignment_file, working_directory)
         print('unmapped reads extracted')
 
-        if working_directory == './':
-            working_directory = os.path.dirname(alignment_file)
         filtered_read_ids = self.filter_reads_with_keyword_matching(working_directory, unmapped_read_file)
         print('unmapped reads filtered')
 
@@ -178,7 +178,7 @@ class VNTRFinder:
         :param working_directory: directory for generating the outputs
         """
         if working_directory == './':
-            working_directory = os.path.dirname(short_read_files[0])
+            working_directory = os.path.dirname(short_read_files[0]) + '/'
         alignment_file = ''
         return self.find_repeat_count_from_alignment_file(alignment_file, working_directory)
 
@@ -213,8 +213,10 @@ class VNTRFinder:
 read_files = ['original_reads/paired_dat1.fasta', 'original_reads/paired_dat2.fasta']
 alignment_file = '12878_reads_1/CEUTrio.HiSeq.WGS.b37_decoy.NA12878.clean.dedup.recal.20120117.bam'
 reference_vntrs = load_processed_vntrs_data()
-reference_vntrs = identify_homologous_vntrs(reference_vntrs, 'chr15')
+
+# reference_vntrs = identify_homologous_vntrs(reference_vntrs, 'chr15')
 accurate_vntr_list = [271, 281, 283, 287, 288, 325, 327, 328, 329]
+
 for i in range(len(reference_vntrs)):
     if reference_vntrs[i].chromosome != 'chr15':
         continue
