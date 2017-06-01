@@ -92,8 +92,8 @@ def find_non_overlapping_vntrs(vntrseek_output='repeats_length_patterns_chromoso
     skipped_vntrs = []
     for i in range(len(vntrs)):
         print(i)
-        estimated_end_point = len(vntrs[i].pattern) * vntrs[i].estimated_repeats + vntrs[i].start_point
-        if i < len(vntrs) - 1 and vntrs[i].chromosome == vntrs[i+1].chromosome and estimated_end_point > vntrs[i+1].start_point:
+        estimated_end = len(vntrs[i].pattern) * vntrs[i].estimated_repeats + vntrs[i].start_point
+        if i < len(vntrs)-1 and vntrs[i].chromosome == vntrs[i+1].chromosome and estimated_end > vntrs[i+1].start_point:
             vntrs[i].estimated_repeats += vntrs[i+1].estimated_repeats
         vntrs[i].init_from_vntrseek_data()
         repeat_segments = vntrs[i].get_repeat_segments()
