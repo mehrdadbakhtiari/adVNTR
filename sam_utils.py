@@ -3,13 +3,13 @@ import os
 import settings
 
 
-def extract_unmapped_reads_to_fasta_file(alignment_file, working_directory='./'):
+def extract_unmapped_reads_to_fasta_file(alignment_file, working_directory='./', use_existing_computed_files=True):
     base_name = os.path.basename(alignment_file).rsplit('.', 1)[0]
     unmapped_read_file = working_directory + base_name + '.fasta'
-    unmapped_sam_file = working_directory + base_name + '.sam'
-    if not os.path.exists(unmapped_sam_file):
-        os.system('samtools view -f4 %s > %s' % (alignment_file, unmapped_sam_file))
-    os.system('samtools bam2fq %s | %s seq -A > %s' % (unmapped_sam_file, settings.SEQTK_DIR, unmapped_read_file))
+    unmapped_bam_file = working_directory + base_name + '.unmapped.bam'
+    if not use_existing_computed_files or not os.path.exists(unmapped_bam_file):
+        os.system('samtools view -b -f4 %s > %s' % (alignment_file, unmapped_bam_file))
+    os.system('samtools bam2fq %s | %s seq -A > %s' % (unmapped_bam_file, settings.SEQTK_DIR, unmapped_read_file))
     return unmapped_read_file
 
 
