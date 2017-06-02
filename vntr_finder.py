@@ -133,6 +133,8 @@ class VNTRFinder:
 
             if read_segment.id not in filtered_read_ids:
                 continue
+            if read_segment.seq.count('N') > 0:
+                continue
             logp, vpath = hmm.viterbi(str(read_segment.seq))
             rev_logp, rev_vpath = hmm.viterbi(str(read_segment.seq.reverse_complement()))
             if logp < rev_logp:
