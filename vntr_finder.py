@@ -1,4 +1,5 @@
 from Bio import SeqIO
+import pysam
 
 from blast_wrapper import get_blast_matched_ids, make_blast_database
 from coverage_bias import CoverageBiasDetector, CoverageCorrector
@@ -156,7 +157,9 @@ class VNTRFinder:
         region_start = vntr_start - settings.MAX_INSERT_SIZE
         region_end = vntr_end + settings.MAX_INSERT_SIZE
         chromosome = self.reference_vntr.chromosome[3:]
-        for read in alignment_file.fetch(chromosome, region_start, region_end):
+        read_mode = 'r' if self.alignment_file.endswith('sam') else 'rb'
+        samfile = pysam.AlignmentFile(self.alignment_file, read_mode)
+        for read in samfile.fetch(chromosome, region_start, region_end):
             if vntr_start <= read.reference_start < vntr_end or vntr_start < read.reference_end <= vntr_end:
                 end = min(read.reference_end, vntr_end)
                 start = max(read.reference_start, vntr_start)
