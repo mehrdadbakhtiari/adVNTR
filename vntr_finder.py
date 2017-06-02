@@ -50,7 +50,7 @@ class VNTRFinder:
             outfile.write(json_str)
         return vntr_matcher
 
-    def filter_reads_with_keyword_matching(self, working_directory, short_read_files):
+    def filter_reads_with_keyword_matching(self, working_directory, short_read_file):
         word_size = int(len(self.reference_vntr.pattern)/3)
         if word_size > 11:
             word_size = 11
@@ -60,7 +60,7 @@ class VNTRFinder:
         db_name = working_directory[:-1]
         blast_db_name = working_directory + db_name
         if not os.path.exists(blast_db_name + '.nal'):
-            make_blast_database(short_read_files, blast_db_name)
+            make_blast_database(short_read_file, blast_db_name)
         for repeat_segment in self.reference_vntr.get_repeat_segments():
             blast_ids |= get_blast_matched_ids(repeat_segment, blast_db_name, max_seq='50000',
                                                evalue=10, word_size=word_size, search_id=str(self.reference_vntr.id))
