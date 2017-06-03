@@ -157,11 +157,14 @@ class VNTRFinder:
         region_start = vntr_start - settings.MAX_INSERT_SIZE
         region_end = vntr_end + settings.MAX_INSERT_SIZE
         chromosome = self.reference_vntr.chromosome[3:]
-        read_mode = 'r' if self.alignment_file.endswith('sam') else 'rb'
-        samfile = pysam.AlignmentFile(self.alignment_file, read_mode)
+        read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
+        samfile = pysam.AlignmentFile(alignment_file, read_mode)
         for read in samfile.fetch(chromosome, region_start, region_end):
-            if vntr_start <= read.reference_start < vntr_end or vntr_start < read.reference_end <= vntr_end:
-                end = min(read.reference_end, vntr_end)
+            if read.is_unmapped:
+                continue
+            read_end = read.reference_end if read.reference_end else read.reference_start + len(read.seq)
+            if vntr_start <= read.reference_start < vntr_end or vntr_start < read_end <= vntr_end:
+                end = min(read_end, vntr_end)
                 start = max(read.reference_start, vntr_start)
                 vntr_bp_in_mapped_reads += end - start
         print('vntr base pairs in mapped reads:', vntr_bp_in_mapped_reads)

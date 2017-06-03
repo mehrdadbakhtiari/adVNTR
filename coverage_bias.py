@@ -14,7 +14,7 @@ class CoverageBiasDetector:
         :param alignment_reference: The alignment reference used in alignment file. Defaults to HG19.
         """
         self.alignment_file = alignment_file
-        self.chromosome = chromosome
+        self.chromosome = [chromosome] if chromosome is not None else None
         self.alignment_reference = alignment_reference
 
     def get_gc_contents_of_reference_windows(self):
@@ -45,9 +45,12 @@ class CoverageBiasDetector:
         for chromosome in self.chromosome or CHROMOSOMES:
             covered_bps[chromosome] = {}
 
-        reference = self.chromosome
-        if self.chromosome and self.alignment_reference != 'HG19':
-            reference = self.chromosome[3:]
+        if not self.chromosome:
+            reference = None
+        elif self.alignment_reference != 'HG19':
+            reference = self.chromosome[0][3:]
+        else:
+            reference = self.chromosome[0]
 
         for read in samfile.fetch(reference, until_eof=True):
             window_number = read.reference_start / GC_CONTENT_WINDOW_SIZE
@@ -56,7 +59,7 @@ class CoverageBiasDetector:
             reference_name = read.reference_name
             if not reference_name.startswith('chr'):
                 reference_name = 'chr' + reference_name
-            if read.reference_name in covered_bps.keys():
+            if reference_name in covered_bps.keys():
                 self.__add_bp_to_coverage_map(covered_bps, reference_name, window_number, read_start, read_end)
         return covered_bps
 
@@ -68,7 +71,7 @@ class CoverageBiasDetector:
         for chromosome in covered_bps.keys():
             for window_number in covered_bps[chromosome]:
                 windows_gc = reference_gc_map[chromosome][window_number]
-                windows_gc = int(windows_gc * 10)
+                windows_gc = int(windows_gc * GC_CONTENT_BINS)
                 windows_coverage = covered_bps[chromosome][window_number] / GC_CONTENT_WINDOW_SIZE
                 if windows_coverage > OUTLIER_COVERAGE:
                     continue
@@ -92,10 +95,11 @@ class CoverageCorrector:
     def get_sequencing_mean_coverage(self):
         windows_coverages = []
         for gc_content, coverages in self.gc_coverage_map.items():
-            windows_coverages.append(coverages)
+            windows_coverages += coverages
         return sum(windows_coverages) / float(len(windows_coverages))
 
     def get_mean_coverage_of_gc_content(self, gc_content):
+        gc_content = int(gc_content * GC_CONTENT_BINS)
         return sum(self.gc_coverage_map[gc_content]) / float(len(self.gc_coverage_map[gc_content]))
 
     def get_scaled_coverage(self, reference_vntr, observed_coverage):
