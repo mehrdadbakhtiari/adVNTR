@@ -1,5 +1,7 @@
 from Bio import SeqIO
+import numpy
 import pysam
+from random import random
 
 from blast_wrapper import get_blast_matched_ids, make_blast_database
 from coverage_bias import CoverageBiasDetector, CoverageCorrector
@@ -83,12 +85,18 @@ class VNTRFinder:
         with open('id_score_to_select.txt', 'r') as infile:
             id_score_map = {int(vntr_id): float(score) for vntr_id, score in infile.readlines()}
         # TODO
+        false_positive_reads_score = []
+        for i in range(10):
+            if random() > settings.SCORE_FINDING_READS_FRACTION:
+                continue
+            false_positive_reads_score.append(-1)
+        score = numpy.percentile(false_positive_reads_score, 1 - 0.0001)
         with open('id_score_to_select.txt', 'w') as outfile:
             for vntr_id, score in id_score_map.items():
                 outfile.write('%s %s\n' % (vntr_id, score))
-        return 0
+        return score
 
-    def get_min_score_to_select_a_read(self):
+    def get_min_score_to_select_a_read(self, alignment_file):
         """Try to load the minimum score for this VNTR
         If the score was not precomputed, it outputs an error and returns 0
         """
@@ -113,7 +121,7 @@ class VNTRFinder:
         filtered_read_ids = self.filter_reads_with_keyword_matching(working_directory, unmapped_read_file)
         print('unmapped reads filtered')
 
-        min_score_to_count_read = self.get_min_score_to_select_a_read()
+        min_score_to_count_read = self.get_min_score_to_select_a_read(alignment_file)
         selected_reads = []
         vntr_bp_in_unmapped_reads = 0
 
