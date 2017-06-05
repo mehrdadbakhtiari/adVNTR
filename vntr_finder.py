@@ -237,11 +237,11 @@ accurate_vntr_list = [271, 281, 283, 287, 288, 325, 327, 328, 329]
 for i in range(len(reference_vntrs)):
     if reference_vntrs[i].chromosome != 'chr15':
         continue
-    print(i)
     if not reference_vntrs[i].is_non_overlapping() or reference_vntrs[i].has_homologous_vntr():
         continue
     if reference_vntrs[i].id not in accurate_vntr_list:
         continue
+    print(i, len(reference_vntrs[i].get_repeat_segments()))
     vntr_finder = VNTRFinder(reference_vntrs[i])
     # copy_number = vntr_finder.find_repeat_count_from_short_reads(read_files)
     copy_number = vntr_finder.find_repeat_count_from_alignment_file(alignment_file)
