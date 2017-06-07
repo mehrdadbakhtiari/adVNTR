@@ -2,6 +2,7 @@ from Bio import SeqIO
 import numpy
 import pysam
 from random import random
+from uuid import uuid4
 
 from blast_wrapper import get_blast_matched_ids, make_blast_database
 from coverage_bias import CoverageBiasDetector, CoverageCorrector
@@ -65,9 +66,10 @@ class VNTRFinder:
         blast_db_name = working_directory + db_name
         if not os.path.exists(blast_db_name + '.nal'):
             make_blast_database(short_read_file, blast_db_name)
+        search_id = str(uuid4()) + str(self.reference_vntr.id)
         for repeat_segment in self.reference_vntr.get_repeat_segments():
             blast_ids |= get_blast_matched_ids(repeat_segment, blast_db_name, max_seq='50000',
-                                               evalue=10, word_size=word_size, search_id=str(self.reference_vntr.id))
+                                               evalue=10, word_size=word_size, search_id=search_id)
 
         print('blast selected ', len(blast_ids), ' reads')
         if len(blast_ids) == len(self.reference_vntr.get_repeat_segments()) * 50 * 1000:
