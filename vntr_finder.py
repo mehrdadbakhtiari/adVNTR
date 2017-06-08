@@ -1,5 +1,6 @@
 from Bio import SeqIO
 import numpy
+import os
 import pysam
 from random import random
 from uuid import uuid4
@@ -9,8 +10,6 @@ from coverage_bias import CoverageBiasDetector, CoverageCorrector
 from hmm_utils import *
 from sam_utils import get_related_reads_and_read_count_in_samfile, extract_unmapped_reads_to_fasta_file
 import settings
-
-import os
 
 
 class VNTRFinder:
@@ -75,28 +74,37 @@ class VNTRFinder:
                 out.write('maximum number of read selected in filtering for pattern %s\n' % self.reference_vntr.id)
         return blast_ids
 
-    def calculate_min_score_to_select_a_read(self, hmm, true_reads, update=True):
+    def calculate_min_score_to_select_a_read(self, hmm, alignment_file):
         """Calculate the score distribution of false positive reads
         and return score to select the 0.0001 percentile of the distribution
 
         It will update the score for this VNTR in precomputed data if update variable is True, otherwise, it will
         only writes the result if there is no score for this VNTR in precomputed data.
         """
-        with open('id_score_to_select.txt', 'r') as infile:
-            id_score_map = {int(vntr_id): float(score) for vntr_id, score in infile.readlines()}
-        # TODO
-        false_positive_reads_score = []
-        for i in range(10):
+        false_reads_score = []
+        read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
+        samfile = pysam.AlignmentFile(alignment_file, read_mode)
+        for read in samfile.fetch():
+            if read.is_unmapped:
+                continue
             if random() > settings.SCORE_FINDING_READS_FRACTION:
                 continue
-            false_positive_reads_score.append(-1)
-        score = numpy.percentile(false_positive_reads_score, 1 - 0.0001)
-        with open('id_score_to_select.txt', 'w') as outfile:
-            for vntr_id, score in id_score_map.items():
-                outfile.write('%s %s\n' % (vntr_id, score))
+            read_start = read.reference_start
+            read_end = read.reference_end if read.reference_end else read_start + len(read.seq)
+            vntr_start = self.reference_vntr.start_point
+            vntr_end = vntr_start + self.reference_vntr.get_length()
+            reference_name = read.reference_name
+            if not reference_name.startswith('chr'):
+                reference_name = 'chr' + reference_name
+            if reference_name == self.reference_vntr.chromosome and (
+                        vntr_start <= read_start < vntr_end or vntr_start < read_end <= vntr_end):
+                continue
+            logp, vpath = hmm.viterbi(str(read.seq))
+            false_reads_score.append(logp)
+        score = numpy.percentile(false_reads_score, 100 - 0.0001)
         return score
 
-    def get_min_score_to_select_a_read(self, alignment_file):
+    def get_min_score_to_select_a_read(self, alignment_file, update=True):
         """Try to load the minimum score for this VNTR
         If the score was not precomputed, it outputs an error and returns 0
         """
@@ -106,7 +114,12 @@ class VNTRFinder:
 
         if self.reference_vntr.id not in id_score_map:
             print('Minimum score is not precomputed for vntr id: %s' % self.reference_vntr.id)
-            id_score_map[reference_vntrs.id] = 0
+            # score = self.calculate_min_score_to_select_a_read(hmm, alignment_file)
+            id_score_map[self.reference_vntr.id] = 0
+            if False and update:
+                with open('id_score_to_select.txt', 'w') as outfile:
+                    for vntr_id, score in id_score_map.items():
+                        outfile.write('%s %s\n' % (vntr_id, score))
 
         return id_score_map[self.reference_vntr.id]
 
