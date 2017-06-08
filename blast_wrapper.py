@@ -37,7 +37,7 @@ def run_blast_search(query_file, db, result_file, num_threads, word_size, max_se
     return matched_ids
 
 
-def get_blast_matched_ids(query, blast_db_name, word_size='5', max_seq='6000', evalue=10.0, search_id=''):
+def get_blast_matched_ids(query, blast_db_name, word_size='5', max_seq='6000', evalue=10.0, search_id='', threads='16'):
     query_file = settings.BLAST_TMP_DIR + search_id + '_query.fasta'
     result_file = settings.BLAST_TMP_DIR + search_id + '_blast_result.txt'
     with open(query_file, "w") as output_handle:
@@ -49,7 +49,7 @@ def get_blast_matched_ids(query, blast_db_name, word_size='5', max_seq='6000', e
     else:
         task = 'blastn'
 
-    matched_ids = run_blast_search(query_file, blast_db_name, result_file, '4', word_size, max_seq, evalue, task)
+    matched_ids = run_blast_search(query_file, blast_db_name, result_file, threads, word_size, max_seq, evalue, task)
 
     os.remove(result_file) if os.path.exists(result_file) else None
     os.remove(query_file) if os.path.exists(query_file) else None
