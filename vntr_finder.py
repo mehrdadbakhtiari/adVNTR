@@ -77,9 +77,6 @@ class VNTRFinder:
     def calculate_min_score_to_select_a_read(self, hmm, alignment_file):
         """Calculate the score distribution of false positive reads
         and return score to select the 0.0001 percentile of the distribution
-
-        It will update the score for this VNTR in precomputed data if update variable is True, otherwise, it will
-        only writes the result if there is no score for this VNTR in precomputed data.
         """
         false_reads_score = []
         read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
@@ -106,25 +103,27 @@ class VNTRFinder:
         score = numpy.percentile(false_reads_score, 100 - 0.0001)
         return score
 
-    def get_min_score_to_select_a_read(self, hmm, alignment_file, update=True):
+    def get_min_score_to_select_a_read(self, hmm, alignment_file, read_length):
         """Try to load the minimum score for this VNTR
-        If the score was not precomputed, it outputs an error and returns 0
+
+        If the score is not stored, it will compute the score and write it for this VNTR in precomputed data.
         """
-        with open('id_score_to_select.txt', 'r') as infile:
-            id_score_pairs = [(line.split()[0], line.split()[1]) for line in infile.readlines() if line.strip() != '']
-            id_score_map = {int(vntr_id): float(score) for vntr_id, score in id_score_pairs}
+        base_name = str(self.reference_vntr.id) + '_' + str(read_length) + '.scores'
+        stored_scores_file = settings.TRAINED_HMMS_DIR + base_name
+        if settings.USE_TRAINED_HMMS and os.path.isfile(stored_scores_file):
+            with open(stored_scores_file, 'r') as infile:
+                frac_score = [(line.split()[0], line.split()[1]) for line in infile.readlines() if line.strip() != '']
+                fraction_score_map = {float(reads_fraction): float(score) for reads_fraction, score in frac_score}
+            if settings.SCORE_FINDING_READS_FRACTION in fraction_score_map.keys():
+                return fraction_score_map[settings.SCORE_FINDING_READS_FRACTION]
 
-        if self.reference_vntr.id not in id_score_map:
-            print('Minimum score is not precomputed for vntr id: %s' % self.reference_vntr.id)
-            score = self.calculate_min_score_to_select_a_read(hmm, alignment_file)
-            print('computed score', score)
-            id_score_map[self.reference_vntr.id] = score
-            if False and update:
-                with open('id_score_to_select.txt', 'w') as outfile:
-                    for vntr_id, score in id_score_map.items():
-                        outfile.write('%s %s\n' % (vntr_id, score))
+        print('Minimum score is not precomputed for vntr id: %s' % self.reference_vntr.id)
+        score = self.calculate_min_score_to_select_a_read(hmm, alignment_file)
+        print('computed score: ', score)
+        with open(stored_scores_file, 'a') as outfile:
+            outfile.write('%s %s\n' % (settings.SCORE_FINDING_READS_FRACTION, score))
 
-        return id_score_map[self.reference_vntr.id]
+        return score
 
     def find_repeat_count_from_alignment_file(self, alignment_file, working_directory='./'):
 
@@ -156,7 +155,7 @@ class VNTRFinder:
             number_of_reads += 1
             if not hmm:
                 hmm = self.get_vntr_matcher_hmm(read_length=read_length)
-                min_score_to_count_read = self.get_min_score_to_select_a_read(hmm, alignment_file)
+                min_score_to_count_read = self.get_min_score_to_select_a_read(hmm, alignment_file, read_length)
 
             if read_segment.id not in filtered_read_ids:
                 continue
