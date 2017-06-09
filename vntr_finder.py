@@ -99,12 +99,14 @@ class VNTRFinder:
             if reference_name == self.reference_vntr.chromosome and (
                         vntr_start <= read_start < vntr_end or vntr_start < read_end <= vntr_end):
                 continue
+            if read.seq.count('N') > 0:
+                continue
             logp, vpath = hmm.viterbi(str(read.seq))
             false_reads_score.append(logp)
         score = numpy.percentile(false_reads_score, 100 - 0.0001)
         return score
 
-    def get_min_score_to_select_a_read(self, alignment_file, update=True):
+    def get_min_score_to_select_a_read(self, hmm, alignment_file, update=True):
         """Try to load the minimum score for this VNTR
         If the score was not precomputed, it outputs an error and returns 0
         """
@@ -114,8 +116,9 @@ class VNTRFinder:
 
         if self.reference_vntr.id not in id_score_map:
             print('Minimum score is not precomputed for vntr id: %s' % self.reference_vntr.id)
-            # score = self.calculate_min_score_to_select_a_read(hmm, alignment_file)
-            id_score_map[self.reference_vntr.id] = 0
+            score = self.calculate_min_score_to_select_a_read(hmm, alignment_file)
+            print('computed score', score)
+            id_score_map[self.reference_vntr.id] = score
             if False and update:
                 with open('id_score_to_select.txt', 'w') as outfile:
                     for vntr_id, score in id_score_map.items():
@@ -134,13 +137,13 @@ class VNTRFinder:
         filtered_read_ids = self.filter_reads_with_keyword_matching(working_directory, unmapped_read_file)
         print('unmapped reads filtered')
 
-        min_score_to_count_read = self.get_min_score_to_select_a_read(alignment_file)
+        hmm = None
+        min_score_to_count_read = None
         selected_reads = []
         vntr_bp_in_unmapped_reads = 0
 
         number_of_reads = 0
         read_length = 150
-        hmm = None
         min_repeat_bp_to_add_read = 2
         if len(self.reference_vntr.pattern) < 30:
             min_repeat_bp_to_add_read = 2
@@ -153,6 +156,7 @@ class VNTRFinder:
             number_of_reads += 1
             if not hmm:
                 hmm = self.get_vntr_matcher_hmm(read_length=read_length)
+                min_score_to_count_read = self.get_min_score_to_select_a_read(hmm, alignment_file)
 
             if read_segment.id not in filtered_read_ids:
                 continue
@@ -235,6 +239,8 @@ class VNTRFinder:
         if 1 > sensitivity > 0.9 and len(false_negatives) > 0 and len(false_positives) > 0:
             print('sensitivity ', sensitivity, ' FN:', false_negatives[0], ' FP:', false_positives[0])
         with open('FP_and_sensitivity_HMM_read_scoring_method.txt', 'a') as outfile:
-            outfile.write('%s\t%s\t%s\t%s\t%s\n' % (len(false_positives), sensitivity, self.reference_vntr.id, len(self.reference_vntr.pattern), len(true_positives)))
+            outfile.write('%s\t%s\t%s\t%s\t%s\n' % (
+                len(false_positives), sensitivity, self.reference_vntr.id, len(self.reference_vntr.pattern),
+                len(true_positives)))
         error = abs(len(self.reference_vntr.get_repeat_segments()) - occurrences / avg_coverage)
         print(error)
