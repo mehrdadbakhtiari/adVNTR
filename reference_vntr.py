@@ -128,7 +128,7 @@ def process_vntrseek_data():
                                             vntr.right_flanking_region, comma_separated_segments))
 
 
-def load_processed_vntrs_data(vntrseek_output='repeats_length_patterns_chromosomes_starts.txt'):
+def load_unique_vntrs_data(vntrseek_output='repeats_length_patterns_chromosomes_starts.txt'):
     vntrs = []
     with open(vntrseek_output) as input_file:
         vntrseek_data = [line.strip() for line in input_file.readlines() if line.strip() != '']
