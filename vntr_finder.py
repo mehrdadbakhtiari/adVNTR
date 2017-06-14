@@ -79,10 +79,21 @@ class VNTRFinder:
                 out.write('maximum number of read selected in filtering for pattern %s\n' % self.reference_vntr.id)
         return blast_ids
 
+    @staticmethod
+    def add_hmm_score_to_list(self, semaphore, list_lock, hmm, read, result_scores):
+        list_lock.acquire()
+        logp, vpath = hmm.viterbi(str(read.seq))
+        result_scores.append(logp)
+        list_lock.release()
+        semaphore.release()
+
     def calculate_min_score_to_select_a_read(self, hmm, alignment_file):
         """Calculate the score distribution of false positive reads
         and return score to select the 0.0001 percentile of the distribution
         """
+        semaphore = Semaphore(settings.CORES)
+        list_lock = Lock()
+        process_list = []
         false_reads_score = []
         read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
         samfile = pysam.AlignmentFile(alignment_file, read_mode)
@@ -103,8 +114,13 @@ class VNTRFinder:
                 continue
             if read.seq.count('N') > 0:
                 continue
-            logp, vpath = hmm.viterbi(str(read.seq))
-            false_reads_score.append(logp)
+            semaphore.acquire()
+            p = Process(target=self.add_hmm_score_to_list, args=(semaphore, list_lock, hmm, read, false_reads_score))
+            process_list.append(p)
+            p.start()
+        for p in process_list:
+            p.join()
+
         score = numpy.percentile(false_reads_score, 100 - 0.0001)
         return score
 
