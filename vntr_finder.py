@@ -1,4 +1,5 @@
 from Bio import SeqIO
+from multiprocessing import Semaphore, Lock, Process
 import numpy
 import os
 import pysam
@@ -17,6 +18,10 @@ class VNTRFinder:
 
     def __init__(self, reference_vntr):
         self.reference_vntr = reference_vntr
+        self.min_repeat_bp_to_add_read = 2
+        if len(self.reference_vntr.pattern) < 30:
+            self.min_repeat_bp_to_add_read = 2
+        self.min_repeat_bp_to_count_repeats = 2
 
     def build_vntr_matcher_hmm(self, copies, read_length=150):
         patterns = self.reference_vntr.get_repeat_segments() * 100
@@ -125,6 +130,24 @@ class VNTRFinder:
 
         return score
 
+    def process_unmapped_read(self, sema, result_lock, read_segment, hmm, filtered_read_ids, min_score_to_count_read,
+                              vntr_bp_in_unmapped_reads, selected_reads):
+        if read_segment.id in filtered_read_ids and read_segment.seq.count('N') <= 0:
+            logp, vpath = hmm.viterbi(str(read_segment.seq))
+            rev_logp, rev_vpath = hmm.viterbi(str(read_segment.seq.reverse_complement()))
+            if logp < rev_logp:
+                logp = rev_logp
+                vpath = rev_vpath
+            repeat_bps = get_number_of_repeat_bp_matches_in_vpath(vpath)
+            if logp > min_score_to_count_read:
+                result_lock.acquire()
+                if repeat_bps > self.min_repeat_bp_to_count_repeats:
+                    vntr_bp_in_unmapped_reads += repeat_bps
+                if repeat_bps > self.min_repeat_bp_to_add_read:
+                    selected_reads.append(read_segment.id)
+                result_lock.release()
+        sema.release()
+
     def find_repeat_count_from_alignment_file(self, alignment_file, working_directory='./'):
 
         if working_directory == './':
@@ -143,13 +166,13 @@ class VNTRFinder:
 
         number_of_reads = 0
         read_length = 150
-        min_repeat_bp_to_add_read = 2
-        if len(self.reference_vntr.pattern) < 30:
-            min_repeat_bp_to_add_read = 2
-        min_repeat_bp_to_count_repeats = 2
 
-        reads = SeqIO.parse(unmapped_read_file, 'fasta')
-        for read_segment in reads:
+        semaphore = Semaphore(settings.CORES)
+        result_lock = Lock()
+        process_list = []
+
+        unmapped_reads = SeqIO.parse(unmapped_read_file, 'fasta')
+        for read_segment in unmapped_reads:
             if number_of_reads == 0:
                 read_length = len(str(read_segment.seq))
             number_of_reads += 1
@@ -157,23 +180,15 @@ class VNTRFinder:
                 hmm = self.get_vntr_matcher_hmm(read_length=read_length)
                 min_score_to_count_read = self.get_min_score_to_select_a_read(hmm, alignment_file, read_length)
 
-            if read_segment.id not in filtered_read_ids:
-                continue
-            if read_segment.seq.count('N') > 0:
-                continue
-            logp, vpath = hmm.viterbi(str(read_segment.seq))
-            rev_logp, rev_vpath = hmm.viterbi(str(read_segment.seq.reverse_complement()))
-            if logp < rev_logp:
-                logp = rev_logp
-                vpath = rev_vpath
-            repeat_bps = get_number_of_repeat_bp_matches_in_vpath(vpath)
-            if logp > min_score_to_count_read:
-                if repeat_bps > min_repeat_bp_to_count_repeats:
-                    vntr_bp_in_unmapped_reads += repeat_bps
-                if repeat_bps > min_repeat_bp_to_add_read:
-                    selected_reads.append(read_segment.id)
+            semaphore.acquire()
+            p = Process(target=self.process_unmapped_read, args=(semaphore, result_lock, read_segment, hmm,
+                                                                 filtered_read_ids, min_score_to_count_read,
+                                                                 vntr_bp_in_unmapped_reads, selected_reads))
+            process_list.append(p)
+            p.start()
+        for p in process_list:
+            p.join()
 
-            number_of_reads += 1
         print('vntr base pairs in unmapped reads:', vntr_bp_in_unmapped_reads)
 
         vntr_bp_in_mapped_reads = 0
