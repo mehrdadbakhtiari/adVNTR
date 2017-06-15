@@ -1,5 +1,5 @@
 from Bio import SeqIO
-from multiprocessing import Process, Manager, Value
+from multiprocessing import Process, Manager, Value, Semaphore
 import numpy
 import os
 import pysam
@@ -80,12 +80,14 @@ class VNTRFinder:
         return blast_ids
 
     @staticmethod
-    def add_hmm_score_to_list(hmm, read, result_scores):
+    def add_hmm_score_to_list(sema, hmm, read, result_scores):
         logp, vpath = hmm.viterbi(str(read.seq))
         result_scores.append(logp)
+        sema.release()
 
     def add_false_read_scores_of_chromosome(self, samfile, reference, hmm, false_scores):
         process_list = []
+        sema = Semaphore(5)
         for read in samfile.fetch(reference, multiple_iterators=True):
             if read.is_unmapped:
                 continue
@@ -103,7 +105,8 @@ class VNTRFinder:
                 continue
             if read.seq.count('N') > 0:
                 continue
-            p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(hmm, read, false_scores))
+            sema.acquire()
+            p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, false_scores))
             process_list.append(p)
             p.start()
         for p in process_list:
@@ -151,7 +154,7 @@ class VNTRFinder:
 
         return score
 
-    def process_unmapped_read(self, read_segment, hmm, filtered_read_ids, min_score_to_count_read,
+    def process_unmapped_read(self, sema, read_segment, hmm, filtered_read_ids, min_score_to_count_read,
                               vntr_bp_in_unmapped_reads, selected_reads):
         if read_segment.id in filtered_read_ids and read_segment.seq.count('N') <= 0:
             logp, vpath = hmm.viterbi(str(read_segment.seq))
@@ -165,6 +168,7 @@ class VNTRFinder:
                     vntr_bp_in_unmapped_reads.value += repeat_bps
                 if repeat_bps > self.min_repeat_bp_to_add_read:
                     selected_reads.append(read_segment.id)
+        sema.release()
 
     def find_repeat_count_from_alignment_file(self, alignment_file, working_directory='./'):
 
@@ -179,6 +183,7 @@ class VNTRFinder:
 
         hmm = None
         min_score_to_count_read = None
+        sema = Semaphore(settings.CORES)
         manager = Manager()
         selected_reads = manager.list()
         vntr_bp_in_unmapped_reads = Value('d', 0.0)
@@ -197,7 +202,8 @@ class VNTRFinder:
                 hmm = self.get_vntr_matcher_hmm(read_length=read_length)
                 min_score_to_count_read = self.get_min_score_to_select_a_read(hmm, alignment_file, read_length)
 
-            p = Process(target=self.process_unmapped_read, args=(read_segment, hmm,
+            sema.acquire()
+            p = Process(target=self.process_unmapped_read, args=(sema, read_segment, hmm,
                                                                  filtered_read_ids, min_score_to_count_read,
                                                                  vntr_bp_in_unmapped_reads, selected_reads))
             process_list.append(p)
