@@ -1,5 +1,5 @@
 from Bio import SeqIO
-from multiprocessing import Semaphore, Lock, Process, Manager
+from multiprocessing import Process, Manager, Value
 import numpy
 import os
 import pysam
@@ -86,7 +86,7 @@ class VNTRFinder:
 
     def add_false_read_scores_of_chromosome(self, samfile, reference, hmm, false_scores):
         process_list = []
-        for read in samfile.fetch(reference):
+        for read in samfile.fetch(reference, multiple_iterators=True):
             if read.is_unmapped:
                 continue
             if random() > settings.SCORE_FINDING_READS_FRACTION:
@@ -151,7 +151,7 @@ class VNTRFinder:
 
         return score
 
-    def process_unmapped_read(self, sema, result_lock, read_segment, hmm, filtered_read_ids, min_score_to_count_read,
+    def process_unmapped_read(self, read_segment, hmm, filtered_read_ids, min_score_to_count_read,
                               vntr_bp_in_unmapped_reads, selected_reads):
         if read_segment.id in filtered_read_ids and read_segment.seq.count('N') <= 0:
             logp, vpath = hmm.viterbi(str(read_segment.seq))
@@ -161,13 +161,10 @@ class VNTRFinder:
                 vpath = rev_vpath
             repeat_bps = get_number_of_repeat_bp_matches_in_vpath(vpath)
             if logp > min_score_to_count_read:
-                result_lock.acquire()
                 if repeat_bps > self.min_repeat_bp_to_count_repeats:
-                    vntr_bp_in_unmapped_reads += repeat_bps
+                    vntr_bp_in_unmapped_reads.value += repeat_bps
                 if repeat_bps > self.min_repeat_bp_to_add_read:
                     selected_reads.append(read_segment.id)
-                result_lock.release()
-        sema.release()
 
     def find_repeat_count_from_alignment_file(self, alignment_file, working_directory='./'):
 
@@ -182,14 +179,13 @@ class VNTRFinder:
 
         hmm = None
         min_score_to_count_read = None
-        selected_reads = []
-        vntr_bp_in_unmapped_reads = 0
+        manager = Manager()
+        selected_reads = manager.list()
+        vntr_bp_in_unmapped_reads = Value('d', 0.0)
 
         number_of_reads = 0
         read_length = 150
 
-        semaphore = Semaphore(settings.CORES)
-        result_lock = Lock()
         process_list = []
 
         unmapped_reads = SeqIO.parse(unmapped_read_file, 'fasta')
@@ -201,8 +197,7 @@ class VNTRFinder:
                 hmm = self.get_vntr_matcher_hmm(read_length=read_length)
                 min_score_to_count_read = self.get_min_score_to_select_a_read(hmm, alignment_file, read_length)
 
-            semaphore.acquire()
-            p = Process(target=self.process_unmapped_read, args=(semaphore, result_lock, read_segment, hmm,
+            p = Process(target=self.process_unmapped_read, args=(read_segment, hmm,
                                                                  filtered_read_ids, min_score_to_count_read,
                                                                  vntr_bp_in_unmapped_reads, selected_reads))
             process_list.append(p)
@@ -210,7 +205,7 @@ class VNTRFinder:
         for p in process_list:
             p.join()
 
-        print('vntr base pairs in unmapped reads:', vntr_bp_in_unmapped_reads)
+        print('vntr base pairs in unmapped reads:', vntr_bp_in_unmapped_reads.value)
 
         vntr_bp_in_mapped_reads = 0
         vntr_start = self.reference_vntr.start_point
@@ -230,7 +225,7 @@ class VNTRFinder:
                 vntr_bp_in_mapped_reads += end - start
         print('vntr base pairs in mapped reads:', vntr_bp_in_mapped_reads)
 
-        total_counted_vntr_bp = vntr_bp_in_unmapped_reads + vntr_bp_in_mapped_reads
+        total_counted_vntr_bp = vntr_bp_in_unmapped_reads.value + vntr_bp_in_mapped_reads
         pattern_occurrences = total_counted_vntr_bp / float(len(self.reference_vntr.pattern))
         bias_detector = CoverageBiasDetector(alignment_file, self.reference_vntr.chromosome, 'GRCh37')
         coverage_bias_corrector = CoverageCorrector(bias_detector.get_gc_content_coverage_map())
