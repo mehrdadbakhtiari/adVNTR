@@ -1,5 +1,5 @@
 from Bio import SeqIO
-from multiprocessing import Semaphore, Lock, Process
+from multiprocessing import Semaphore, Lock, Process, Manager
 import numpy
 import os
 import pysam
@@ -80,24 +80,13 @@ class VNTRFinder:
         return blast_ids
 
     @staticmethod
-    def add_hmm_score_to_list(semaphore, list_lock, hmm, read, result_scores):
+    def add_hmm_score_to_list(hmm, read, result_scores):
         logp, vpath = hmm.viterbi(str(read.seq))
-        list_lock.acquire()
         result_scores.append(logp)
-        list_lock.release()
-        semaphore.release()
 
-    def calculate_min_score_to_select_a_read(self, hmm, alignment_file):
-        """Calculate the score distribution of false positive reads
-        and return score to select the 0.0001 percentile of the distribution
-        """
-        semaphore = Semaphore(settings.CORES)
-        list_lock = Lock()
+    def add_false_read_scores_of_chromosome(self, samfile, reference, hmm, false_scores):
         process_list = []
-        false_scores = []
-        read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
-        samfile = pysam.AlignmentFile(alignment_file, read_mode)
-        for read in samfile.fetch():
+        for read in samfile.fetch(reference):
             if read.is_unmapped:
                 continue
             if random() > settings.SCORE_FINDING_READS_FRACTION:
@@ -114,8 +103,24 @@ class VNTRFinder:
                 continue
             if read.seq.count('N') > 0:
                 continue
-            semaphore.acquire()
-            p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(semaphore, list_lock, hmm, read, false_scores))
+            p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(hmm, read, false_scores))
+            process_list.append(p)
+            p.start()
+        for p in process_list:
+            p.join()
+
+    def calculate_min_score_to_select_a_read(self, hmm, alignment_file):
+        """Calculate the score distribution of false positive reads
+        and return score to select the 0.0001 percentile of the distribution
+        """
+        process_list = []
+        manager = Manager()
+        false_scores = manager.list()
+        read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
+        samfile = pysam.AlignmentFile(alignment_file, read_mode)
+        refs = [ref for ref in samfile.references if ref in settings.CHROMOSOMES or 'chr'+ref in settings.CHROMOSOMES]
+        for ref in refs:
+            p = Process(target=self.add_false_read_scores_of_chromosome, args=(samfile, ref, hmm, false_scores))
             process_list.append(p)
             p.start()
         for p in process_list:
