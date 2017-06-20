@@ -154,9 +154,9 @@ class VNTRFinder:
 
         return score
 
-    def process_unmapped_read(self, sema, read_segment, hmm, filtered_read_ids, min_score_to_count_read,
+    def process_unmapped_read(self, sema, read_segment, hmm, min_score_to_count_read,
                               vntr_bp_in_unmapped_reads, selected_reads):
-        if read_segment.id in filtered_read_ids and read_segment.seq.count('N') <= 0:
+        if read_segment.seq.count('N') <= 0:
             logp, vpath = hmm.viterbi(str(read_segment.seq))
             rev_logp, rev_vpath = hmm.viterbi(str(read_segment.seq.reverse_complement()))
             if logp < rev_logp:
@@ -202,12 +202,12 @@ class VNTRFinder:
                 hmm = self.get_vntr_matcher_hmm(read_length=read_length)
                 min_score_to_count_read = self.get_min_score_to_select_a_read(hmm, alignment_file, read_length)
 
-            sema.acquire()
-            p = Process(target=self.process_unmapped_read, args=(sema, read_segment, hmm,
-                                                                 filtered_read_ids, min_score_to_count_read,
-                                                                 vntr_bp_in_unmapped_reads, selected_reads))
-            process_list.append(p)
-            p.start()
+            if read_segment.id in filtered_read_ids:
+                sema.acquire()
+                p = Process(target=self.process_unmapped_read, args=(sema, read_segment, hmm, min_score_to_count_read,
+                                                                     vntr_bp_in_unmapped_reads, selected_reads))
+                process_list.append(p)
+                p.start()
         for p in process_list:
             p.join()
 
