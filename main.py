@@ -1,10 +1,14 @@
 from vntr_finder import VNTRFinder
 from reference_vntr import identify_homologous_vntrs, load_unique_vntrs_data
 # from vntr_graph import plot_graph_components, get_nodes_and_edges_of_vntr_graph
+import sys
 
 
 read_files = ['original_reads/paired_dat1.fasta', 'original_reads/paired_dat2.fasta']
-alignment_file = '12878_reads_1/CEUTrio.HiSeq.WGS.b37_decoy.NA12878.clean.dedup.recal.20120117.bam'
+# alignment_file = '12878_reads_1/CEUTrio.HiSeq.WGS.b37_decoy.NA12878.clean.dedup.recal.20120117.bam'
+if len(sys.argv) < 2:
+    sys.exit("ERROR: You should specify alignment_file")
+alignment_file = sys.argv[1]
 reference_vntrs = load_unique_vntrs_data()
 
 # reference_vntrs = identify_homologous_vntrs(reference_vntrs, 'chr15')
