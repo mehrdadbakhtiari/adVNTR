@@ -1,4 +1,4 @@
-from Bio import SeqIO
+from Bio import SeqIO, pairwise2
 from multiprocessing import Process, Manager, Value, Semaphore
 import numpy
 import os
@@ -170,11 +170,42 @@ class VNTRFinder:
                     selected_reads.append(read_segment.id)
         sema.release()
 
+    def check_if_read_spans_vntr(self, read, length_distribution):
+        left_flanking = self.reference_vntr.left_flanking_region[-80:]
+        right_flanking = self.reference_vntr.right_flanking_region[:80]
+        left_align = pairwise2.align.localms(read, left_flanking, 1, -1, -1, -1)[0]
+        if left_align[2] < len(left_flanking) * 0.8:
+            return
+        right_align = pairwise2.align.localms(read, right_flanking, 1, -1, -1, -1)[0]
+        if right_align[2] < len(right_flanking) * 0.8:
+            return
+        if right_align[3] < left_align[3]:
+            return
+        length_distribution.append(right_align[3] - left_align[3])
+
+    def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, working_directory='./'):
+        length_distribution = []
+
+        unmapped_read_file = extract_unmapped_reads_to_fasta_file(alignment_file, working_directory)
+        print('unmapped reads extracted')
+        unmapped_reads = SeqIO.parse(unmapped_read_file, 'fasta')
+        for read in unmapped_reads:
+            self.check_if_read_spans_vntr(read, length_distribution)
+
+        vntr_start = self.reference_vntr.start_point
+        vntr_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
+        region_start = vntr_start - 30000
+        region_end = vntr_end + 30000
+        chromosome = self.reference_vntr.chromosome[3:]
+        read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
+        samfile = pysam.AlignmentFile(alignment_file, read_mode)
+        for read in samfile.fetch(chromosome, region_start, region_end):
+            self.check_if_read_spans_vntr(read, length_distribution)
+
+        print('length_distribution: ', length_distribution)
+        return sum(length_distribution) / float(len(length_distribution))
+
     def find_repeat_count_from_alignment_file(self, alignment_file, working_directory='./'):
-
-        if working_directory == './':
-            working_directory = os.path.dirname(alignment_file) + '/'
-
         unmapped_read_file = extract_unmapped_reads_to_fasta_file(alignment_file, working_directory)
         print('unmapped reads extracted')
 
@@ -247,9 +278,8 @@ class VNTRFinder:
         :param short_read_files: short read sequencing data
         :param working_directory: directory for generating the outputs
         """
-        if working_directory == './':
-            working_directory = os.path.dirname(short_read_files[0]) + '/'
-        alignment_file = ''
+        alignment_file = '' + short_read_files
+        # TODO: use bowtie2 to map short reads to hg19
         return self.find_repeat_count_from_alignment_file(alignment_file, working_directory)
 
     def find_accuracy(self, samfile='original_reads/paired_dat.sam'):
