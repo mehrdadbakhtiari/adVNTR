@@ -1,6 +1,8 @@
 from settings import *
 from utils import get_chromosome_reference_sequence, get_gc_content
 import pysam
+import numpy
+from math import sqrt
 
 
 class CoverageBiasDetector:
@@ -102,7 +104,17 @@ class CoverageCorrector:
         gc_content = int(gc_content * GC_CONTENT_BINS)
         return sum(self.gc_coverage_map[gc_content]) / float(len(self.gc_coverage_map[gc_content]))
 
+    def get_mean_coverage_error_bar_of_gc_content(self, gc_content):
+        gc_content = int(gc_content * GC_CONTENT_BINS)
+        coverages = self.gc_coverage_map[gc_content]
+        return numpy.std(numpy.array(coverages)) / sqrt(len(coverages))
+
     def get_scaled_coverage(self, reference_vntr, observed_coverage):
         gc_content = get_gc_content(''.join(reference_vntr.get_repeat_segments()))
         scale_ratio = self.get_sequencing_mean_coverage() / self.get_mean_coverage_of_gc_content(gc_content)
-        return observed_coverage * scale_ratio
+        scaled_coverage = observed_coverage * scale_ratio
+
+        coverage_error = self.get_mean_coverage_error_bar_of_gc_content(gc_content)
+        coverage_with_error = self.get_mean_coverage_of_gc_content(gc_content) - coverage_error
+        max_error = self.get_sequencing_mean_coverage() / coverage_with_error - scaled_coverage
+        return scaled_coverage

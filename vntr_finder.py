@@ -234,10 +234,10 @@ class VNTRFinder:
         total_counted_vntr_bp = vntr_bp_in_unmapped_reads.value + vntr_bp_in_mapped_reads
         pattern_occurrences = total_counted_vntr_bp / float(len(self.reference_vntr.pattern))
         bias_detector = CoverageBiasDetector(alignment_file, self.reference_vntr.chromosome, 'GRCh37')
-        coverage_bias_corrector = CoverageCorrector(bias_detector.get_gc_content_coverage_map())
+        coverage_corrector = CoverageCorrector(bias_detector.get_gc_content_coverage_map())
 
-        observed_copy_number = pattern_occurrences / coverage_bias_corrector.get_sequencing_mean_coverage()
-        scaled_copy_number = coverage_bias_corrector.get_scaled_coverage(self.reference_vntr, observed_copy_number)
+        observed_copy_number = pattern_occurrences / coverage_corrector.get_sequencing_mean_coverage()
+        scaled_copy_number = coverage_corrector.get_scaled_coverage(self.reference_vntr, observed_copy_number)
         print('observed copy number and scaled copy number: ', observed_copy_number, scaled_copy_number)
         return scaled_copy_number
 
