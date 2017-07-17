@@ -9,7 +9,8 @@ def extract_unmapped_reads_to_fasta_file(alignment_file, working_directory='./',
     unmapped_bam_file = working_directory + base_name + '.unmapped.bam'
     if not use_existing_computed_files or not os.path.exists(unmapped_bam_file):
         os.system('samtools view -b -f4 %s > %s' % (alignment_file, unmapped_bam_file))
-    os.system('samtools bam2fq %s | %s seq -A > %s' % (unmapped_bam_file, settings.SEQTK_DIR, unmapped_read_file))
+    if not use_existing_computed_files or not os.path.exists(unmapped_read_file):
+        os.system('samtools bam2fq %s | %s seq -A > %s' % (unmapped_bam_file, settings.SEQTK_DIR, unmapped_read_file))
     return unmapped_read_file
 
 
