@@ -173,10 +173,10 @@ class VNTRFinder:
     def check_if_read_spans_vntr(self, read, length_distribution):
         left_flanking = self.reference_vntr.left_flanking_region[-80:]
         right_flanking = self.reference_vntr.right_flanking_region[:80]
-        left_align = pairwise2.align.localms(read, left_flanking, 1, -1, -1, -1)[0]
+        left_align = pairwise2.align.localms(str(read.seq), left_flanking, 1, -1, -1, -1)[0]
         if left_align[2] < len(left_flanking) * 0.8:
             return
-        right_align = pairwise2.align.localms(read, right_flanking, 1, -1, -1, -1)[0]
+        right_align = pairwise2.align.localms(str(read.seq), right_flanking, 1, -1, -1, -1)[0]
         if right_align[2] < len(right_flanking) * 0.8:
             return
         if right_align[3] < left_align[3]:
