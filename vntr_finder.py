@@ -181,6 +181,7 @@ class VNTRFinder:
             return
         if right_align[3] < left_align[3]:
             return
+        print(read[left_align[3]:right_align[3]+80])
         length_distribution.append(right_align[3] - left_align[3])
 
     def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, working_directory='./'):
@@ -188,6 +189,7 @@ class VNTRFinder:
 
         unmapped_read_file = extract_unmapped_reads_to_fasta_file(alignment_file, working_directory)
         print('unmapped reads extracted')
+        # TODO: filter unmapped reads
         unmapped_reads = SeqIO.parse(unmapped_read_file, 'fasta')
         for read in unmapped_reads:
             self.check_if_read_spans_vntr(read, length_distribution)
