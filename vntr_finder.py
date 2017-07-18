@@ -205,8 +205,10 @@ class VNTRFinder:
             self.check_if_read_spans_vntr(read, length_distribution)
 
         print('length_distribution: ', length_distribution)
-        average_length = sum(length_distribution) / float(len(length_distribution))
-        return average_length / float(len(self.reference_vntr.pattern))
+        average_length = sum(length_distribution) / float(len(length_distribution)) if len(length_distribution) else 0
+        copy_count = average_length / float(len(self.reference_vntr.pattern))
+        print('copy_count: ', copy_count)
+        return copy_count
 
     def find_repeat_count_from_alignment_file(self, alignment_file, working_directory='./'):
         unmapped_read_file = extract_unmapped_reads_to_fasta_file(alignment_file, working_directory)
