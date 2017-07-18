@@ -181,8 +181,8 @@ class VNTRFinder:
             return
         if right_align[3] < left_align[3]:
             return
-        print(read[left_align[3]:right_align[3]+80])
-        length_distribution.append(right_align[3] - left_align[3])
+        print(str(read.seq)[left_align[3]:right_align[3]+80])
+        length_distribution.append(right_align[3] - (left_align[3] + 80))
 
     def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, working_directory='./'):
         length_distribution = []
@@ -205,7 +205,8 @@ class VNTRFinder:
             self.check_if_read_spans_vntr(read, length_distribution)
 
         print('length_distribution: ', length_distribution)
-        return sum(length_distribution) / float(len(length_distribution))
+        average_length = sum(length_distribution) / float(len(length_distribution))
+        return average_length / float(len(self.reference_vntr.pattern))
 
     def find_repeat_count_from_alignment_file(self, alignment_file, working_directory='./'):
         unmapped_read_file = extract_unmapped_reads_to_fasta_file(alignment_file, working_directory)
