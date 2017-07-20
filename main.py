@@ -19,7 +19,7 @@ directory = os.path.dirname(alignment_file) + '/'
 reference_vntrs = load_unique_vntrs_data()
 
 # reference_vntrs = identify_homologous_vntrs(reference_vntrs, 'chr15')
-accurate_vntr_list = [271, 281, 283, 287, 288, 325, 327, 328, 329]
+accurate_vntr_list = [271, 281, 283, 287, 288, 325, 327, 328, 329, 119, 1213]
 
 for i in range(len(reference_vntrs)):
     if not reference_vntrs[i].is_non_overlapping() or reference_vntrs[i].has_homologous_vntr():
