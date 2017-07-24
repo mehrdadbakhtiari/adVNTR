@@ -189,10 +189,14 @@ class VNTRFinder:
 
         unmapped_read_file = extract_unmapped_reads_to_fasta_file(alignment_file, working_directory)
         print('unmapped reads extracted')
-        # TODO: filter unmapped reads
+
+        filtered_read_ids = self.filter_reads_with_keyword_matching(working_directory, unmapped_read_file)
+        print('unmapped reads filtered')
+
         unmapped_reads = SeqIO.parse(unmapped_read_file, 'fasta')
         for read in unmapped_reads:
-            self.check_if_read_spans_vntr(read, length_distribution)
+            if read.id in filtered_read_ids:
+                self.check_if_read_spans_vntr(read, length_distribution)
 
         vntr_start = self.reference_vntr.start_point
         vntr_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
