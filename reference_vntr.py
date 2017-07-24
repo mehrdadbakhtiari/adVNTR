@@ -108,6 +108,15 @@ def find_non_overlapping_vntrs(vntrseek_output='repeats_length_patterns_chromoso
     return vntrs
 
 
+def process_vntrseek_data(processed_vntrs_file='repeats_and_segments.txt'):
+    vntrs = find_non_overlapping_vntrs()
+    for vntr in vntrs:
+        comma_separated_segments = ','.join(vntr.get_repeat_segments())
+        with open(processed_vntrs_file, 'a') as out:
+            out.write('%s %s %s %s %s\n' % (vntr.id, vntr.is_non_overlapping(), vntr.left_flanking_region,
+                                            vntr.right_flanking_region, comma_separated_segments))
+
+
 def identify_homologous_vntrs(vntrs, chromosome=None):
     for i in range(len(vntrs)):
         for j in range(i + 1, len(vntrs)):
@@ -117,15 +126,6 @@ def identify_homologous_vntrs(vntrs, chromosome=None):
                 vntrs[i].has_homologous = True
                 vntrs[j].has_homologous = True
     return vntrs
-
-
-def process_vntrseek_data():
-    vntrs = find_non_overlapping_vntrs()
-    for vntr in vntrs:
-        comma_separated_segments = ','.join(vntr.get_repeat_segments())
-        with open('repeats_and_segments.txt', 'a') as out:
-            out.write('%s %s %s %s %s\n' % (vntr.id, vntr.is_non_overlapping(), vntr.left_flanking_region,
-                                            vntr.right_flanking_region, comma_separated_segments))
 
 
 def load_unique_vntrs_data(vntrseek_output='repeats_length_patterns_chromosomes_starts.txt'):
