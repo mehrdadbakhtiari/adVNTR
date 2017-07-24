@@ -57,21 +57,27 @@ class VNTRFinder:
             outfile.write(json_str)
         return vntr_matcher
 
-    def filter_reads_with_keyword_matching(self, working_directory, short_read_file):
+    def filter_reads_with_keyword_matching(self, working_directory, read_file, short_reads=True):
+        db_name = working_directory[:-1]
+        blast_db_name = working_directory + db_name
+        if not os.path.exists(blast_db_name + '.nal'):
+            make_blast_database(read_file, blast_db_name)
+
         word_size = int(len(self.reference_vntr.pattern)/3)
         if word_size > 11:
             word_size = 11
         word_size = str(word_size)
-        blast_ids = set([])
 
-        db_name = working_directory[:-1]
-        blast_db_name = working_directory + db_name
-        if not os.path.exists(blast_db_name + '.nal'):
-            make_blast_database(short_read_file, blast_db_name)
+        blast_ids = set([])
         search_id = str(uuid4()) + str(self.reference_vntr.id)
-        for repeat_segment in self.reference_vntr.get_repeat_segments():
-            blast_ids |= get_blast_matched_ids(repeat_segment, blast_db_name, max_seq='50000',
-                                               evalue=10, word_size=word_size, search_id=search_id)
+        queries = self.reference_vntr.get_repeat_segments()
+        if not short_reads:
+            queries = [self.reference_vntr.left_flanking_region[-50:], self.reference_vntr.right_flanking_region[:50]]
+            word_size = str('10')
+            #TODO: set minimum identity for blast search to 80%
+        for repeat_segment in queries:
+            blast_ids |= get_blast_matched_ids(repeat_segment, blast_db_name, max_seq='50000', word_size=word_size,
+                                               evalue=10, search_id=search_id)
 
         print('blast selected ', len(blast_ids), ' reads')
         if len(blast_ids) == len(self.reference_vntr.get_repeat_segments()) * 50 * 1000:
@@ -190,7 +196,7 @@ class VNTRFinder:
         unmapped_read_file = extract_unmapped_reads_to_fasta_file(alignment_file, working_directory)
         print('unmapped reads extracted')
 
-        filtered_read_ids = self.filter_reads_with_keyword_matching(working_directory, unmapped_read_file)
+        filtered_read_ids = self.filter_reads_with_keyword_matching(working_directory, unmapped_read_file, False)
         print('unmapped reads filtered')
 
         unmapped_reads = SeqIO.parse(unmapped_read_file, 'fasta')
