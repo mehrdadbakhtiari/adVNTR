@@ -60,8 +60,9 @@ class VNTRFinder:
     def filter_reads_with_keyword_matching(self, working_directory, read_file, short_reads=True):
         db_name = working_directory[:-1]
         blast_db_name = working_directory + db_name
+        empty_db = False
         if not os.path.exists(blast_db_name + '.nal'):
-            make_blast_database(read_file, blast_db_name)
+            empty_db = make_blast_database(read_file, blast_db_name)
 
         word_size = int(len(self.reference_vntr.pattern)/3)
         if word_size > 11:
@@ -75,9 +76,10 @@ class VNTRFinder:
             queries = [self.reference_vntr.left_flanking_region[-50:], self.reference_vntr.right_flanking_region[:50]]
             word_size = str('10')
             # TODO: set minimum identity for blast search to 80%
-        for repeat_segment in queries:
-            blast_ids |= get_blast_matched_ids(repeat_segment, blast_db_name, max_seq='50000', word_size=word_size,
-                                               evalue=10, search_id=search_id)
+        if not empty_db:
+            for repeat_segment in queries:
+                blast_ids |= get_blast_matched_ids(repeat_segment, blast_db_name, max_seq='50000', word_size=word_size,
+                                                   evalue=10, search_id=search_id)
 
         print('blast selected ', len(blast_ids), ' reads')
         if len(blast_ids) == len(self.reference_vntr.get_repeat_segments()) * 50 * 1000:
