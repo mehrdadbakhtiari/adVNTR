@@ -9,10 +9,11 @@ import settings
 def make_blast_database(fasta_file, db_name):
     make_db_args = '-in %s -parse_seqids -max_file_sz 2GB -dbtype nucl -out %s -title "%s"' % (fasta_file, db_name, db_name)
     make_db_args = shlex.split(make_db_args)
-    try:
-        call(['makeblastdb'] + make_db_args)
+    call(['makeblastdb'] + make_db_args)
+
+    if os.path.exists(db_name + '.nal'):
         empty_db = False
-    except:
+    else:
         empty_db = True
     return empty_db
 
