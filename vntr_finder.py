@@ -79,7 +79,7 @@ class VNTRFinder:
         if not empty_db:
             for query in queries:
                 search_result = get_blast_matched_ids(query, blast_db_name, max_seq='50000', word_size=word_size,
-                                                   evalue=10, search_id=search_id)
+                                                      evalue=10, search_id=search_id)
                 if short_reads:
                     blast_ids |= search_result
                 else:
