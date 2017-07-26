@@ -77,9 +77,13 @@ class VNTRFinder:
             word_size = str('10')
             # TODO: set minimum identity for blast search to 80%
         if not empty_db:
-            for repeat_segment in queries:
-                blast_ids |= get_blast_matched_ids(repeat_segment, blast_db_name, max_seq='50000', word_size=word_size,
+            for query in queries:
+                search_result = get_blast_matched_ids(query, blast_db_name, max_seq='50000', word_size=word_size,
                                                    evalue=10, search_id=search_id)
+                if short_reads:
+                    blast_ids |= search_result
+                else:
+                    blast_ids &= search_result
 
         print('blast selected ', len(blast_ids), ' reads')
         if len(blast_ids) == len(self.reference_vntr.get_repeat_segments()) * 50 * 1000:
