@@ -61,7 +61,7 @@ class VNTRFinder:
         db_name = working_directory[:-1]
         blast_db_name = working_directory + db_name
         empty_db = False
-        if not os.path.exists(blast_db_name + '.nsq'):
+        if not os.path.exists(blast_db_name + '.nsq') and not os.path.exists(blast_db_name + '.nal'):
             empty_db = make_blast_database(read_file, blast_db_name)
 
         word_size = int(len(self.reference_vntr.pattern)/3)
