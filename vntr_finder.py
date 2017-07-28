@@ -74,7 +74,7 @@ class VNTRFinder:
         queries = self.reference_vntr.get_repeat_segments()
         identity_cutoff = '50'
         if not short_reads:
-            queries = [self.reference_vntr.left_flanking_region[-50:], self.reference_vntr.right_flanking_region[:50]]
+            queries = [self.reference_vntr.left_flanking_region[-140:], self.reference_vntr.right_flanking_region[:140]]
             word_size = str('10')
             identity_cutoff = '80'
         if not empty_db:
@@ -184,8 +184,8 @@ class VNTRFinder:
         sema.release()
 
     def check_if_read_spans_vntr(self, read, length_distribution):
-        left_flanking = self.reference_vntr.left_flanking_region[-80:]
-        right_flanking = self.reference_vntr.right_flanking_region[:80]
+        left_flanking = self.reference_vntr.left_flanking_region[-140:]
+        right_flanking = self.reference_vntr.right_flanking_region[:140]
         left_align = pairwise2.align.localms(str(read.seq), left_flanking, 1, -1, -1, -1)[0]
         if left_align[2] < len(left_flanking) * 0.8:
             return
