@@ -16,7 +16,8 @@ def path_to_alignment(x, y, path):
 
 
 def is_matching_state(state_name):
-    if state_name.startswith('M') or state_name.startswith('I') or state_name.startswith('start_random_matches')or state_name.startswith('end_random_matches'):
+    if state_name.startswith('M') or state_name.startswith('I') or state_name.startswith('start_random_matches') \
+            or state_name.startswith('end_random_matches'):
         return True
     return False
 
