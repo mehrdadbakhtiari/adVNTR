@@ -72,14 +72,15 @@ class VNTRFinder:
         blast_ids = set([])
         search_id = str(uuid4()) + str(self.reference_vntr.id)
         queries = self.reference_vntr.get_repeat_segments()
+        identity_cutoff = '50'
         if not short_reads:
             queries = [self.reference_vntr.left_flanking_region[-50:], self.reference_vntr.right_flanking_region[:50]]
             word_size = str('10')
-            # TODO: set minimum identity for blast search to 80%
+            identity_cutoff = '80'
         if not empty_db:
             for query in queries:
                 search_result = get_blast_matched_ids(query, blast_db_name, max_seq='50000', word_size=word_size,
-                                                      evalue=10, search_id=search_id)
+                                                      evalue=10, search_id=search_id, identity_cutoff=identity_cutoff)
                 if short_reads:
                     blast_ids |= search_result
                 else:
