@@ -72,11 +72,11 @@ class VNTRFinder:
         blast_ids = set([])
         search_id = str(uuid4()) + str(self.reference_vntr.id)
         queries = self.reference_vntr.get_repeat_segments()
-        identity_cutoff = '50'
+        identity_cutoff = '40'
         if not short_reads:
             queries = [self.reference_vntr.left_flanking_region[-140:], self.reference_vntr.right_flanking_region[:140]]
             word_size = str('10')
-            identity_cutoff = '80'
+            identity_cutoff = '70'
         if not empty_db:
             for query in queries:
                 search_result = get_blast_matched_ids(query, blast_db_name, max_seq='50000', word_size=word_size,
@@ -184,8 +184,9 @@ class VNTRFinder:
         sema.release()
 
     def check_if_read_spans_vntr(self, read, length_distribution):
-        left_flanking = self.reference_vntr.left_flanking_region[-140:]
-        right_flanking = self.reference_vntr.right_flanking_region[:140]
+        flanking_region_size = 140
+        left_flanking = self.reference_vntr.left_flanking_region[-flanking_region_size:]
+        right_flanking = self.reference_vntr.right_flanking_region[:flanking_region_size]
         left_align = pairwise2.align.localms(str(read.seq), left_flanking, 1, -1, -1, -1)[0]
         if left_align[2] < len(left_flanking) * 0.8:
             return
@@ -194,8 +195,8 @@ class VNTRFinder:
             return
         if right_align[3] < left_align[3]:
             return
-        print(str(read.seq)[left_align[3]:right_align[3]+80])
-        length_distribution.append(right_align[3] - (left_align[3] + 80))
+        print(str(read.seq)[left_align[3]:right_align[3]+flanking_region_size])
+        length_distribution.append(right_align[3] - (left_align[3] + flanking_region_size))
 
     def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, working_directory='./'):
         length_distribution = []
