@@ -293,6 +293,8 @@ class VNTRFinder:
         observed_copy_number = pattern_occurrences / coverage_corrector.get_sequencing_mean_coverage()
         scaled_copy_number = coverage_corrector.get_scaled_coverage(self.reference_vntr, observed_copy_number)
         print('observed copy number and scaled copy number: ', observed_copy_number, scaled_copy_number)
+        print('unmapped reads influence: ', scaled_copy_number * vntr_bp_in_unmapped_reads.value /
+              (vntr_bp_in_mapped_reads + vntr_bp_in_unmapped_reads.value))
         return scaled_copy_number
 
     def find_repeat_count_from_short_reads(self, short_read_files, working_directory='./'):
