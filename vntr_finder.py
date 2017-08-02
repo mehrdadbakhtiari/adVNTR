@@ -74,17 +74,14 @@ class VNTRFinder:
         queries = self.reference_vntr.get_repeat_segments()
         identity_cutoff = '40'
         if not short_reads:
-            queries = [self.reference_vntr.left_flanking_region[-140:], self.reference_vntr.right_flanking_region[:140]]
+            queries = [self.reference_vntr.left_flanking_region[-80:], self.reference_vntr.right_flanking_region[:80]]
             word_size = str('10')
             identity_cutoff = '70'
         if not empty_db:
             for query in queries:
                 search_result = get_blast_matched_ids(query, blast_db_name, max_seq='50000', word_size=word_size,
                                                       evalue=10, search_id=search_id, identity_cutoff=identity_cutoff)
-                if short_reads:
-                    blast_ids |= search_result
-                else:
-                    blast_ids &= search_result
+                blast_ids |= search_result
 
         print('blast selected ', len(blast_ids), ' reads')
         if len(blast_ids) == len(self.reference_vntr.get_repeat_segments()) * 50 * 1000:
@@ -184,7 +181,7 @@ class VNTRFinder:
         sema.release()
 
     def check_if_read_spans_vntr(self, read, length_distribution):
-        flanking_region_size = 140
+        flanking_region_size = 100
         left_flanking = self.reference_vntr.left_flanking_region[-flanking_region_size:]
         right_flanking = self.reference_vntr.right_flanking_region[:flanking_region_size]
         left_align = pairwise2.align.localms(str(read.seq), left_flanking, 1, -1, -1, -1)[0]
