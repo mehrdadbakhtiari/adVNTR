@@ -342,6 +342,27 @@ def plot_gc_content_violin_plot():
     plt.savefig('gc_coverage_violinplot_simulated.png')
 
 
+def plot_paccbio_flanking_region_sizes():
+    import matplotlib.pyplot as plt
+    import numpy as np
+    fig, ax = plt.subplots(1)
+    sizes_1217 = [298, 333, 355, 310, 311, 313, 350, 339, 292, 309, 385, 329, 295, 301]
+    X = [i for i, _ in enumerate(sizes_1217)]
+    line_width = [0, len(X)]
+    cmap = plt.get_cmap('jet', 20)
+    for i in range(19, 12, -1):
+        line_y = [i * 20, i * 20]
+        c = cmap((i-13) * 2)
+        ax.plot(line_width, line_y, '-', color=c)
+        sigma1 = np.array([10, 10])
+        ax.fill_between(line_width, line_y + sigma1, line_y - sigma1, facecolor=c, alpha=0.3, label='%s Repeats' % i)
+    ax.plot(X, sizes_1217, 'o', label='distance of flanking regions', color='red')
+    ax.set_xlabel('read index')
+    ax.set_ylabel('flanking region distance (bp)')
+    ax.legend(loc=0, fontsize = 'x-small')
+
+    plt.show()
+
 edges = [(1, 8), (1, 16), (2, 17), (4, 18), (8, 16), (30, 32), (30, 33), (32, 33), (34, 40), (34, 47), (38, 57),
          (38, 59), (38, 67), (40, 47), (57, 59), (57, 67), (59, 67)] + [(5, 53), (47, 19), (71, 3), (31, 9)]
 eliminated_nodes = []
@@ -356,4 +377,5 @@ for a, b in edges:
 # plot_reference_repeats()
 # plot_copy_count_comparison(eliminated_nodes)
 # plot_FP_for_specific_sensitivity(eliminated_nodes)
-plot_gc_content_violin_plot()
+# plot_gc_content_violin_plot()
+plot_paccbio_flanking_region_sizes()
