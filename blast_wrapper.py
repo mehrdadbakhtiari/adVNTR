@@ -11,7 +11,7 @@ def make_blast_database(fasta_file, db_name):
     make_db_args = shlex.split(make_db_args)
     call(['makeblastdb'] + make_db_args)
 
-    if os.path.exists(db_name + '.nal'):
+    if os.path.exists(db_name + '.nal') or os.path.exists(db_name + '.nsq'):
         empty_db = False
     else:
         empty_db = True
