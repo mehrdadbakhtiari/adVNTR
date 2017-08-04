@@ -220,6 +220,9 @@ class VNTRFinder:
             self.check_if_read_spans_vntr(read, length_distribution)
 
         print('length_distribution: ', length_distribution)
+        # max_copies = max(length_distribution) / float(len(self.reference_vntr.pattern))
+        # vntr_matcher = self.build_vntr_matcher_hmm(max_copies)
+
         average_length = sum(length_distribution) / float(len(length_distribution)) if len(length_distribution) else 0
         copy_count = average_length / float(len(self.reference_vntr.pattern))
         print('copy_count: ', copy_count)
