@@ -1,5 +1,7 @@
 matplotlib
 biopython
-pysam
+pysam==0.9.1.4
 cython
 networkx
+scipy
+joblib
