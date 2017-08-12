@@ -1,0 +1,5 @@
+matplotlib
+biopython
+pysam
+cython
+networkx

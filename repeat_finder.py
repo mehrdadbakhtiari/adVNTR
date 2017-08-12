@@ -97,4 +97,3 @@ if __name__ == '__main__':
     for i in range(len(paired_end_files)):
         paired_end_files[i] = files_dir + paired_end_files[i]
     print(get_copy_number_of_pattern(repeating_unit, paired_end_files, files_dir))
-

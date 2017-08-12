@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import networkx as nx
-from Bio import pairwise2
 
 
 def plot_graph_components(nodes, edges, output_file_name='labels_and_colors.png'):
