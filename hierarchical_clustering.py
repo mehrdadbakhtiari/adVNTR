@@ -35,25 +35,6 @@ def hierarchical_clustering(k, distance_matrix):
         clusters = clusters[:closest[0]] + clusters[closest[0]+1:]
     return clusters
 
-
-def get_informative_columns(seqs):
-    result = ['' for _ in seqs]
-    for col in range(len(seqs[0])-1):
-        current = '$'
-        counter = 0
-        for row in seqs:
-            if row[col] == current:
-                counter += 1
-            else:
-                counter -= 1
-            if counter < 0:
-                counter = 0
-                current = row[col]
-        if counter <= 3:
-            for i in range(len(seqs)):
-                result[i] += seqs[i][col]
-    return result
-
 fasta_sequences = SeqIO.parse(open('24149_VNTR1217_alignment_of_reads.fa'), 'fasta')
 mat = []
 seqs = []
