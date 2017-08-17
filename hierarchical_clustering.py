@@ -1,5 +1,3 @@
-from Bio import SeqIO
-from distance import hamming
 
 
 def clusters_dist(c1, c2, distance_matrix):
@@ -34,24 +32,3 @@ def hierarchical_clustering(k, distance_matrix):
         clusters = clusters[:closest[1]] + clusters[closest[1]+1:]
         clusters = clusters[:closest[0]] + clusters[closest[0]+1:]
     return clusters
-
-fasta_sequences = SeqIO.parse(open('24149_VNTR1217_alignment_of_reads.fa'), 'fasta')
-mat = []
-seqs = []
-for fasta in fasta_sequences:
-    seqs.append(str(fasta.seq))
-
-seqs = get_informative_columns(seqs)
-
-for row in seqs:
-    print(row)
-
-for i in range(len(seqs)):
-    mat.append([])
-    for seq in seqs:
-        mat[i].append(hamming(seq, seqs[i]))
-# for line in mat:
-#     print line
-# print('')
-clusters = hierarchical_clustering(2, mat)
-print(clusters)
