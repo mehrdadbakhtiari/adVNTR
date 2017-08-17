@@ -1,16 +1,17 @@
-from Bio import SeqIO, pairwise2
-from multiprocessing import Process, Manager, Value, Semaphore
-import numpy
 import os
-import pysam
+from multiprocessing import Process, Manager, Value, Semaphore
 from random import random
 from uuid import uuid4
 
+import numpy
+import pysam
+from Bio import SeqIO, pairwise2
+
+import settings
 from blast_wrapper import get_blast_matched_ids, make_blast_database
 from coverage_bias import CoverageBiasDetector, CoverageCorrector
 from hmm_utils import *
 from sam_utils import get_related_reads_and_read_count_in_samfile, extract_unmapped_reads_to_fasta_file
-import settings
 
 
 class VNTRFinder:
