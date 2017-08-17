@@ -6,6 +6,14 @@ def hamming(s1, s2):
     return result
 
 
+def get_similarity(s1, s2):
+    similarity = 0
+    for i in range(min(len(s1), len(s2))):
+        if s1[i] == s2[i]:
+            similarity += 1
+    return similarity
+
+
 def get_nucleotide_map(sequence):
     n_map = {'A': 0, 'C': 0, 'G': 0, 'T': 0}
     for s in sequence:
