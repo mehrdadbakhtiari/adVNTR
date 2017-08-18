@@ -11,6 +11,7 @@ import settings
 from blast_wrapper import get_blast_matched_ids, make_blast_database
 from coverage_bias import CoverageBiasDetector, CoverageCorrector
 from hmm_utils import *
+from pacbio_haplotyper import PacBioHaplotyper
 from sam_utils import get_related_reads_and_read_count_in_samfile, extract_unmapped_reads_to_fasta_file
 
 
@@ -181,7 +182,7 @@ class VNTRFinder:
                     selected_reads.append(read_segment.id)
         sema.release()
 
-    def check_if_read_spans_vntr(self, read, length_distribution):
+    def check_if_read_spans_vntr(self, read, length_distribution, spanning_reads):
         flanking_region_size = 100
         left_flanking = self.reference_vntr.left_flanking_region[-flanking_region_size:]
         right_flanking = self.reference_vntr.right_flanking_region[:flanking_region_size]
@@ -193,11 +194,12 @@ class VNTRFinder:
             return
         if right_align[3] < left_align[3]:
             return
-        print(str(read.seq)[left_align[3]:right_align[3]+flanking_region_size])
+        spanning_reads.append(str(read.seq)[left_align[3]:right_align[3]+flanking_region_size])
         length_distribution.append(right_align[3] - (left_align[3] + flanking_region_size))
 
     def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, working_directory='./'):
         length_distribution = []
+        spanning_reads = []
 
         unmapped_read_file = extract_unmapped_reads_to_fasta_file(alignment_file, working_directory)
         print('unmapped reads extracted')
@@ -208,7 +210,7 @@ class VNTRFinder:
         unmapped_reads = SeqIO.parse(unmapped_read_file, 'fasta')
         for read in unmapped_reads:
             if read.id in filtered_read_ids:
-                self.check_if_read_spans_vntr(read, length_distribution)
+                self.check_if_read_spans_vntr(read, length_distribution, spanning_reads)
 
         vntr_start = self.reference_vntr.start_point
         vntr_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
@@ -218,11 +220,15 @@ class VNTRFinder:
         read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
         samfile = pysam.AlignmentFile(alignment_file, read_mode)
         for read in samfile.fetch(chromosome, region_start, region_end):
-            self.check_if_read_spans_vntr(read, length_distribution)
+            self.check_if_read_spans_vntr(read, length_distribution, spanning_reads)
 
         print('length_distribution: ', length_distribution)
-        # max_copies = max(length_distribution) / float(len(self.reference_vntr.pattern))
-        # vntr_matcher = self.build_vntr_matcher_hmm(max_copies)
+        haplotyper = PacBioHaplotyper(spanning_reads)
+        haplotypes = haplotyper.get_error_corrected_haplotypes()
+        for haplotype in haplotypes:
+            print(haplotype)
+            # max_copies = max(length_distribution) / float(len(self.reference_vntr.pattern))
+            # vntr_matcher = self.build_vntr_matcher_hmm(max_copies)
 
         average_length = sum(length_distribution) / float(len(length_distribution)) if len(length_distribution) else 0
         copy_count = average_length / float(len(self.reference_vntr.pattern))
