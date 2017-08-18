@@ -26,7 +26,7 @@ class VNTRFinder:
             self.min_repeat_bp_to_add_read = 2
         self.min_repeat_bp_to_count_repeats = 2
 
-    def build_vntr_matcher_hmm(self, copies, flanking_region_size=140):
+    def build_vntr_matcher_hmm(self, copies, flanking_region_size=100):
         patterns = self.reference_vntr.get_repeat_segments() * 100
         left_flanking_region = self.reference_vntr.left_flanking_region[-flanking_region_size:]
         right_flanking_region = self.reference_vntr.right_flanking_region[:flanking_region_size]
@@ -224,7 +224,7 @@ class VNTRFinder:
             self.check_if_read_spans_vntr(read, length_distribution, spanning_reads)
 
         print('length_distribution: ', length_distribution)
-        max_copies = max(length_distribution) / float(len(self.reference_vntr.pattern))
+        max_copies = int(round(max(length_distribution) / float(len(self.reference_vntr.pattern))))
         vntr_matcher = self.build_vntr_matcher_hmm(max_copies)
         haplotyper = PacBioHaplotyper(spanning_reads)
         haplotypes = haplotyper.get_error_corrected_haplotypes()
