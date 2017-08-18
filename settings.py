@@ -19,3 +19,4 @@ CORES = 96
 
 SEQTK_DIR = '../seqtk/seqtk'
 CLUSTAL_DIR = '../clustalw2'
+MUSCLE_DIR = '../muscle3.8.31_i86linux64'
