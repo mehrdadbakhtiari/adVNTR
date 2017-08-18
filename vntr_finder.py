@@ -6,6 +6,7 @@ from uuid import uuid4
 import numpy
 import pysam
 from Bio import SeqIO, pairwise2
+from Bio.Seq import Seq
 
 import settings
 from blast_wrapper import get_blast_matched_ids, make_blast_database
@@ -25,9 +26,8 @@ class VNTRFinder:
             self.min_repeat_bp_to_add_read = 2
         self.min_repeat_bp_to_count_repeats = 2
 
-    def build_vntr_matcher_hmm(self, copies, read_length=150):
+    def build_vntr_matcher_hmm(self, copies, flanking_region_size=140):
         patterns = self.reference_vntr.get_repeat_segments() * 100
-        flanking_region_size = read_length - 10
         left_flanking_region = self.reference_vntr.left_flanking_region[-flanking_region_size:]
         right_flanking_region = self.reference_vntr.right_flanking_region[:flanking_region_size]
 
@@ -52,7 +52,8 @@ class VNTRFinder:
             model = model.from_json(stored_hmm_file)
             return model
 
-        vntr_matcher = self.build_vntr_matcher_hmm(copies, read_length)
+        flanking_region_size = read_length - 10
+        vntr_matcher = self.build_vntr_matcher_hmm(copies, flanking_region_size)
 
         json_str = vntr_matcher.to_json()
         with open(stored_hmm_file, 'w') as outfile:
@@ -223,12 +224,18 @@ class VNTRFinder:
             self.check_if_read_spans_vntr(read, length_distribution, spanning_reads)
 
         print('length_distribution: ', length_distribution)
+        max_copies = max(length_distribution) / float(len(self.reference_vntr.pattern))
+        vntr_matcher = self.build_vntr_matcher_hmm(max_copies)
         haplotyper = PacBioHaplotyper(spanning_reads)
         haplotypes = haplotyper.get_error_corrected_haplotypes()
         for haplotype in haplotypes:
             print(haplotype)
-            # max_copies = max(length_distribution) / float(len(self.reference_vntr.pattern))
-            # vntr_matcher = self.build_vntr_matcher_hmm(max_copies)
+            logp, vpath = vntr_matcher.viterbi(haplotype)
+            rev_logp, rev_vpath = vntr_matcher.viterbi(str(Seq(haplotype).reverse_complement()))
+            if logp < rev_logp:
+                vpath = rev_vpath
+            copy_number = get_number_of_repeats_in_vpath(vpath)
+            print(copy_number)
 
         average_length = sum(length_distribution) / float(len(length_distribution)) if len(length_distribution) else 0
         copy_count = average_length / float(len(self.reference_vntr.pattern))
