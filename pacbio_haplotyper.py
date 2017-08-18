@@ -1,4 +1,4 @@
-import StringIO
+from StringIO import StringIO
 
 from Bio.Align.Applications import MuscleCommandline
 from Bio import AlignIO
@@ -17,8 +17,8 @@ class PacBioHaplotyper:
         clusters = self.get_read_clusters()
         for cluster in clusters:
             muscle_cline = MuscleCommandline(MUSCLE_DIR, clwstrict=True)
-            data = '\n'.join(['>%s\n' % str(i) + cluster for i in range(len(cluster))])
             stdout, stderr = muscle_cline(stdin=data)
+            data = '\n'.join(['>%s\n' % str(i) + cluster[i] for i in range(len(cluster))])
             alignment = AlignIO.read(StringIO(stdout), "clustal")
             aligned_reads = [str(aligned.seq) for aligned in alignment]
             seq = self.get_consensus_sequence_from_multiple_alignment(aligned_reads)
