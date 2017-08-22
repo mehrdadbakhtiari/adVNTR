@@ -183,20 +183,25 @@ class VNTRFinder:
                     selected_reads.append(read_segment.id)
         sema.release()
 
-    def check_if_read_spans_vntr(self, read, length_distribution, spanning_reads):
+    def check_if_flanking_regions_align_to_str(self, read_str, length_distribution, spanning_reads):
         flanking_region_size = 100
         left_flanking = self.reference_vntr.left_flanking_region[-flanking_region_size:]
         right_flanking = self.reference_vntr.right_flanking_region[:flanking_region_size]
-        left_align = pairwise2.align.localms(str(read.seq), left_flanking, 1, -1, -1, -1)[0]
+        left_align = pairwise2.align.localms(read_str, left_flanking, 1, -1, -1, -1)[0]
         if left_align[2] < len(left_flanking) * 0.8:
             return
-        right_align = pairwise2.align.localms(str(read.seq), right_flanking, 1, -1, -1, -1)[0]
+        right_align = pairwise2.align.localms(read_str, right_flanking, 1, -1, -1, -1)[0]
         if right_align[2] < len(right_flanking) * 0.8:
             return
         if right_align[3] < left_align[3]:
             return
-        spanning_reads.append(str(read.seq)[left_align[3]:right_align[3]+flanking_region_size])
+        spanning_reads.append(read_str[left_align[3]:right_align[3]+flanking_region_size])
         length_distribution.append(right_align[3] - (left_align[3] + flanking_region_size))
+
+    def check_if_read_spans_vntr(self, read, length_distribution, spanning_reads):
+        self.check_if_flanking_regions_align_to_str(str(read.seq), length_distribution, spanning_reads)
+        reverse_complement_str = str(Seq(read.seq).reverse_complement())
+        self.check_if_flanking_regions_align_to_str(reverse_complement_str, length_distribution, spanning_reads)
 
     def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, working_directory='./'):
         length_distribution = []
