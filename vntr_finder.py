@@ -1,5 +1,5 @@
-import os
 from multiprocessing import Process, Manager, Value, Semaphore
+import os
 from random import random
 from uuid import uuid4
 
@@ -61,7 +61,7 @@ class VNTRFinder:
         return vntr_matcher
 
     def filter_reads_with_keyword_matching(self, working_directory, read_file, short_reads=True):
-        db_name = 'blast_db__' + read_file
+        db_name = 'blast_db__' + os.path.basename(read_file)
         blast_db_name = working_directory + db_name
         empty_db = False
         if not os.path.exists(blast_db_name + '.nsq') and not os.path.exists(blast_db_name + '.nal'):
