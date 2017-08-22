@@ -44,12 +44,15 @@ def get_repeat_segments_from_visited_states_and_region(visited_states, region):
 
 
 def get_number_of_repeats_in_vpath(vpath):
-    repeats = 0
+    starts = 0
+    ends = 0
     visited_states = [state.name for idx, state in vpath[1:-1]]
     for i in range(len(visited_states)):
+        if visited_states[i].startswith('unit_start'):
+            starts += 1
         if visited_states[i].startswith('unit_end'):
-            repeats += 1
-    return repeats
+            ends += 1
+    return max(starts, ends)
 
 
 def get_number_of_repeat_bp_matches_in_vpath(vpath):
