@@ -65,20 +65,20 @@ class PacBioHaplotyper:
         result = [[self.reads[int(aligned_read_ids[i])] for i in cluster] for cluster in clusters]
         return result
 
-    def get_informative_columns(self, aligned_reads):
+    @staticmethod
+    def get_informative_columns(aligned_reads):
         result = ['' for _ in aligned_reads]
-        for col in range(len(aligned_reads[0])-1):
-            current = '$'
-            counter = 0
+        number_of_columns = len(aligned_reads[0])-1
+        for col in range(number_of_columns):
+            bins = {}
             for row in aligned_reads:
-                if row[col] == current:
-                    counter += 1
+                if row[col] in bins.keys():
+                    bins[row[col]] += 1
                 else:
-                    counter -= 1
-                if counter < 0:
-                    counter = 0
-                    current = row[col]
-            if counter <= 3:
+                    bins[row[col]] = 0
+            sorted_frequencies = sorted(bins.items(), key=lambda x: x[1])
+            highest_frequency = sorted_frequencies[-1][1]
+            if highest_frequency <= len(aligned_reads) * 0.7:
                 for i in range(len(aligned_reads)):
                     result[i] += aligned_reads[i][col]
         return result
