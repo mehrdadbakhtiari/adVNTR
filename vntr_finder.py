@@ -61,7 +61,7 @@ class VNTRFinder:
         return vntr_matcher
 
     def filter_reads_with_keyword_matching(self, working_directory, read_file, short_reads=True):
-        db_name = working_directory[:-1]
+        db_name = 'blast_db__' + read_file
         blast_db_name = working_directory + db_name
         empty_db = False
         if not os.path.exists(blast_db_name + '.nsq') and not os.path.exists(blast_db_name + '.nal'):
