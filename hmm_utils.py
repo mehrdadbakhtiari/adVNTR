@@ -69,6 +69,30 @@ def get_number_of_repeat_bp_matches_in_vpath(vpath):
     return result
 
 
+def get_left_flanking_region_size_in_vpath(vpath):
+    visited_states = [state.name for idx, state in vpath[1:-1]]
+    result = 0
+    counting = True
+    for i in range(len(visited_states)):
+        if visited_states[i].startswith('start_repeating_pattern_match'):
+            counting = False
+        if is_matching_state(visited_states[i]) and counting:
+            result += 1
+    return result
+
+
+def get_right_flanking_region_size_in_vpath(vpath):
+    visited_states = [state.name for idx, state in vpath[1:-1]]
+    result = 0
+    counting = False
+    for i in range(len(visited_states)):
+        if visited_states[i] == 'end_repeating_pattern_match':
+            counting = True
+        if is_matching_state(visited_states[i]) and counting:
+            result += 1
+    return result
+
+
 def get_prefix_matcher_hmm(pattern):
     model = Model(name="Prefix Matcher HMM Model")
     insert_distribution = DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
