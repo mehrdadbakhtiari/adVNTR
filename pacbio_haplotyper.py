@@ -20,6 +20,9 @@ class PacBioHaplotyper:
         clusters = self.get_read_clusters()
         logging.debug('Cluster sizes: %s, %s' % (len(clusters[0]), len(clusters[1])))
         for cluster in clusters:
+            if len(cluster) < 2:
+                logging.info('Both haplotypes are similar (homozygous copy number)')
+                continue
             muscle_cline = MuscleCommandline(MUSCLE_DIR, clwstrict=True)
             data = '\n'.join(['>%s\n' % str(i) + cluster[i] for i in range(len(cluster))])
             stdout, stderr = muscle_cline(stdin=data)
@@ -27,6 +30,8 @@ class PacBioHaplotyper:
             aligned_reads = [str(aligned.seq) for aligned in alignment]
             seq = self.get_consensus_sequence_from_multiple_alignment(aligned_reads)
             haplotypes.append(seq)
+        if len(haplotypes) < 2:
+            haplotypes.append(haplotypes[0])
         return haplotypes
 
     @staticmethod

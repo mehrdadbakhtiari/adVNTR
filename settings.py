@@ -20,7 +20,5 @@ CORES = 96
 SEQTK_DIR = '../seqtk/seqtk'
 MUSCLE_DIR = 'tools/muscle3.8.31_i86linux64'
 
-PROFILING_OUTPUT = 'profiling.txt'
 LOG_FILE = 'log.log'
 logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', filename=LOG_FILE, level=logging.DEBUG)
-

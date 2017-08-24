@@ -27,6 +27,7 @@ class VNTRFinder:
             self.min_repeat_bp_to_add_read = 2
         self.min_repeat_bp_to_count_repeats = 2
 
+    @time_usage
     def build_vntr_matcher_hmm(self, copies, flanking_region_size=100):
         patterns = self.reference_vntr.get_repeat_segments() * 100
         left_flanking_region = self.reference_vntr.left_flanking_region[-flanking_region_size:]
@@ -127,6 +128,7 @@ class VNTRFinder:
         for p in process_list:
             p.join()
 
+    @time_usage
     def calculate_min_score_to_select_a_read(self, hmm, alignment_file):
         """Calculate the score distribution of false positive reads
         and return score to select the 0.0001 percentile of the distribution
@@ -271,6 +273,7 @@ class VNTRFinder:
         print('copy_count: ', copy_count)
         return copy_count
 
+    @time_usage
     def find_repeat_count_from_alignment_file(self, alignment_file, working_directory='./'):
         unmapped_read_file = extract_unmapped_reads_to_fasta_file(alignment_file, working_directory)
         logging.info('unmapped reads extracted')
