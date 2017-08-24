@@ -200,7 +200,7 @@ class VNTRFinder:
 
     def check_if_read_spans_vntr(self, read, length_distribution, spanning_reads):
         self.check_if_flanking_regions_align_to_str(str(read.seq), length_distribution, spanning_reads)
-        reverse_complement_str = str(Seq(read.seq).reverse_complement())
+        reverse_complement_str = str(Seq(str(read.seq)).reverse_complement())
         self.check_if_flanking_regions_align_to_str(reverse_complement_str, length_distribution, spanning_reads)
 
     def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, working_directory='./'):
@@ -234,7 +234,7 @@ class VNTRFinder:
         haplotyper = PacBioHaplotyper(spanning_reads)
         haplotypes = haplotyper.get_error_corrected_haplotypes()
         for haplotype in haplotypes:
-            print(haplotype)
+            print('haplotype:', haplotype)
             logp, vpath = vntr_matcher.viterbi(haplotype)
             rev_logp, rev_vpath = vntr_matcher.viterbi(str(Seq(haplotype).reverse_complement()))
             if logp < rev_logp:
