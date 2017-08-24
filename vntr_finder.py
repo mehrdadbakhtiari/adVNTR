@@ -168,7 +168,7 @@ class VNTRFinder:
         return score
 
     def process_unmapped_read(self, sema, read_segment, hmm, min_score_to_count_read,
-                              vntr_bp_in_unmapped_reads, selected_reads):
+                              vntr_bp_in_unmapped_reads, selected_reads_vpath):
         if read_segment.seq.count('N') <= 0:
             logp, vpath = hmm.viterbi(str(read_segment.seq))
             rev_logp, rev_vpath = hmm.viterbi(str(read_segment.seq.reverse_complement()))
@@ -180,7 +180,7 @@ class VNTRFinder:
                 if repeat_bps > self.min_repeat_bp_to_count_repeats:
                     vntr_bp_in_unmapped_reads.value += repeat_bps
                 if repeat_bps > self.min_repeat_bp_to_add_read:
-                    selected_reads.append(read_segment.id)
+                    selected_reads_vpath.append(vpath)
         sema.release()
 
     def check_if_flanking_regions_align_to_str(self, read_str, length_distribution, spanning_reads):
@@ -278,7 +278,7 @@ class VNTRFinder:
             if read_segment.id in filtered_read_ids:
                 sema.acquire()
                 p = Process(target=self.process_unmapped_read, args=(sema, read_segment, hmm, min_score_to_count_read,
-                                                                     vntr_bp_in_unmapped_reads, selected_reads))
+                                                                     vntr_bp_in_unmapped_reads, selected_reads_vpath))
                 process_list.append(p)
                 p.start()
         for p in process_list:
@@ -299,6 +299,12 @@ class VNTRFinder:
                 continue
             read_end = read.reference_end if read.reference_end else read.reference_start + len(read.seq)
             if vntr_start <= read.reference_start < vntr_end or vntr_start < read_end <= vntr_end:
+                if read.seq.count('N') <= 0:
+                    logp, vpath = hmm.viterbi(str(read.seq))
+                    rev_logp, rev_vpath = hmm.viterbi(str(Seq(read.seq).reverse_complement()))
+                    if logp < rev_logp:
+                        vpath = rev_vpath
+                    selected_reads_vpath.append(vpath)
                 end = min(read_end, vntr_end)
                 start = max(read.reference_start, vntr_start)
                 vntr_bp_in_mapped_reads += end - start
