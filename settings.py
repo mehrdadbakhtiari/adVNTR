@@ -1,7 +1,6 @@
 
 HG19_DIR = './hg19_chromosomes/'
 CHROMOSOMES = ['chr' + str(chr_number) for chr_number in list(range(1, 23))] + ['chrX', 'chrY']
-# GENOME_LENGTH = 102531392
 GENOME_LENGTH = 3100000000
 MAX_INSERT_SIZE = 1000
 
