@@ -13,6 +13,7 @@ from blast_wrapper import get_blast_matched_ids, make_blast_database
 from coverage_bias import CoverageBiasDetector, CoverageCorrector
 from hmm_utils import *
 from pacbio_haplotyper import PacBioHaplotyper
+from profiler import time_usage
 from sam_utils import get_related_reads_and_read_count_in_samfile, extract_unmapped_reads_to_fasta_file
 
 
@@ -60,6 +61,7 @@ class VNTRFinder:
             outfile.write(json_str)
         return vntr_matcher
 
+    @time_usage
     def filter_reads_with_keyword_matching(self, working_directory, read_file, short_reads=True):
         db_name = 'blast_db__' + os.path.basename(read_file)
         blast_db_name = working_directory + db_name
@@ -204,6 +206,7 @@ class VNTRFinder:
         self.check_if_flanking_regions_align_to_str(reverse_complement_str, length_distribution, spanning_reads)
         sema.release()
 
+    @time_usage
     def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, working_directory='./'):
         sema = Semaphore(settings.CORES)
         manager = Manager()
