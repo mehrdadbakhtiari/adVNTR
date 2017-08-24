@@ -198,14 +198,17 @@ class VNTRFinder:
         spanning_reads.append(read_str[left_align[3]:right_align[3]+flanking_region_size])
         length_distribution.append(right_align[3] - (left_align[3] + flanking_region_size))
 
-    def check_if_read_spans_vntr(self, read, length_distribution, spanning_reads):
+    def check_if_read_spans_vntr(self, sema, read, length_distribution, spanning_reads):
         self.check_if_flanking_regions_align_to_str(str(read.seq), length_distribution, spanning_reads)
         reverse_complement_str = str(Seq(str(read.seq)).reverse_complement())
         self.check_if_flanking_regions_align_to_str(reverse_complement_str, length_distribution, spanning_reads)
+        sema.release()
 
     def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, working_directory='./'):
-        length_distribution = []
-        spanning_reads = []
+        sema = Semaphore(settings.CORES)
+        manager = Manager()
+        shared_length_distribution = manager.list()
+        shared_spanning_reads = manager.list()
 
         unmapped_read_file = extract_unmapped_reads_to_fasta_file(alignment_file, working_directory)
         print('unmapped reads extracted')
@@ -214,9 +217,16 @@ class VNTRFinder:
         print('unmapped reads filtered')
 
         unmapped_reads = SeqIO.parse(unmapped_read_file, 'fasta')
+        process_list = []
         for read in unmapped_reads:
             if read.id in filtered_read_ids:
-                self.check_if_read_spans_vntr(read, length_distribution, spanning_reads)
+                sema.acquire()
+                p = Process(target=self.check_if_read_spans_vntr, args=(sema, read, shared_length_distribution,
+                                                                        shared_spanning_reads))
+                process_list.append(p)
+                p.start()
+        for p in process_list:
+            p.join()
 
         vntr_start = self.reference_vntr.start_point
         vntr_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
@@ -225,8 +235,19 @@ class VNTRFinder:
         chromosome = self.reference_vntr.chromosome[3:]
         read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
         samfile = pysam.AlignmentFile(alignment_file, read_mode)
+        process_list = []
         for read in samfile.fetch(chromosome, region_start, region_end):
-            self.check_if_read_spans_vntr(read, length_distribution, spanning_reads)
+            sema.acquire()
+            p = Process(target=self.check_if_read_spans_vntr, args=(sema, read, shared_length_distribution,
+                                                                    shared_spanning_reads))
+            process_list.append(p)
+            p.start()
+
+        for p in process_list:
+            p.join()
+
+        length_distribution = list(shared_length_distribution)
+        spanning_reads = list(shared_spanning_reads)
 
         print('length_distribution: ', length_distribution)
         max_copies = int(round(max(length_distribution) / float(len(self.reference_vntr.pattern))))
@@ -258,7 +279,7 @@ class VNTRFinder:
         min_score_to_count_read = None
         sema = Semaphore(settings.CORES)
         manager = Manager()
-        selected_reads = manager.list()
+        selected_reads_vpath = manager.list()
         vntr_bp_in_unmapped_reads = Value('d', 0.0)
 
         number_of_reads = 0
