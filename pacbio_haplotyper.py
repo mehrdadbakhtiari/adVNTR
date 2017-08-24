@@ -9,6 +9,8 @@ from settings import MUSCLE_DIR
 
 
 class PacBioHaplotyper:
+    """Find error corrected VNTR section in two haplotypes from PacBio reads and genotype the number of repeats"""
+
     def __init__(self, reads):
         self.reads = [read.upper() for read in reads]
 
@@ -47,6 +49,7 @@ class PacBioHaplotyper:
         return seq
 
     def get_read_clusters(self):
+        """Cluster reads to two group based on informative base pairs to separate the reads of each haplotype"""
         muscle_cline = MuscleCommandline(MUSCLE_DIR, clwstrict=True)
         data = '\n'.join(['>%s\n' % str(i) + self.reads[i] for i in range(len(self.reads))])
         stdout, stderr = muscle_cline(stdin=data)
