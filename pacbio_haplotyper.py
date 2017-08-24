@@ -5,18 +5,20 @@ from Bio import AlignIO
 
 from distance import hamming
 from hierarchical_clustering import hierarchical_clustering
-from settings import MUSCLE_DIR
+from settings import *
 
 
 class PacBioHaplotyper:
     """Find error corrected VNTR section in two haplotypes from PacBio reads and genotype the number of repeats"""
 
     def __init__(self, reads):
+        logging.debug('Number of reads for finding haplotypes: %s' % len(reads))
         self.reads = [read.upper() for read in reads]
 
     def get_error_corrected_haplotypes(self):
         haplotypes = []
         clusters = self.get_read_clusters()
+        logging.debug('Cluster sizes: %s, %s' % (len(clusters[0]), len(clusters[1])))
         for cluster in clusters:
             muscle_cline = MuscleCommandline(MUSCLE_DIR, clwstrict=True)
             data = '\n'.join(['>%s\n' % str(i) + cluster[i] for i in range(len(cluster))])

@@ -1,3 +1,4 @@
+import logging
 
 HG19_DIR = './hg19_chromosomes/'
 CHROMOSOMES = ['chr' + str(chr_number) for chr_number in list(range(1, 23))] + ['chrX', 'chrY']
@@ -20,3 +21,6 @@ SEQTK_DIR = '../seqtk/seqtk'
 MUSCLE_DIR = 'tools/muscle3.8.31_i86linux64'
 
 PROFILING_OUTPUT = 'profiling.txt'
+LOG_FILE = 'log.log'
+logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', filename=LOG_FILE, level=logging.DEBUG)
+
