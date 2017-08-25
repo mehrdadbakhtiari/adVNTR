@@ -292,7 +292,7 @@ def get_constant_number_of_repeats_matcher_hmm(patterns, copies):
     if len(patterns) > 1:
         # model.fit(patterns, algorithm='baum-welch', transition_pseudocount=1, use_pseudocount=True)
         fit_patterns = [pattern * copies for pattern in patterns]
-        model.fit(fit_patterns, algorithm='viterbi', transition_pseudocount=1, use_pseudocount=True)
+        model.fit(fit_patterns, algorithm='viterbi', transition_pseudocount=1, use_pseudocount=True, verbose=False)
     return model
 
 

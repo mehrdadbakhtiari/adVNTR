@@ -9,6 +9,6 @@ def time_usage(func):
         retval = func(*args, **kwargs)
         end_ts = time.time()
         function_name = func.__name__
-        logging.info("%s executed in %fs\n" % (function_name, end_ts - beg_ts))
+        logging.info("%s executed in %fs" % (function_name, end_ts - beg_ts))
         return retval
     return wrapper

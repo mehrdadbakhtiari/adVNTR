@@ -89,10 +89,9 @@ class VNTRFinder:
                                                       evalue=10, search_id=search_id, identity_cutoff=identity_cutoff)
                 blast_ids |= search_result
 
-        print('blast selected ', len(blast_ids), ' reads')
+        logging.info('blast selected %s reads' % len(blast_ids))
         if len(blast_ids) == len(self.reference_vntr.get_repeat_segments()) * 50 * 1000:
-            with open('errors.txt', 'a') as out:
-                out.write('maximum number of read selected in filtering for pattern %s\n' % self.reference_vntr.id)
+            logging.error('maximum number of read selected in filtering for pattern %s' % self.reference_vntr.id)
         return blast_ids
 
     @staticmethod
@@ -163,9 +162,9 @@ class VNTRFinder:
             if SCORE_FINDING_READS_FRACTION in fraction_score_map.keys():
                 return fraction_score_map[SCORE_FINDING_READS_FRACTION]
 
-        print('Minimum score is not precomputed for vntr id: %s' % self.reference_vntr.id)
+        logging.debug('Minimum score is not precomputed for vntr id: %s' % self.reference_vntr.id)
         score = self.calculate_min_score_to_select_a_read(hmm, alignment_file)
-        print('computed score: ', score)
+        logging.debug('computed score: ', score)
         with open(stored_scores_file, 'a') as outfile:
             outfile.write('%s %s\n' % (SCORE_FINDING_READS_FRACTION, score))
 
@@ -260,7 +259,7 @@ class VNTRFinder:
         haplotyper = PacBioHaplotyper(spanning_reads)
         haplotypes = haplotyper.get_error_corrected_haplotypes()
         for haplotype in haplotypes:
-            print('haplotype:', haplotype)
+            print('haplotype: %s' % haplotype)
             logp, vpath = vntr_matcher.viterbi(haplotype)
             rev_logp, rev_vpath = vntr_matcher.viterbi(str(Seq(haplotype).reverse_complement()))
             if logp < rev_logp:
