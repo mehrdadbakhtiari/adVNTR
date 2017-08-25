@@ -164,7 +164,7 @@ class VNTRFinder:
 
         logging.debug('Minimum score is not precomputed for vntr id: %s' % self.reference_vntr.id)
         score = self.calculate_min_score_to_select_a_read(hmm, alignment_file)
-        logging.debug('computed score: ', score)
+        logging.debug('computed score: %s' % score)
         with open(stored_scores_file, 'a') as outfile:
             outfile.write('%s %s\n' % (SCORE_FINDING_READS_FRACTION, score))
 
@@ -209,6 +209,7 @@ class VNTRFinder:
 
     @time_usage
     def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, working_directory='./'):
+        logging.debug('finding repeat count from pacbio alignment file for %s' % self.reference_vntr.id)
         sema = Semaphore(CORES)
         manager = Manager()
         shared_length_distribution = manager.list()
@@ -274,6 +275,7 @@ class VNTRFinder:
 
     @time_usage
     def find_repeat_count_from_alignment_file(self, alignment_file, working_directory='./'):
+        logging.debug('finding repeat count from alignment file for %s' % self.reference_vntr.id)
         unmapped_read_file = extract_unmapped_reads_to_fasta_file(alignment_file, working_directory)
         logging.info('unmapped reads extracted')
 
@@ -335,6 +337,16 @@ class VNTRFinder:
                 start = max(read.reference_start, vntr_start)
                 vntr_bp_in_mapped_reads += end - start
         print('vntr base pairs in mapped reads:', vntr_bp_in_mapped_reads)
+
+        flanked_repeats = []
+        observed_repeats = []
+        for vpath in selected_reads_vpath:
+            repeats = get_number_of_repeats_in_vpath(vpath)
+            if get_left_flanking_region_size_in_vpath(vpath) > 5 and get_right_flanking_region_size_in_vpath(vpath) > 5:
+                flanked_repeats.append(repeats)
+            observed_repeats.append(repeats)
+        print('flanked repeats:', flanked_repeats)
+        print('maximum of observed repeats:', max(observed_repeats))
 
         total_counted_vntr_bp = vntr_bp_in_unmapped_reads.value + vntr_bp_in_mapped_reads
         pattern_occurrences = total_counted_vntr_bp / float(len(self.reference_vntr.pattern))
