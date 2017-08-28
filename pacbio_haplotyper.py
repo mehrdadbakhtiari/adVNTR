@@ -1,3 +1,4 @@
+import logging
 from StringIO import StringIO
 
 from Bio.Align.Applications import MuscleCommandline
@@ -42,8 +43,9 @@ class PacBioHaplotyper:
     @staticmethod
     def get_consensus_sequence_from_multiple_alignment(aligned_reads):
         """
-        It finds the most frequent element in each column using counting sort.
-        Then it add the element to the result if it is not a gap element.
+        It finds the most frequent element in each column using counting sort,
+        then it add the most frequent element to the result if it is not a gap element.
+        If the frequency of the gap and one base pair is equal, the base pair will be selected.
         """
         seq = ''
         for i in range(len(aligned_reads[0])):

@@ -1,4 +1,3 @@
-import logging
 
 HG19_DIR = './hg19_chromosomes/'
 CHROMOSOMES = ['chr' + str(chr_number) for chr_number in list(range(1, 23))] + ['chrX', 'chrY']
@@ -15,10 +14,7 @@ GC_CONTENT_WINDOW_SIZE = 100
 GC_CONTENT_BINS = 10
 OUTLIER_COVERAGE = 200
 
-CORES = 96
+CORES = 20
 
 SEQTK_DIR = '../seqtk/seqtk'
 MUSCLE_DIR = 'tools/muscle3.8.31_i86linux64'
-
-LOG_FILE = 'log.log'
-logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', filename=LOG_FILE, level=logging.DEBUG)

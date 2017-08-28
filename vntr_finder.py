@@ -1,3 +1,4 @@
+import logging
 from multiprocessing import Process, Manager, Value, Semaphore
 import os
 from random import random

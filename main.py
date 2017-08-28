@@ -1,8 +1,10 @@
+import logging
+import os
+import sys
+
 from vntr_finder import VNTRFinder
 from reference_vntr import identify_homologous_vntrs, load_unique_vntrs_data
 # from vntr_graph import plot_graph_components, get_nodes_and_edges_of_vntr_graph
-import os
-import sys
 
 
 if len(sys.argv) < 2:
@@ -14,6 +16,9 @@ if len(sys.argv) >= 3:
 input_file = sys.argv[1]
 input_is_alignment_file = input_file.endswith('bam') or input_file.endswith('sam')
 directory = os.path.dirname(input_file) + '/'
+
+LOG_FILE = 'log_%s.log' % os.path.basename(input_file)
+logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', filename=LOG_FILE, level=logging.DEBUG)
 
 reference_vntrs = load_unique_vntrs_data()
 

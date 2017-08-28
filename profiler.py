@@ -1,6 +1,5 @@
+import logging
 import time
-
-from settings import *
 
 
 def time_usage(func):
