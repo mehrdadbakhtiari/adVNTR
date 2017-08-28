@@ -208,15 +208,11 @@ class VNTRFinder:
         sema.release()
 
     @time_usage
-    def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, working_directory='./'):
-        logging.debug('finding repeat count from pacbio alignment file for %s' % self.reference_vntr.id)
+    def get_spanning_reads_of_unaligned_pacbio_reads(self, unmapped_read_file, working_directory):
         sema = Semaphore(CORES)
         manager = Manager()
         shared_length_distribution = manager.list()
         shared_spanning_reads = manager.list()
-
-        unmapped_read_file = extract_unmapped_reads_to_fasta_file(alignment_file, working_directory)
-        logging.info('unmapped reads extracted')
 
         filtered_read_ids = self.filter_reads_with_keyword_matching(working_directory, unmapped_read_file, False)
         logging.info('unmapped reads filtered')
@@ -232,6 +228,42 @@ class VNTRFinder:
                 p.start()
         for p in process_list:
             p.join()
+        print('length_distribution of unmapped spanning reads: ', shared_length_distribution)
+        return list(shared_spanning_reads)
+
+    @time_usage
+    def get_haplotype_copy_numbers_from_spanning_reads(self, spanning_reads):
+        max_length = 0
+        for read in spanning_reads:
+            if len(read) - 100 > max_length:
+                max_length = len(read) - 100
+        max_copies = int(round(max_length / float(len(self.reference_vntr.pattern))))
+        vntr_matcher = self.build_vntr_matcher_hmm(max_copies)
+        haplotyper = PacBioHaplotyper(spanning_reads)
+        haplotypes = haplotyper.get_error_corrected_haplotypes()
+        copy_numbers = []
+        for haplotype in haplotypes:
+            print('haplotype: %s' % haplotype)
+            logp, vpath = vntr_matcher.viterbi(haplotype)
+            rev_logp, rev_vpath = vntr_matcher.viterbi(str(Seq(haplotype).reverse_complement()))
+            if logp < rev_logp:
+                vpath = rev_vpath
+            copy_numbers.append(get_number_of_repeats_in_vpath(vpath))
+            print(copy_numbers[-1])
+        return copy_numbers
+
+    @time_usage
+    def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, working_directory='./'):
+        logging.debug('finding repeat count from pacbio alignment file for %s' % self.reference_vntr.id)
+        sema = Semaphore(CORES)
+        manager = Manager()
+        shared_length_distribution = manager.list()
+        mapped_spanning_reads = manager.list()
+
+        unmapped_reads = extract_unmapped_reads_to_fasta_file(alignment_file, working_directory)
+        logging.info('unmapped reads extracted')
+
+        unaligned_spanning_reads = self.get_spanning_reads_of_unaligned_pacbio_reads(unmapped_reads, working_directory)
 
         vntr_start = self.reference_vntr.start_point
         vntr_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
@@ -244,34 +276,25 @@ class VNTRFinder:
         for read in samfile.fetch(chromosome, region_start, region_end):
             sema.acquire()
             p = Process(target=self.check_if_read_spans_vntr, args=(sema, read, shared_length_distribution,
-                                                                    shared_spanning_reads))
+                                                                    mapped_spanning_reads))
             process_list.append(p)
             p.start()
 
         for p in process_list:
             p.join()
 
-        length_distribution = list(shared_length_distribution)
-        spanning_reads = list(shared_spanning_reads)
+        print('length_distribution of mapped spanning reads: ', shared_length_distribution)
+        spanning_reads = list(mapped_spanning_reads) + unaligned_spanning_reads
+        copy_numbers = self.get_haplotype_copy_numbers_from_spanning_reads(spanning_reads)
+        print('copy_numbers: ', copy_numbers)
+        return copy_numbers
 
-        print('length_distribution: ', length_distribution)
-        max_copies = int(round(max(length_distribution) / float(len(self.reference_vntr.pattern))))
-        vntr_matcher = self.build_vntr_matcher_hmm(max_copies)
-        haplotyper = PacBioHaplotyper(spanning_reads)
-        haplotypes = haplotyper.get_error_corrected_haplotypes()
-        for haplotype in haplotypes:
-            print('haplotype: %s' % haplotype)
-            logp, vpath = vntr_matcher.viterbi(haplotype)
-            rev_logp, rev_vpath = vntr_matcher.viterbi(str(Seq(haplotype).reverse_complement()))
-            if logp < rev_logp:
-                vpath = rev_vpath
-            copy_number = get_number_of_repeats_in_vpath(vpath)
-            print(copy_number)
-
-        average_length = sum(length_distribution) / float(len(length_distribution)) if len(length_distribution) else 0
-        copy_count = average_length / float(len(self.reference_vntr.pattern))
-        print('copy_count: ', copy_count)
-        return copy_count
+    @time_usage
+    def find_repeat_count_from_pacbio_reads(self, pacbio_read_file, working_directory='./'):
+        spanning_reads = self.get_spanning_reads_of_unaligned_pacbio_reads(pacbio_read_file, working_directory)
+        copy_numbers = self.get_haplotype_copy_numbers_from_spanning_reads(spanning_reads)
+        print('copy_numbers: ', copy_numbers)
+        return copy_numbers
 
     @time_usage
     def find_repeat_count_from_alignment_file(self, alignment_file, working_directory='./'):

@@ -30,7 +30,10 @@ for i in range(len(reference_vntrs)):
     vntr_finder = VNTRFinder(reference_vntrs[i])
     # copy_number = vntr_finder.find_repeat_count_from_short_reads(read_files)
     if pacbio_reads:
-        copy_number = vntr_finder.find_repeat_count_from_pacbio_alignment_file(alignment_file, directory)
+        if alignment_file.endswith('bam') or alignment_file.endswith('sam'):
+            copy_number = vntr_finder.find_repeat_count_from_pacbio_alignment_file(alignment_file, directory)
+        else:
+            copy_number = vntr_finder.find_repeat_count_from_pacbio_reads(alignment_file, directory)
     else:
         copy_number = vntr_finder.find_repeat_count_from_alignment_file(alignment_file, directory)
     # vntr_finder.find_accuracy()
