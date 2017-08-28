@@ -19,7 +19,7 @@ class PacBioHaplotyper:
         haplotypes = []
         clusters = self.get_read_clusters()
         logging.debug('Cluster sizes: %s, %s' % (len(clusters[0]), len(clusters[1])))
-        homozygous = max(len(clusters[0]), len(clusters[1])) >= 10 * min(len(clusters[0]), len(clusters[1]))
+        homozygous = max(len(clusters[0]), len(clusters[1])) >= 7 * min(len(clusters[0]), len(clusters[1]))
         for cluster in clusters:
             if len(cluster) < 2 and homozygous:
                 logging.info('Both haplotypes are similar (homozygous copy number)')
