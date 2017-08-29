@@ -1,3 +1,5 @@
+import socket
+
 
 HG19_DIR = './hg19_chromosomes/'
 CHROMOSOMES = ['chr' + str(chr_number) for chr_number in list(range(1, 23))] + ['chrX', 'chrY']
@@ -14,6 +16,10 @@ GC_CONTENT_WINDOW_SIZE = 100
 GC_CONTENT_BINS = 10
 OUTLIER_COVERAGE = 200
 
-CORES = 20
+hostname = socket.gethostname()
+if hostname.startswith('genome'):
+    CORES = 20
+else:
+    CORES = 8
 
 MUSCLE_DIR = 'tools/muscle3.8.31_i86linux64'
