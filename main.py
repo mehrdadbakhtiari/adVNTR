@@ -24,6 +24,7 @@ reference_vntrs = load_unique_vntrs_data()
 
 # reference_vntrs = identify_homologous_vntrs(reference_vntrs, 'chr15')
 accurate_vntr_list = [7, 69, 119, 970, 1123, 1213, 1214, 1215, 1216, 1217, 1218, 1219, 1220, 809, 377, 378]
+accurate_vntr_list = [7, 119, 1214, 1218, 1220, 1221, 377, 378, 809]
 
 for i in range(len(reference_vntrs)):
     if not reference_vntrs[i].is_non_overlapping() or reference_vntrs[i].has_homologous_vntr():
@@ -44,8 +45,6 @@ for i in range(len(reference_vntrs)):
             copy_number = vntr_finder.find_repeat_count_from_short_reads(input_file)
     # vntr_finder.find_accuracy()
 
-    with open('hmm_repeat_count.txt', 'a') as output:
-        output.write('%s %s\n' % (i, copy_number / len(reference_vntrs[i].get_repeat_segments())))
     # end_point = start_points[i] + sum([len(e) for e in repeat_segments])
     # VNTR_coverage_ratio = get_VNTR_coverage_over_total_coverage(start_points[i], end_point)
     # with open('vntr_coverage_ratio.txt', 'a') as output:
