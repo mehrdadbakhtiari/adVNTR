@@ -16,5 +16,4 @@ OUTLIER_COVERAGE = 200
 
 CORES = 20
 
-SEQTK_DIR = '../seqtk/seqtk'
 MUSCLE_DIR = 'tools/muscle3.8.31_i86linux64'
