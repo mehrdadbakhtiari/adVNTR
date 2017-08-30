@@ -313,32 +313,16 @@ def get_variable_number_of_repeats_matcher_hmm(patterns, copies=1):
     mat = np.r_[mat, [np.zeros(states_count + 2)]]
 
     unit_ends = []
-    first_repeat_matches = []
-    matches_states = []
     for i, state in enumerate(model.states):
         if state.name.startswith('unit_end'):
             unit_ends.append(i)
-        if state.name[0] == 'M' and state.name.split('_')[-1] == '0':
-            first_repeat_matches.append(i)
-        if state.name[0] == 'M':
-            matches_states.append(i)
 
     for i in range(len(mat[model.start_index])):
         if mat[model.start_index][i] != 0:
             first_unit_start = i
     mat[model.start_index][first_unit_start] = 0.0
     mat[model.start_index][start_repeats_ind] = 1
-    mat[start_repeats_ind][first_unit_start] = 0.3
-    for first_repeat_match in first_repeat_matches:
-        mat[start_repeats_ind][first_repeat_match] = 0.7 / len(first_repeat_matches)
-
-    for match_state in matches_states:
-        to_end = 0.7 / len(matches_states)
-        total = 1 + to_end
-        for next in range(len(mat[match_state])):
-            if mat[match_state][next] != 0:
-                mat[match_state][next] /=  total
-        mat[match_state][end_repeats_ind] = to_end
+    mat[start_repeats_ind][first_unit_start] = 1
 
     for unit_end in unit_ends:
         for j in range(len(mat[unit_end])):
@@ -356,6 +340,49 @@ def get_variable_number_of_repeats_matcher_hmm(patterns, copies=1):
     state_names = [state.name for state in states]
     distributions = [state.distribution for state in states]
     new_model = Model.from_matrix(mat, distributions, starts, ends, name='Repeat Matcher HMM Model', state_names=state_names, merge=None)
+    return new_model
+
+
+def get_read_matcher_model(left_flanking_region, right_flanking_region, patterns, copies=1):
+    model = get_suffix_matcher_hmm(left_flanking_region)
+    right_flanking_matcher = get_prefix_matcher_hmm(right_flanking_region)
+    repeats_matcher = get_variable_number_of_repeats_matcher_hmm(patterns, copies)
+    model.concatenate(repeats_matcher)
+    model.concatenate(right_flanking_matcher)
+    model.bake(merge=None)
+
+    mat = model.dense_transition_matrix()
+
+    first_repeat_matches = []
+    repeat_match_states = []
+    suffix_start = None
+    for i, state in enumerate(model.states):
+        if state.name[0] == 'M' and state.name.split('_')[-1] == '0':
+            first_repeat_matches.append(i)
+        if state.name[0] == 'M' and state.name.split('_')[-1] not in ['prefix', 'suffix']:
+            repeat_match_states.append(i)
+        if state.name == 'suffix_start_suffix':
+            suffix_start = i
+
+    mat[model.start_index][suffix_start] = 0.3
+    for first_repeat_match in first_repeat_matches:
+        mat[model.start_index][first_repeat_match] = 0.7 / len(first_repeat_matches)
+
+    for match_state in repeat_match_states:
+        to_end = 0.7 / len(repeat_match_states)
+        total = 1 + to_end
+        for next in range(len(mat[match_state])):
+            if mat[match_state][next] != 0:
+                mat[match_state][next] /= total
+        mat[match_state][model.end_index] = to_end
+
+    starts = np.zeros(len(model.states))
+    starts[model.start_index] = 1.0
+    ends = np.zeros(len(model.states))
+    ends[model.end_index] = 1.0
+    state_names = [state.name for state in model.states]
+    distributions = [state.distribution for state in model.states]
+    new_model = Model.from_matrix(mat, distributions, starts, ends, name='Read Matcher', state_names=state_names, merge=None)
     return new_model
 
 

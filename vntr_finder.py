@@ -34,11 +34,7 @@ class VNTRFinder:
         left_flanking_region = self.reference_vntr.left_flanking_region[-flanking_region_size:]
         right_flanking_region = self.reference_vntr.right_flanking_region[:flanking_region_size]
 
-        vntr_matcher = get_suffix_matcher_hmm(left_flanking_region)
-        right_flanking_matcher = get_prefix_matcher_hmm(right_flanking_region)
-        repeats_matcher = get_variable_number_of_repeats_matcher_hmm(patterns, copies)
-        vntr_matcher.concatenate(repeats_matcher)
-        vntr_matcher.concatenate(right_flanking_matcher)
+        vntr_matcher = get_read_matcher_model(left_flanking_region, right_flanking_region, patterns, copies)
         vntr_matcher.bake(merge=None)
         return vntr_matcher
 
