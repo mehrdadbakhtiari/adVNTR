@@ -1,3 +1,5 @@
+import sys
+
 from settings import *
 from utils import get_chromosome_reference_sequence, get_gc_content
 import pysam
@@ -94,6 +96,10 @@ class CoverageCorrector:
         """
         self.gc_coverage_map = gc_coverage_map
 
+    @staticmethod
+    def get_gc_bin_index(gc_content):
+        return int(gc_content * GC_CONTENT_BINS - sys.float_info.epsilon)
+
     def get_sequencing_mean_coverage(self):
         windows_coverages = []
         for gc_content, coverages in self.gc_coverage_map.items():
@@ -101,12 +107,12 @@ class CoverageCorrector:
         return sum(windows_coverages) / float(len(windows_coverages))
 
     def get_mean_coverage_of_gc_content(self, gc_content):
-        gc_content = int(gc_content * GC_CONTENT_BINS)
-        return sum(self.gc_coverage_map[gc_content]) / float(len(self.gc_coverage_map[gc_content]))
+        gc_bin_index = self.get_gc_bin_index(gc_content)
+        return sum(self.gc_coverage_map[gc_bin_index]) / float(len(self.gc_coverage_map[gc_bin_index]))
 
     def get_mean_coverage_error_bar_of_gc_content(self, gc_content):
-        gc_content = int(gc_content * GC_CONTENT_BINS)
-        coverages = self.gc_coverage_map[gc_content]
+        gc_bin_index = self.get_gc_bin_index(gc_content)
+        coverages = self.gc_coverage_map[gc_bin_index]
         return numpy.std(numpy.array(coverages)) / sqrt(len(coverages))
 
     def get_scaled_coverage(self, reference_vntr, observed_coverage):
