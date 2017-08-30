@@ -58,13 +58,8 @@ def get_number_of_repeats_in_vpath(vpath):
 def get_number_of_repeat_bp_matches_in_vpath(vpath):
     visited_states = [state.name for idx, state in vpath[1:-1]]
     result = 0
-    counting = False
     for i in range(len(visited_states)):
-        if visited_states[i].startswith('start_repeating_pattern_match'):
-            counting = True
-        if visited_states[i] == 'end_repeating_pattern_match':
-            counting = False
-        if is_matching_state(visited_states[i]) and counting:
+        if is_matching_state(visited_states[i]) and not visited_states[i].endswith('fix'):
             result += 1
     return result
 
@@ -72,11 +67,8 @@ def get_number_of_repeat_bp_matches_in_vpath(vpath):
 def get_left_flanking_region_size_in_vpath(vpath):
     visited_states = [state.name for idx, state in vpath[1:-1]]
     result = 0
-    counting = True
     for i in range(len(visited_states)):
-        if visited_states[i].startswith('start_repeating_pattern_match'):
-            counting = False
-        if is_matching_state(visited_states[i]) and counting:
+        if is_matching_state(visited_states[i]) and visited_states[i].endswith('suffix'):
             result += 1
     return result
 
@@ -84,11 +76,8 @@ def get_left_flanking_region_size_in_vpath(vpath):
 def get_right_flanking_region_size_in_vpath(vpath):
     visited_states = [state.name for idx, state in vpath[1:-1]]
     result = 0
-    counting = False
     for i in range(len(visited_states)):
-        if visited_states[i] == 'end_repeating_pattern_match':
-            counting = True
-        if is_matching_state(visited_states[i]) and counting:
+        if is_matching_state(visited_states[i]) and visited_states[i].endswith('prefix'):
             result += 1
     return result
 
