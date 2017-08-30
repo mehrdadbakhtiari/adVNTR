@@ -98,7 +98,7 @@ class CoverageCorrector:
 
     @staticmethod
     def get_gc_bin_index(gc_content):
-        return int(gc_content * GC_CONTENT_BINS - sys.float_info.epsilon)
+        return int(gc_content * GC_CONTENT_BINS - sys.float_info.epsilon * 10)
 
     def get_sequencing_mean_coverage(self):
         windows_coverages = []
