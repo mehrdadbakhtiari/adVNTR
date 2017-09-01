@@ -337,12 +337,10 @@ class VNTRFinder:
         vntr_bp_in_mapped_reads = 0
         vntr_start = self.reference_vntr.start_point
         vntr_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
-        region_start = vntr_start - MAX_INSERT_SIZE
-        region_end = vntr_end + MAX_INSERT_SIZE
         chromosome = self.reference_vntr.chromosome[3:]
         read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
         samfile = pysam.AlignmentFile(alignment_file, read_mode)
-        for read in samfile.fetch(chromosome, region_start, region_end):
+        for read in samfile.fetch(chromosome, vntr_start, vntr_end):
             if read.is_unmapped:
                 continue
             read_end = read.reference_end if read.reference_end else read.reference_start + len(read.seq)
