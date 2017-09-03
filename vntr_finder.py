@@ -225,7 +225,7 @@ class VNTRFinder:
                 p.start()
         for p in process_list:
             p.join()
-        print('length_distribution of unmapped spanning reads: ', shared_length_distribution)
+        print('length_distribution of unmapped spanning reads: ', list(shared_length_distribution))
         return list(shared_spanning_reads)
 
     @time_usage
@@ -280,7 +280,7 @@ class VNTRFinder:
         for p in process_list:
             p.join()
 
-        print('length_distribution of mapped spanning reads: ', shared_length_distribution)
+        print('length_distribution of mapped spanning reads: ', list(shared_length_distribution))
         spanning_reads = list(mapped_spanning_reads) + unaligned_spanning_reads
         copy_numbers = self.get_haplotype_copy_numbers_from_spanning_reads(spanning_reads)
         print('copy_numbers: ', copy_numbers)
@@ -288,6 +288,7 @@ class VNTRFinder:
 
     @time_usage
     def find_repeat_count_from_pacbio_reads(self, pacbio_read_file, working_directory='./'):
+        logging.debug('finding repeat count from pacbio reads file for %s' % self.reference_vntr.id)
         spanning_reads = self.get_spanning_reads_of_unaligned_pacbio_reads(pacbio_read_file, working_directory)
         copy_numbers = self.get_haplotype_copy_numbers_from_spanning_reads(spanning_reads)
         print('copy_numbers: ', copy_numbers)
