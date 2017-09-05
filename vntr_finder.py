@@ -189,6 +189,31 @@ class VNTRFinder:
                     selected_reads.append((sequence, logp, vpath))
         sema.release()
 
+    def find_frameshift_from_selected_reads(self, selected_reads):
+        mutations = {}
+        repeating_bps_in_data = 0
+        for sequence, logp, vpath in selected_reads:
+            visited_states = [state.name for idx, state in vpath[1:-1]]
+            repeating_bps_in_data += get_number_of_repeat_bp_matches_in_vpath(vpath)
+            for i in range(len(visited_states)):
+                if visited_states[i].endswith('fix') or visited_states[i].startswith('M'):
+                    continue
+                if not visited_states[i].startswith('I') and not visited_states[i].startswith('D'):
+                    continue
+                state = visited_states[i].split('_')[0]
+                if state not in mutations.keys():
+                    mutations[state] = 0
+                mutations[state] += 1
+        sorted_mutations = sorted(mutations.items(), key=lambda x: x[1])
+        frameshift_candidate = sorted_mutations[-1]
+        logging.info('Frameshift Candidate and Occurrence %s: %s' % frameshift_candidate)
+        logging.info('Observed repeating base pairs in data: %s' % repeating_bps_in_data)
+        avg_bp_coverage = float(repeating_bps_in_data) / self.reference_vntr.get_length()
+        logging.info('Average coverage for each base pair: %s' % avg_bp_coverage)
+        if frameshift_candidate[1] > avg_bp_coverage / 3:
+            print('There is a frameshift at %s' % frameshift_candidate[0])
+
+
     def check_if_flanking_regions_align_to_str(self, read_str, length_distribution, spanning_reads):
         flanking_region_size = 100
         left_flanking = self.reference_vntr.left_flanking_region[-flanking_region_size:]
@@ -391,6 +416,8 @@ class VNTRFinder:
             observed_repeats.append(repeats)
         print('flanked repeats:', flanked_repeats)
         print('maximum of observed repeats:', max(observed_repeats))
+
+        self.find_frameshift_from_selected_reads(selected_reads)
 
         total_counted_vntr_bp = vntr_bp_in_unmapped_reads.value + vntr_bp_in_mapped_reads
         pattern_occurrences = total_counted_vntr_bp / float(len(self.reference_vntr.pattern))
