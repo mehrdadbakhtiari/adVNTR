@@ -1,5 +1,5 @@
 import logging
-from multiprocessing import Process, Manager, Value, Semaphore
+from multiprocessing import Process, Manager, Value, Semaphore, Array
 import os
 from random import random
 from uuid import uuid4
@@ -168,19 +168,25 @@ class VNTRFinder:
         return score
 
     def process_unmapped_read(self, sema, read_segment, hmm, min_score_to_count_read,
-                              vntr_bp_in_unmapped_reads, selected_reads_vpath):
+                              vntr_bp_in_unmapped_reads, selected_reads, best_seq):
         if read_segment.seq.count('N') <= 0:
-            logp, vpath = hmm.viterbi(str(read_segment.seq))
+            sequence = str(read_segment.seq)
+            logp, vpath = hmm.viterbi(sequence)
             rev_logp, rev_vpath = hmm.viterbi(str(read_segment.seq.reverse_complement()))
             if logp < rev_logp:
+                sequence = str(read_segment.seq.reverse_complement())
                 logp = rev_logp
                 vpath = rev_vpath
+            if logp > best_seq['logp']:
+                best_seq['logp'] = logp
+                best_seq['seq'] = sequence
+                best_seq['vpath'] = vpath
             repeat_bps = get_number_of_repeat_bp_matches_in_vpath(vpath)
             if logp > min_score_to_count_read:
                 if repeat_bps > self.min_repeat_bp_to_count_repeats:
                     vntr_bp_in_unmapped_reads.value += repeat_bps
                 if repeat_bps > self.min_repeat_bp_to_add_read:
-                    selected_reads_vpath.append(vpath)
+                    selected_reads.append((sequence, logp, vpath))
         sema.release()
 
     def check_if_flanking_regions_align_to_str(self, read_str, length_distribution, spanning_reads):
@@ -307,13 +313,18 @@ class VNTRFinder:
         min_score_to_count_read = None
         sema = Semaphore(CORES)
         manager = Manager()
-        selected_reads_vpath = manager.list()
+        selected_reads = manager.list()
         vntr_bp_in_unmapped_reads = Value('d', 0.0)
 
         number_of_reads = 0
         read_length = 150
 
         process_list = []
+
+        best_seq = manager.dict()
+        best_seq['logp'] = -10e8
+        best_seq['vpath'] = ''
+        best_seq['seq'] = ''
 
         unmapped_reads = SeqIO.parse(unmapped_read_file, 'fasta')
         for read_segment in unmapped_reads:
@@ -327,13 +338,16 @@ class VNTRFinder:
             if read_segment.id in filtered_read_ids:
                 sema.acquire()
                 p = Process(target=self.process_unmapped_read, args=(sema, read_segment, hmm, min_score_to_count_read,
-                                                                     vntr_bp_in_unmapped_reads, selected_reads_vpath))
+                                                                     vntr_bp_in_unmapped_reads, selected_reads, best_seq))
                 process_list.append(p)
                 p.start()
         for p in process_list:
             p.join()
 
         print('vntr base pairs in unmapped reads:', vntr_bp_in_unmapped_reads.value)
+        logging.debug('highest logp in unmapped reads: %s', best_seq['logp'])
+        logging.debug('best sequence %s' % best_seq['seq'])
+        logging.debug('best vpath: %s' % [state.name for idx, state in list(best_seq['vpath'])[1:-1]])
 
         vntr_bp_in_mapped_reads = 0
         vntr_start = self.reference_vntr.start_point
@@ -347,11 +361,14 @@ class VNTRFinder:
             read_end = read.reference_end if read.reference_end else read.reference_start + len(read.seq)
             if vntr_start <= read.reference_start < vntr_end or vntr_start < read_end <= vntr_end:
                 if read.seq.count('N') <= 0:
-                    logp, vpath = hmm.viterbi(str(read.seq))
+                    sequence = str(read.seq)
+                    logp, vpath = hmm.viterbi(sequence)
                     rev_logp, rev_vpath = hmm.viterbi(str(Seq(read.seq).reverse_complement()))
                     if logp < rev_logp:
+                        sequence = str(Seq(read.seq).reverse_complement())
+                        logp = rev_logp
                         vpath = rev_vpath
-                    selected_reads_vpath.append(vpath)
+                    selected_reads.append((sequence, (logp, read.mapq, read.reference_start), vpath))
                 end = min(read_end, vntr_end)
                 start = max(read.reference_start, vntr_start)
                 vntr_bp_in_mapped_reads += end - start
@@ -359,9 +376,17 @@ class VNTRFinder:
 
         flanked_repeats = []
         observed_repeats = []
-        for vpath in selected_reads_vpath:
+        for sequence, logp, vpath in selected_reads:
             repeats = get_number_of_repeats_in_vpath(vpath)
+            logging.debug('logp of read: %s' % str(logp))
+            logging.debug('flankign sizes: %s %s' % (get_left_flanking_region_size_in_vpath(vpath), get_right_flanking_region_size_in_vpath(vpath)))
+            logging.debug('repeating bp: %s' % get_number_of_repeat_bp_matches_in_vpath(vpath))
+            logging.debug(sequence)
+            visited_states = [state.name for idx, state in vpath[1:-1]]
+            # logging.debug('%s' % visited_states)
             if get_left_flanking_region_size_in_vpath(vpath) > 5 and get_right_flanking_region_size_in_vpath(vpath) > 5:
+                logging.debug('spanning read:')
+                logging.debug('visited states :%s' % [state.name for idx, state in vpath[1:-1]])
                 flanked_repeats.append(repeats)
             observed_repeats.append(repeats)
         print('flanked repeats:', flanked_repeats)
