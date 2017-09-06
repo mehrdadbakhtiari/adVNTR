@@ -16,6 +16,7 @@ from pacbio_haplotyper import PacBioHaplotyper
 from profiler import time_usage
 from sam_utils import get_related_reads_and_read_count_in_samfile, extract_unmapped_reads_to_fasta_file
 from settings import *
+from utils import get_reference_genome_of_alignment_file
 
 
 class VNTRFinder:
@@ -389,9 +390,10 @@ class VNTRFinder:
         vntr_bp_in_mapped_reads = 0
         vntr_start = self.reference_vntr.start_point
         vntr_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
-        chromosome = self.reference_vntr.chromosome[3:]
         read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
         samfile = pysam.AlignmentFile(alignment_file, read_mode)
+        reference = get_reference_genome_of_alignment_file(samfile)
+        chromosome = self.reference_vntr.chromosome if reference == 'HG19' else self.reference_vntr.chromosome[3:]
         for read in samfile.fetch(chromosome, vntr_start, vntr_end):
             if read.is_unmapped:
                 continue
@@ -433,7 +435,7 @@ class VNTRFinder:
 
         total_counted_vntr_bp = vntr_bp_in_unmapped_reads.value + vntr_bp_in_mapped_reads
         pattern_occurrences = total_counted_vntr_bp / float(len(self.reference_vntr.pattern))
-        bias_detector = CoverageBiasDetector(alignment_file, self.reference_vntr.chromosome, 'GRCh37')
+        bias_detector = CoverageBiasDetector(alignment_file, self.reference_vntr.chromosome, reference)
         coverage_corrector = CoverageCorrector(bias_detector.get_gc_content_coverage_map())
 
         observed_copy_number = pattern_occurrences / coverage_corrector.get_sequencing_mean_coverage()

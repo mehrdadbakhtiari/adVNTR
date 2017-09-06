@@ -14,6 +14,16 @@ def get_gc_content(s):
     return float(res) / len(s)
 
 
+def get_reference_genome_of_alignment_file(samfile):
+    if 'chr1' in samfile.references:
+        result = 'HG19'
+    elif '1' in samfile.references:
+        result = 'GRCh37'
+    else:
+        result = None
+    return result
+
+
 def get_chromosome_reference_sequence(chromosome):
     ref_file_name = HG19_DIR + chromosome + '.fa'
     fasta_sequences = SeqIO.parse(open(ref_file_name), 'fasta')
