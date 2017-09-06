@@ -17,8 +17,8 @@ input_file = sys.argv[1]
 input_is_alignment_file = input_file.endswith('bam') or input_file.endswith('sam')
 directory = os.path.dirname(input_file) + '/'
 
-LOG_FILE = 'log_%s.log' % os.path.basename(input_file)
-logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', filename=LOG_FILE, level=logging.DEBUG)
+LOGFILE = 'log_%s.log' % os.path.basename(input_file)
+logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', filename=LOGFILE, level=logging.DEBUG, filemode='w')
 
 reference_vntrs = load_unique_vntrs_data()
 
