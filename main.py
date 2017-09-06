@@ -45,11 +45,6 @@ for i in range(len(reference_vntrs)):
             copy_number = vntr_finder.find_repeat_count_from_short_reads(input_file)
     # vntr_finder.find_accuracy()
 
-    # end_point = start_points[i] + sum([len(e) for e in repeat_segments])
-    # VNTR_coverage_ratio = get_VNTR_coverage_over_total_coverage(start_points[i], end_point)
-    # with open('vntr_coverage_ratio.txt', 'a') as output:
-    #     output.write('%s %s\n' % (i, VNTR_coverage_ratio))
-
 # print(len(reference_vntrs))
 # nodes, edges = get_nodes_and_edges_of_vntr_graph(reference_vntrs)
 # plot_graph_components(nodes, edges)
