@@ -22,7 +22,7 @@ def is_matching_state(state_name):
     return False
 
 
-def get_repeat_segments_from_visited_states_and_region(visited_states, region):
+def get_repeating_pattern_lengths(visited_states):
     lengths = []
     prev_start = None
     for i in range(len(visited_states)):
@@ -34,6 +34,11 @@ def get_repeat_segments_from_visited_states_and_region(visited_states, region):
             lengths.append(current_len)
         if visited_states[i].startswith('unit_start'):
             prev_start = i
+    return lengths
+
+
+def get_repeat_segments_from_visited_states_and_region(visited_states, region):
+    lengths = get_repeating_pattern_lengths(visited_states)
 
     repeat_segments = []
     added = 0

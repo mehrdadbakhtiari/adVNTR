@@ -192,20 +192,33 @@ class VNTRFinder:
     def find_frameshift_from_selected_reads(self, selected_reads):
         mutations = {}
         repeating_bps_in_data = 0
+        repeats_lengths_distribution = []
         for sequence, logp, vpath in selected_reads:
             visited_states = [state.name for idx, state in vpath[1:-1]]
+            repeats_lengths = get_repeating_pattern_lengths(visited_states)
+            repeats_lengths_distribution += repeats_lengths
+            current_repeat = None
             repeating_bps_in_data += get_number_of_repeat_bp_matches_in_vpath(vpath)
             for i in range(len(visited_states)):
                 if visited_states[i].endswith('fix') or visited_states[i].startswith('M'):
                     continue
+                if visited_states[i].startswith('unit_start'):
+                    if current_repeat is None:
+                        current_repeat = 0
+                    else:
+                        current_repeat += 1
+                if not current_repeat or current_repeat >= len(repeats_lengths):
+                    continue
                 if not visited_states[i].startswith('I') and not visited_states[i].startswith('D'):
                     continue
                 state = visited_states[i].split('_')[0]
-                if state not in mutations.keys():
-                    mutations[state] = 0
-                mutations[state] += 1
+                if repeats_lengths[current_repeat] != len(self.reference_vntr.pattern):
+                    if state not in mutations.keys():
+                        mutations[state] = 0
+                    mutations[state] += 1
         sorted_mutations = sorted(mutations.items(), key=lambda x: x[1])
         frameshift_candidate = sorted_mutations[-1]
+        logging.info(sorted(repeats_lengths_distribution))
         logging.info('Frameshift Candidate and Occurrence %s: %s' % frameshift_candidate)
         logging.info('Observed repeating base pairs in data: %s' % repeating_bps_in_data)
         avg_bp_coverage = float(repeating_bps_in_data) / self.reference_vntr.get_length()
