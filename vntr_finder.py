@@ -218,6 +218,7 @@ class VNTRFinder:
                         mutations[state] = 0
                     mutations[state] += 1
         sorted_mutations = sorted(mutations.items(), key=lambda x: x[1])
+        logging.debug('sorted mutations: %s ' % sorted_mutations)
         frameshift_candidate = sorted_mutations[-1] if len(sorted_mutations) else (None, 0)
         logging.info(sorted(repeats_lengths_distribution))
         logging.info('Frameshift Candidate and Occurrence %s: %s' % frameshift_candidate)
