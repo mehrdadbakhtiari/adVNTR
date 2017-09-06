@@ -217,7 +217,7 @@ class VNTRFinder:
                         mutations[state] = 0
                     mutations[state] += 1
         sorted_mutations = sorted(mutations.items(), key=lambda x: x[1])
-        frameshift_candidate = sorted_mutations[-1]
+        frameshift_candidate = sorted_mutations[-1] if len(sorted_mutations) else (None, 0)
         logging.info(sorted(repeats_lengths_distribution))
         logging.info('Frameshift Candidate and Occurrence %s: %s' % frameshift_candidate)
         logging.info('Observed repeating base pairs in data: %s' % repeating_bps_in_data)
@@ -225,7 +225,6 @@ class VNTRFinder:
         logging.info('Average coverage for each base pair: %s' % avg_bp_coverage)
         if frameshift_candidate[1] > avg_bp_coverage / 3:
             print('There is a frameshift at %s' % frameshift_candidate[0])
-
 
     def check_if_flanking_regions_align_to_str(self, read_str, length_distribution, spanning_reads):
         flanking_region_size = 100
