@@ -14,14 +14,11 @@ def get_gc_content(s):
     return float(res) / len(s)
 
 
-def get_reference_genome_of_alignment_file(samfile):
-    if 'chr1' in samfile.references:
-        result = 'HG19'
-    elif '1' in samfile.references:
-        result = 'GRCh37'
-    else:
-        result = None
-    return result
+def is_low_quality_read(quality_scores):
+    low_quality_base_pairs = [q for q in quality_scores if q < QUALITY_SCORE_CUTOFF]
+    if low_quality_base_pairs >= LOW_QUALITY_BP_TO_DISCARD_READ:
+        return True
+    return False
 
 
 def get_chromosome_reference_sequence(chromosome):

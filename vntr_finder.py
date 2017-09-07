@@ -15,8 +15,9 @@ from hmm_utils import *
 from pacbio_haplotyper import PacBioHaplotyper
 from profiler import time_usage
 from sam_utils import get_related_reads_and_read_count_in_samfile, extract_unmapped_reads_to_fasta_file
+from sam_utils import get_reference_genome_of_alignment_file
 from settings import *
-from utils import get_reference_genome_of_alignment_file
+from utils import is_low_quality_read
 
 
 class VNTRFinder:
@@ -397,6 +398,8 @@ class VNTRFinder:
         chromosome = self.reference_vntr.chromosome if reference == 'HG19' else self.reference_vntr.chromosome[3:]
         for read in samfile.fetch(chromosome, vntr_start, vntr_end):
             if read.is_unmapped:
+                continue
+            if is_low_quality_read(read.query_qualities) or read.mapq <= MAPQ_CUTOFF:
                 continue
             read_end = read.reference_end if read.reference_end else read.reference_start + len(read.seq)
             if vntr_start <= read.reference_start < vntr_end or vntr_start < read_end <= vntr_end:
