@@ -15,6 +15,16 @@ def path_to_alignment(x, y, path):
     return x, y
 
 
+def get_emitted_basepair_from_visited_states(state, visited_states, sequence):
+    base_pair_idx = 0
+    for visited_state in visited_states:
+        if visited_state == state:
+            return sequence[base_pair_idx]
+        if is_matching_state(visited_state):
+            base_pair_idx += 1
+    return None
+
+
 def is_matching_state(state_name):
     if state_name.startswith('M') or state_name.startswith('I') or state_name.startswith('start_random_matches') \
             or state_name.startswith('end_random_matches'):
