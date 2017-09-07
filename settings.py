@@ -17,8 +17,8 @@ GC_CONTENT_BINS = 10
 OUTLIER_COVERAGE = 200
 
 QUALITY_SCORE_CUTOFF = 20
-LOW_QUALITY_BP_TO_DISCARD_READ = 5
-MAPQ_CUTOFF = 20
+LOW_QUALITY_BP_TO_DISCARD_READ = 0.25
+MAPQ_CUTOFF = 0
 
 hostname = socket.gethostname()
 if hostname.startswith('genome'):

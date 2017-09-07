@@ -399,8 +399,6 @@ class VNTRFinder:
         for read in samfile.fetch(chromosome, vntr_start, vntr_end):
             if read.is_unmapped:
                 continue
-            if is_low_quality_read(read.query_qualities) or read.mapq <= MAPQ_CUTOFF:
-                continue
             read_end = read.reference_end if read.reference_end else read.reference_start + len(read.seq)
             if vntr_start <= read.reference_start < vntr_end or vntr_start < read_end <= vntr_end:
                 if read.seq.count('N') <= 0:
@@ -411,6 +409,8 @@ class VNTRFinder:
                         sequence = str(Seq(read.seq).reverse_complement())
                         logp = rev_logp
                         vpath = rev_vpath
+                    if is_low_quality_read(read) and logp < min_score_to_count_read:
+                        continue
                     selected_reads.append((sequence, (logp, read.mapq, read.reference_start), vpath))
                 end = min(read_end, vntr_end)
                 start = max(read.reference_start, vntr_start)
