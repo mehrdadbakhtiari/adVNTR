@@ -431,8 +431,9 @@ class VNTRFinder:
             visited_states = [state.name for idx, state in vpath[1:-1]]
             # logging.debug('%s' % visited_states)
             if get_left_flanking_region_size_in_vpath(vpath) > 5 and get_right_flanking_region_size_in_vpath(vpath) > 5:
-                logging.debug('spanning read:')
+                logging.debug('spanning read: %s ' % sequence)
                 logging.debug('visited states :%s' % [state.name for idx, state in vpath[1:-1]])
+                logging.debug('repeats: %s' % repeats)
                 flanked_repeats.append(repeats)
             observed_repeats.append(repeats)
         print('flanked repeats:', flanked_repeats)
