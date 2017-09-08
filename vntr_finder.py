@@ -209,7 +209,7 @@ class VNTRFinder:
                         current_repeat = 0
                     else:
                         current_repeat += 1
-                if not current_repeat or current_repeat >= len(repeats_lengths):
+                if current_repeat is None or current_repeat >= len(repeats_lengths):
                     continue
                 if not visited_states[i].startswith('I') and not visited_states[i].startswith('D'):
                     continue
@@ -412,6 +412,7 @@ class VNTRFinder:
                         logp = rev_logp
                         vpath = rev_vpath
                     if is_low_quality_read(read) and logp < min_score_to_count_read:
+                        logging.debug('Rejected Read: %s' % sequence)
                         continue
                     selected_reads.append((sequence, (logp, read.mapq, read.reference_start), vpath))
                 end = min(read_end, vntr_end)
