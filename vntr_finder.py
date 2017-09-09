@@ -74,6 +74,7 @@ class VNTRFinder:
             word_size = 11
         word_size = str(word_size)
 
+        search_results = []
         blast_ids = set([])
         search_id = str(uuid4()) + str(self.reference_vntr.id)
         queries = self.reference_vntr.get_repeat_segments()
@@ -86,7 +87,13 @@ class VNTRFinder:
             for query in queries:
                 search_result = get_blast_matched_ids(query, blast_db_name, max_seq='50000', word_size=word_size,
                                                       evalue=10, search_id=search_id, identity_cutoff=identity_cutoff)
-                blast_ids |= search_result
+                search_results.append(search_result)
+
+            if short_reads:
+                for search_result in search_results:
+                    blast_ids |= search_result
+            else:
+                blast_ids = search_results[0] & search_results[1]
 
         logging.info('blast selected %s reads' % len(blast_ids))
         if len(blast_ids) == len(self.reference_vntr.get_repeat_segments()) * 50 * 1000:
