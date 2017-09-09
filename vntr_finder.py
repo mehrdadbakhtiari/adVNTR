@@ -377,6 +377,9 @@ class VNTRFinder:
                 hmm = self.get_vntr_matcher_hmm(read_length=read_length)
                 min_score_to_count_read = self.get_min_score_to_select_a_read(hmm, alignment_file, read_length)
 
+            if len(read_segment.seq) < read_length:
+                continue
+
             if read_segment.id in filtered_read_ids:
                 sema.acquire()
                 p = Process(target=self.process_unmapped_read, args=(sema, read_segment, hmm, min_score_to_count_read,
@@ -400,6 +403,8 @@ class VNTRFinder:
         chromosome = self.reference_vntr.chromosome if reference == 'HG19' else self.reference_vntr.chromosome[3:]
         for read in samfile.fetch(chromosome, vntr_start, vntr_end):
             if read.is_unmapped:
+                continue
+            if len(read.seq) < read_length:
                 continue
             read_end = read.reference_end if read.reference_end else read.reference_start + len(read.seq)
             if vntr_start <= read.reference_start < vntr_end or vntr_start < read_end <= vntr_end:
