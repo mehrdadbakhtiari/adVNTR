@@ -409,9 +409,15 @@ class VNTRFinder:
         reference = get_reference_genome_of_alignment_file(samfile)
         chromosome = self.reference_vntr.chromosome if reference == 'HG19' else self.reference_vntr.chromosome[3:]
         for read in samfile.fetch(chromosome, vntr_start, vntr_end):
+            if not hmm:
+                read_length = len(read.seq)
+                hmm = self.get_vntr_matcher_hmm(read_length=read_length)
+                min_score_to_count_read = self.get_min_score_to_select_a_read(hmm, alignment_file, read_length)
+
             if read.is_unmapped:
                 continue
             if len(read.seq) < read_length * 0.9:
+                logging.debug('Rejecting read for short length: %s' % read.seq)
                 continue
             read_end = read.reference_end if read.reference_end else read.reference_start + len(read.seq)
             if vntr_start <= read.reference_start < vntr_end or vntr_start < read_end <= vntr_end:
