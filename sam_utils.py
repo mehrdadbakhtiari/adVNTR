@@ -16,12 +16,12 @@ def extract_unmapped_reads_to_fasta_file(alignment_file, working_directory='./',
 
 
 def get_reference_genome_of_alignment_file(samfile):
-    if 'chr1' in samfile.references:
-        result = 'HG19'
-    elif '1' in samfile.references:
+    result = None
+    if '1' in samfile.references:
         result = 'GRCh37'
-    else:
-        result = None
+    for reference in samfile.references:
+        if reference.startswith('chr'):
+            result = 'HG19'
     return result
 
 
