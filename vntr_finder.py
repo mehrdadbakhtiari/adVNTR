@@ -411,7 +411,7 @@ class VNTRFinder:
         for read in samfile.fetch(chromosome, vntr_start, vntr_end):
             if read.is_unmapped:
                 continue
-            if len(read.seq) < read_length:
+            if len(read.seq) < read_length * 0.9:
                 continue
             read_end = read.reference_end if read.reference_end else read.reference_start + len(read.seq)
             if vntr_start <= read.reference_start < vntr_end or vntr_start < read_end <= vntr_end:
