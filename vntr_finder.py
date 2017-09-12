@@ -337,9 +337,10 @@ class VNTRFinder:
         vntr_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
         region_start = vntr_start
         region_end = vntr_end
-        chromosome = self.reference_vntr.chromosome[3:]
         read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
         samfile = pysam.AlignmentFile(alignment_file, read_mode)
+        reference = get_reference_genome_of_alignment_file(samfile)
+        chromosome = self.reference_vntr.chromosome if reference == 'HG19' else self.reference_vntr.chromosome[3:]
         process_list = []
         for read in samfile.fetch(chromosome, region_start, region_end):
             sema.acquire()
