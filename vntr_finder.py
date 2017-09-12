@@ -1,5 +1,5 @@
 import logging
-from multiprocessing import Process, Manager, Value, Semaphore, Array
+from multiprocessing import Process, Manager, Value, Semaphore
 import os
 from random import random
 from uuid import uuid4
