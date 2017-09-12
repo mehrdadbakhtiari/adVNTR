@@ -30,6 +30,9 @@ class VNTRFinder:
             self.min_repeat_bp_to_add_read = 2
         self.min_repeat_bp_to_count_repeats = 2
 
+        self.minimum_left_flanking_size = {}
+        self.minimum_right_flanking_size = {119: 19}
+
     @time_usage
     def build_vntr_matcher_hmm(self, copies, flanking_region_size=100):
         patterns = self.reference_vntr.get_repeat_segments() * 100
@@ -239,8 +242,16 @@ class VNTRFinder:
             print('There is a frameshift at %s' % frameshift_candidate[0])
 
     def read_flanks_repeats_with_confidence(self, vpath):
-        if get_left_flanking_region_size_in_vpath(vpath) > 5 and get_right_flanking_region_size_in_vpath(vpath) > 5:
-            return True
+        minimum_left_flanking = 5
+        minimum_right_flanking = 5
+        if self.reference_vntr.id in self.minimum_left_flanking_size:
+            minimum_left_flanking = self.minimum_left_flanking_size[self.reference_vntr.id]
+        if self.reference_vntr.id in self.minimum_right_flanking_size:
+            minimum_left_flanking = self.minimum_right_flanking_size[self.reference_vntr.id]
+
+        if get_left_flanking_region_size_in_vpath(vpath) > minimum_left_flanking:
+            if get_right_flanking_region_size_in_vpath(vpath) > minimum_right_flanking:
+                return True
         return False
 
     def check_if_flanking_regions_align_to_str(self, read_str, length_distribution, spanning_reads):
