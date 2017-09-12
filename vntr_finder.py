@@ -238,6 +238,11 @@ class VNTRFinder:
         if frameshift_candidate[1] > avg_bp_coverage / 3:
             print('There is a frameshift at %s' % frameshift_candidate[0])
 
+    def read_flanks_repeats_with_confidence(self, vpath):
+        if get_left_flanking_region_size_in_vpath(vpath) > 5 and get_right_flanking_region_size_in_vpath(vpath) > 5:
+            return True
+        return False
+
     def check_if_flanking_regions_align_to_str(self, read_str, length_distribution, spanning_reads):
         flanking_region_size = 100
         left_flanking = self.reference_vntr.left_flanking_region[-flanking_region_size:]
@@ -253,7 +258,7 @@ class VNTRFinder:
         spanning_reads.append(read_str[left_align[3]:right_align[3]+flanking_region_size])
         length_distribution.append(right_align[3] - (left_align[3] + flanking_region_size))
 
-    def check_if_read_spans_vntr(self, sema, read, length_distribution, spanning_reads):
+    def check_if_pacbio_read_spans_vntr(self, sema, read, length_distribution, spanning_reads):
         self.check_if_flanking_regions_align_to_str(str(read.seq), length_distribution, spanning_reads)
         reverse_complement_str = str(Seq(str(read.seq)).reverse_complement())
         self.check_if_flanking_regions_align_to_str(reverse_complement_str, length_distribution, spanning_reads)
@@ -274,8 +279,8 @@ class VNTRFinder:
         for read in unmapped_reads:
             if read.id in filtered_read_ids:
                 sema.acquire()
-                p = Process(target=self.check_if_read_spans_vntr, args=(sema, read, shared_length_distribution,
-                                                                        shared_spanning_reads))
+                p = Process(target=self.check_if_pacbio_read_spans_vntr, args=(sema, read, shared_length_distribution,
+                                                                               shared_spanning_reads))
                 process_list.append(p)
                 p.start()
         for p in process_list:
@@ -327,8 +332,8 @@ class VNTRFinder:
         process_list = []
         for read in samfile.fetch(chromosome, region_start, region_end):
             sema.acquire()
-            p = Process(target=self.check_if_read_spans_vntr, args=(sema, read, shared_length_distribution,
-                                                                    mapped_spanning_reads))
+            p = Process(target=self.check_if_pacbio_read_spans_vntr, args=(sema, read, shared_length_distribution,
+                                                                           mapped_spanning_reads))
             process_list.append(p)
             p.start()
 
@@ -448,7 +453,7 @@ class VNTRFinder:
             logging.debug(sequence)
             visited_states = [state.name for idx, state in vpath[1:-1]]
             # logging.debug('%s' % visited_states)
-            if get_left_flanking_region_size_in_vpath(vpath) > 5 and get_right_flanking_region_size_in_vpath(vpath) > 5:
+            if self.read_flanks_repeats_with_confidence(vpath):
                 logging.debug('spanning read: %s ' % sequence)
                 logging.debug('visited states :%s' % [state.name for idx, state in vpath[1:-1]])
                 logging.debug('repeats: %s' % repeats)
