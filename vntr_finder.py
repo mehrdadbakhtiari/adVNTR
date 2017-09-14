@@ -247,7 +247,7 @@ class VNTRFinder:
         if self.reference_vntr.id in self.minimum_left_flanking_size:
             minimum_left_flanking = self.minimum_left_flanking_size[self.reference_vntr.id]
         if self.reference_vntr.id in self.minimum_right_flanking_size:
-            minimum_left_flanking = self.minimum_right_flanking_size[self.reference_vntr.id]
+            minimum_right_flanking = self.minimum_right_flanking_size[self.reference_vntr.id]
 
         if get_left_flanking_region_size_in_vpath(vpath) > minimum_left_flanking:
             if get_right_flanking_region_size_in_vpath(vpath) > minimum_right_flanking:
@@ -472,7 +472,7 @@ class VNTRFinder:
                 flanked_repeats.append(repeats)
             observed_repeats.append(repeats)
         print('flanked repeats:', flanked_repeats)
-        print('maximum of observed repeats:', max(observed_repeats))
+        print('observed repeats:', sorted(observed_repeats))
 
         self.find_frameshift_from_selected_reads(selected_reads)
 
