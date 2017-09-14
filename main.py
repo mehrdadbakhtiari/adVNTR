@@ -1,21 +1,36 @@
+import argparse
 import logging
 import os
 import sys
 
 from vntr_finder import VNTRFinder
 from reference_vntr import identify_homologous_vntrs, load_unique_vntrs_data
+import settings
 # from vntr_graph import plot_graph_components, get_nodes_and_edges_of_vntr_graph
 
+parser = argparse.ArgumentParser(description='VNTRFinder 1.0.0')
+parser.add_argument('-a', '--alignment_file', type=str, help='Alignment file in BAM format or SAM format',
+                    metavar='FILE')
+parser.add_argument('-f', '--fasta', type=str, help='Fasta file containing raw reads', metavar='FILE')
+parser.add_argument('-fs', '--frameshift', action='store_true',
+                    help='Search for a frameshift in VNTR instead of copy number')
+parser.add_argument('-p', '--pacbio', action='store_true',
+                    help='Input file contains PacBio reads instead of Illumina reads')
+parser.add_argument('-t', '--threads', type=int, metavar='<nthreads>',
+                    help='Run the tool on <nthreads> parallel threads which will run on separate processors/cores')
+args = parser.parse_args()
 
-if len(sys.argv) < 2:
-    sys.exit("ERROR: You should specify alignment_file")
+if args.alignment_file is None and args.fasta is None:
+    parser.print_help()
+    sys.exit("ERROR: No input specified. Please specify alignment file or fasta file")
 
-pacbio_reads = False
-if len(sys.argv) >= 3:
-    pacbio_reads = sys.argv[2] == 'pacbio'
-input_file = sys.argv[1]
+if args.threads < 1:
+    parser.error('threads cannot be less than 1')
+settings.CORES = args.threads
+
+input_file = args.alignment_file if args.alignment_file else args.fasta
 input_is_alignment_file = input_file.endswith('bam') or input_file.endswith('sam')
-directory = os.path.dirname(input_file) + '/'
+working_directory = os.path.dirname(input_file) + '/'
 
 LOGFILE = 'log_%s.log' % os.path.basename(input_file)
 logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', filename=LOGFILE, level=logging.DEBUG, filemode='w')
@@ -33,17 +48,16 @@ for i in range(len(reference_vntrs)):
         continue
     print(i, len(reference_vntrs[i].get_repeat_segments()))
     vntr_finder = VNTRFinder(reference_vntrs[i])
-    if pacbio_reads:
+    if args.pacbio:
         if input_is_alignment_file:
-            copy_number = vntr_finder.find_repeat_count_from_pacbio_alignment_file(input_file, directory)
+            copy_number = vntr_finder.find_repeat_count_from_pacbio_alignment_file(input_file, working_directory)
         else:
-            copy_number = vntr_finder.find_repeat_count_from_pacbio_reads(input_file, directory)
+            copy_number = vntr_finder.find_repeat_count_from_pacbio_reads(input_file, working_directory)
     else:
         if input_is_alignment_file:
-            copy_number = vntr_finder.find_repeat_count_from_alignment_file(input_file, directory)
+            copy_number = vntr_finder.find_repeat_count_from_alignment_file(input_file, working_directory)
         else:
             copy_number = vntr_finder.find_repeat_count_from_short_reads(input_file)
-    # vntr_finder.find_accuracy()
 
 # print(len(reference_vntrs))
 # nodes, edges = get_nodes_and_edges_of_vntr_graph(reference_vntrs)
