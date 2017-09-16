@@ -16,7 +16,7 @@ parser.add_argument('-fs', '--frameshift', action='store_true',
                     help='Search for a frameshift in VNTR instead of copy number')
 parser.add_argument('-p', '--pacbio', action='store_true',
                     help='Input file contains PacBio reads instead of Illumina reads')
-parser.add_argument('-t', '--threads', type=int, metavar='<nthreads>',
+parser.add_argument('-t', '--threads', type=int, metavar='<nthreads>', default=1,
                     help='Run the tool on <nthreads> parallel threads which will run on separate processors/cores')
 args = parser.parse_args()
 
