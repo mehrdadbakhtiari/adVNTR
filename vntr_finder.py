@@ -1,10 +1,10 @@
 import logging
-from multiprocessing import Process, Manager, Value, Semaphore
+import numpy
 import os
+from multiprocessing import Process, Manager, Value, Semaphore
 from random import random
 from uuid import uuid4
 
-import numpy
 import pysam
 from Bio import SeqIO, pairwise2
 from Bio.Seq import Seq
@@ -14,8 +14,8 @@ from coverage_bias import CoverageBiasDetector, CoverageCorrector
 from hmm_utils import *
 from pacbio_haplotyper import PacBioHaplotyper
 from profiler import time_usage
-from sam_utils import get_related_reads_and_read_count_in_samfile, extract_unmapped_reads_to_fasta_file
 from sam_utils import get_reference_genome_of_alignment_file
+from sam_utils import get_related_reads_and_read_count_in_samfile, extract_unmapped_reads_to_fasta_file
 from settings import *
 from utils import is_low_quality_read
 
@@ -300,6 +300,35 @@ class VNTRFinder:
         return list(shared_spanning_reads)
 
     @time_usage
+    def get_spanning_reads_of_aligned_pacbio_reads(self, alignment_file):
+        sema = Semaphore(CORES)
+        manager = Manager()
+        shared_length_distribution = manager.list()
+        mapped_spanning_reads = manager.list()
+
+        vntr_start = self.reference_vntr.start_point
+        vntr_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
+        region_start = vntr_start
+        region_end = vntr_end
+        read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
+        samfile = pysam.AlignmentFile(alignment_file, read_mode)
+        reference = get_reference_genome_of_alignment_file(samfile)
+        chromosome = self.reference_vntr.chromosome if reference == 'HG19' else self.reference_vntr.chromosome[3:]
+        process_list = []
+        for read in samfile.fetch(chromosome, region_start, region_end):
+            sema.acquire()
+            p = Process(target=self.check_if_pacbio_read_spans_vntr, args=(sema, read, shared_length_distribution,
+                                                                           mapped_spanning_reads))
+            process_list.append(p)
+            p.start()
+
+        for p in process_list:
+            p.join()
+
+        print('length_distribution of mapped spanning reads: ', list(shared_length_distribution))
+        return list(mapped_spanning_reads)
+
+    @time_usage
     def get_haplotype_copy_numbers_from_spanning_reads(self, spanning_reads):
         max_length = 0
         for read in spanning_reads:
@@ -323,37 +352,14 @@ class VNTRFinder:
     @time_usage
     def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, working_directory='./'):
         logging.debug('finding repeat count from pacbio alignment file for %s' % self.reference_vntr.id)
-        sema = Semaphore(CORES)
-        manager = Manager()
-        shared_length_distribution = manager.list()
-        mapped_spanning_reads = manager.list()
 
         unmapped_reads = extract_unmapped_reads_to_fasta_file(alignment_file, working_directory)
         logging.info('unmapped reads extracted')
 
         unaligned_spanning_reads = self.get_spanning_reads_of_unaligned_pacbio_reads(unmapped_reads, working_directory)
+        mapped_spanning_reads = self.get_spanning_reads_of_aligned_pacbio_reads()
 
-        vntr_start = self.reference_vntr.start_point
-        vntr_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
-        region_start = vntr_start
-        region_end = vntr_end
-        read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
-        samfile = pysam.AlignmentFile(alignment_file, read_mode)
-        reference = get_reference_genome_of_alignment_file(samfile)
-        chromosome = self.reference_vntr.chromosome if reference == 'HG19' else self.reference_vntr.chromosome[3:]
-        process_list = []
-        for read in samfile.fetch(chromosome, region_start, region_end):
-            sema.acquire()
-            p = Process(target=self.check_if_pacbio_read_spans_vntr, args=(sema, read, shared_length_distribution,
-                                                                           mapped_spanning_reads))
-            process_list.append(p)
-            p.start()
-
-        for p in process_list:
-            p.join()
-
-        print('length_distribution of mapped spanning reads: ', list(shared_length_distribution))
-        spanning_reads = list(mapped_spanning_reads) + unaligned_spanning_reads
+        spanning_reads = mapped_spanning_reads + unaligned_spanning_reads
         copy_numbers = self.get_haplotype_copy_numbers_from_spanning_reads(spanning_reads)
         print('copy_numbers: ', copy_numbers)
         return copy_numbers
