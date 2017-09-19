@@ -31,7 +31,7 @@ class VNTRFinder:
         self.min_repeat_bp_to_count_repeats = 2
 
         self.minimum_left_flanking_size = {}
-        self.minimum_right_flanking_size = {119: 19}
+        self.minimum_right_flanking_size = {119: 19, 1214:12}
 
     @time_usage
     def build_vntr_matcher_hmm(self, copies, flanking_region_size=100):
