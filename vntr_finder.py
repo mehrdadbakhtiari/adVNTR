@@ -226,7 +226,8 @@ class VNTRFinder:
                 state = visited_states[i].split('_')[0]
                 if state.startswith('I'):
                     state += get_emitted_basepair_from_visited_states(visited_states[i], visited_states, sequence)
-                if repeats_lengths[current_repeat] != len(self.reference_vntr.pattern):
+                if repeats_lengths[current_repeat] != len(self.reference_vntr.pattern) and\
+                        repeats_lengths[current_repeat] < len(self.reference_vntr.pattern) + 5:
                     if state not in mutations.keys():
                         mutations[state] = 0
                     mutations[state] += 1
