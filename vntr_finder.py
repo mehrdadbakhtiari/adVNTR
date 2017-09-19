@@ -483,6 +483,9 @@ class VNTRFinder:
 
         self.find_frameshift_from_selected_reads(selected_reads)
 
+        # TODO: separate methods
+        return 0
+
         total_counted_vntr_bp = vntr_bp_in_unmapped_reads.value + vntr_bp_in_mapped_reads
         pattern_occurrences = total_counted_vntr_bp / float(len(self.reference_vntr.pattern))
         bias_detector = CoverageBiasDetector(alignment_file, self.reference_vntr.chromosome, reference)

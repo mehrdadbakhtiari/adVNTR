@@ -41,7 +41,10 @@ reference_vntrs = load_unique_vntrs_data()
 
 # reference_vntrs = identify_homologous_vntrs(reference_vntrs, 'chr15')
 accurate_vntr_list = [7, 69, 119, 970, 1123, 1213, 1214, 1215, 1216, 1217, 1218, 1219, 1220, 809, 377, 378]
-accurate_vntr_list = [7, 119, 1214, 1218, 1220, 1221, 377, 378, 809]
+accurate_vntr_list = [7, 119, 1214, 1218, 1220, 1221, 377, 378, 809] # short VNTRs
+accurate_vntr_list = [1123, 1214, 1220, 1221, 1222] # grant
+#accurate_vntr_list = [377, 378, 809, 69, 1123] # frameshift
+#accurate_vntr_list = [69, 1123]
 
 for i in range(len(reference_vntrs)):
     if not reference_vntrs[i].is_non_overlapping() or reference_vntrs[i].has_homologous_vntr():
