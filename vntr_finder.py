@@ -16,7 +16,7 @@ from pacbio_haplotyper import PacBioHaplotyper
 from profiler import time_usage
 from sam_utils import get_reference_genome_of_alignment_file
 from sam_utils import get_related_reads_and_read_count_in_samfile, extract_unmapped_reads_to_fasta_file
-from settings import *
+import settings
 from utils import is_low_quality_read
 
 
@@ -31,7 +31,7 @@ class VNTRFinder:
         self.min_repeat_bp_to_count_repeats = 2
 
         self.minimum_left_flanking_size = {}
-        self.minimum_right_flanking_size = {119: 19, 1214:12}
+        self.minimum_right_flanking_size = {119: 19, 1214: 12}
 
     @time_usage
     def build_vntr_matcher_hmm(self, copies, flanking_region_size=100):
@@ -50,8 +50,8 @@ class VNTRFinder:
         copies = int(round(float(read_length) / len(self.reference_vntr.pattern) + 0.5))
 
         base_name = str(self.reference_vntr.id) + '_' + str(read_length) + '.json'
-        stored_hmm_file = TRAINED_HMMS_DIR + base_name
-        if USE_TRAINED_HMMS and os.path.isfile(stored_hmm_file):
+        stored_hmm_file = settings.TRAINED_HMMS_DIR + base_name
+        if settings.USE_TRAINED_HMMS and os.path.isfile(stored_hmm_file):
             model = Model()
             model = model.from_json(stored_hmm_file)
             return model
@@ -81,6 +81,9 @@ class VNTRFinder:
         blast_ids = set([])
         search_id = str(uuid4()) + str(self.reference_vntr.id)
         queries = self.reference_vntr.get_repeat_segments()
+        if len(self.reference_vntr.pattern) < 10:
+            min_copies = int(10 / len(self.reference_vntr.pattern))
+            queries = [self.reference_vntr.pattern * min_copies]
         identity_cutoff = '40'
         if not short_reads:
             queries = [self.reference_vntr.left_flanking_region[-80:], self.reference_vntr.right_flanking_region[:80]]
@@ -115,7 +118,7 @@ class VNTRFinder:
         for read in samfile.fetch(reference, multiple_iterators=True):
             if read.is_unmapped:
                 continue
-            if random() > SCORE_FINDING_READS_FRACTION:
+            if random() > settings.SCORE_FINDING_READS_FRACTION:
                 continue
             read_start = read.reference_start
             read_end = read.reference_end if read.reference_end else read_start + len(read.seq)
@@ -146,7 +149,7 @@ class VNTRFinder:
         false_scores = manager.list()
         read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
         samfile = pysam.AlignmentFile(alignment_file, read_mode)
-        refs = [ref for ref in samfile.references if ref in CHROMOSOMES or 'chr' + ref in CHROMOSOMES]
+        refs = [ref for ref in samfile.references if ref in settings.CHROMOSOMES or 'chr' + ref in settings.CHROMOSOMES]
         for ref in refs:
             p = Process(target=self.add_false_read_scores_of_chromosome, args=(samfile, ref, hmm, false_scores))
             process_list.append(p)
@@ -163,19 +166,19 @@ class VNTRFinder:
         If the score is not stored, it will compute the score and write it for this VNTR in precomputed data.
         """
         base_name = str(self.reference_vntr.id) + '_' + str(read_length) + '.scores'
-        stored_scores_file = TRAINED_HMMS_DIR + base_name
-        if USE_TRAINED_HMMS and os.path.isfile(stored_scores_file):
+        stored_scores_file = settings.TRAINED_HMMS_DIR + base_name
+        if settings.USE_TRAINED_HMMS and os.path.isfile(stored_scores_file):
             with open(stored_scores_file, 'r') as infile:
                 frac_score = [(line.split()[0], line.split()[1]) for line in infile.readlines() if line.strip() != '']
                 fraction_score_map = {float(reads_fraction): float(score) for reads_fraction, score in frac_score}
-            if SCORE_FINDING_READS_FRACTION in fraction_score_map.keys():
-                return fraction_score_map[SCORE_FINDING_READS_FRACTION]
+            if settings.SCORE_FINDING_READS_FRACTION in fraction_score_map.keys():
+                return fraction_score_map[settings.SCORE_FINDING_READS_FRACTION]
 
         logging.debug('Minimum score is not precomputed for vntr id: %s' % self.reference_vntr.id)
         score = self.calculate_min_score_to_select_a_read(hmm, alignment_file)
         logging.debug('computed score: %s' % score)
         with open(stored_scores_file, 'a') as outfile:
-            outfile.write('%s %s\n' % (SCORE_FINDING_READS_FRACTION, score))
+            outfile.write('%s %s\n' % (settings.SCORE_FINDING_READS_FRACTION, score))
 
         return score
 
@@ -278,7 +281,7 @@ class VNTRFinder:
 
     @time_usage
     def get_spanning_reads_of_unaligned_pacbio_reads(self, unmapped_read_file, working_directory):
-        sema = Semaphore(CORES)
+        sema = Semaphore(settings.CORES)
         manager = Manager()
         shared_length_distribution = manager.list()
         shared_spanning_reads = manager.list()
@@ -302,7 +305,7 @@ class VNTRFinder:
 
     @time_usage
     def get_spanning_reads_of_aligned_pacbio_reads(self, alignment_file):
-        sema = Semaphore(CORES)
+        sema = Semaphore(settings.CORES)
         manager = Manager()
         shared_length_distribution = manager.list()
         mapped_spanning_reads = manager.list()
@@ -384,7 +387,7 @@ class VNTRFinder:
 
         hmm = None
         min_score_to_count_read = None
-        sema = Semaphore(CORES)
+        sema = Semaphore(settings.CORES)
         manager = Manager()
         selected_reads = manager.list()
         vntr_bp_in_unmapped_reads = Value('d', 0.0)
@@ -440,7 +443,7 @@ class VNTRFinder:
 
             if read.is_unmapped:
                 continue
-            if len(read.seq) < read_length * 0.9:
+            if len(read.seq) < int(read_length * 0.9):
                 logging.debug('Rejecting read for short length: %s' % read.seq)
                 continue
             read_end = read.reference_end if read.reference_end else read.reference_start + len(read.seq)

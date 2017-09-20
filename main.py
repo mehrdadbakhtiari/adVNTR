@@ -18,7 +18,7 @@ parser.add_argument('-p', '--pacbio', action='store_true',
                     help='Input file contains PacBio reads instead of Illumina reads')
 parser.add_argument('-wd', '--working_directory', type=str, metavar='DIRECTORY',
                     help='Working directory for creating temporary files needed for computation')
-parser.add_argument('-t', '--threads', type=int, metavar='<nthreads>', default=1,
+parser.add_argument('-t', '--threads', type=int, metavar='<nthreads>', default=4,
                     help='Run the tool on <nthreads> parallel threads which will run on separate processors/cores')
 args = parser.parse_args()
 
@@ -34,7 +34,7 @@ input_file = args.alignment_file if args.alignment_file else args.fasta
 input_is_alignment_file = input_file.endswith('bam') or input_file.endswith('sam')
 working_directory = args.working_directory if args.working_directory else os.path.dirname(input_file) + '/'
 
-LOGFILE = 'log_%s.log' % os.path.basename(input_file)
+LOGFILE = working_directory + 'log_%s.log' % os.path.basename(input_file)
 logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', filename=LOGFILE, level=logging.DEBUG, filemode='w')
 
 reference_vntrs = load_unique_vntrs_data()
