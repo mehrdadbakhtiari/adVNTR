@@ -1,4 +1,5 @@
 from Bio import Seq, SeqRecord, SeqIO
+from utils import get_chromosome_reference_sequence
 
 
 def add_two_copy_to_all_patterns(patterns, start_points):
@@ -18,5 +19,14 @@ def add_two_copy_to_all_patterns(patterns, start_points):
 
     record.seq = Seq.Seq(sequence)
     output_name = 'edited_chr15_two_more_copies.fa'
+    with open(output_name, 'w') as output_handle:
+        SeqIO.write([record], output_handle, 'fasta')
+
+
+def create_reference_with_specific_repeats(reference_vntr, desired_repeats, output_name):
+    record = SeqRecord.SeqRecord('')
+    sequence = get_chromosome_reference_sequence(reference_vntr.chromosome)
+
+    record.seq = Seq.Seq(sequence)
     with open(output_name, 'w') as output_handle:
         SeqIO.write([record], output_handle, 'fasta')
