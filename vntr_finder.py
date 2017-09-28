@@ -75,8 +75,8 @@ class VNTRFinder:
         word_size = int(len(self.reference_vntr.pattern)/3)
         if word_size > 11:
             word_size = 11
-	if word_size < 5:
-	    word_size = 5
+        if word_size < 5:
+            word_size = 5
         word_size = str(word_size)
 
         search_results = []
