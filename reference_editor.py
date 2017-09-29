@@ -23,10 +23,16 @@ def add_two_copy_to_all_patterns(patterns, start_points):
         SeqIO.write([record], output_handle, 'fasta')
 
 
-def create_reference_with_specific_repeats(reference_vntr, desired_repeats, output_name):
+def create_reference_region_with_specific_repeats(reference_vntr, desired_repeats, output_name):
     record = SeqRecord.SeqRecord('')
     sequence = get_chromosome_reference_sequence(reference_vntr.chromosome)
+    new_sequence = sequence[reference_vntr.start_point-30000:reference_vntr.start_point]
+    repeats = reference_vntr.get_repeat_segments()
+    for i in range(desired_repeats):
+        new_sequence += repeats[i % len(repeats)]
+    vntr_end = reference_vntr.start_point + reference_vntr.get_length()
+    new_sequence += sequence[vntr_end:vntr_end+30000]
 
-    record.seq = Seq.Seq(sequence)
+    record.seq = Seq.Seq(new_sequence)
     with open(output_name, 'w') as output_handle:
         SeqIO.write([record], output_handle, 'fasta')
