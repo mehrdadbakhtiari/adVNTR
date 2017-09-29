@@ -342,6 +342,33 @@ def plot_gc_content_violin_plot():
     plt.savefig('gc_coverage_violinplot_simulated.png')
 
 
+def plot_frequency_of_repeats_in_population():
+    import numpy as np
+    import matplotlib.pyplot as plt
+    R5_array = (45, 51, 56)
+    R4_array = (33, 10, 20)
+    R2_array = (22, 18, 12)
+    R3_array = (0, 21, 12)
+    R5 = np.array(R5_array)
+    R4 = np.array(R4_array)
+    R2 = np.array(R2_array)
+    R3 = np.array(R3_array)
+    ind = (0, 1, 2)
+    width = 0.35
+    p5 = plt.bar(ind, R5, width)
+    p4 = plt.bar(ind, R4, width, bottom=R5)
+    p2 = plt.bar(ind, R2, width, bottom=R5+R4)
+    p3 = plt.bar(ind, R3, width, bottom=R5+R4+R2)
+    plt.plot([-0.5, 3], [45, 45], color='k', linestyle='--', linewidth=0.5)
+    plt.plot([-0.5, 3], [56, 56], color='k', linestyle='--', linewidth=0.5)
+    plt.ylabel('Frequency')
+    plt.title('Allele Frequency for VNTR in GP1BA')
+    plt.xticks(ind, ('African', 'East Asian', 'European'))
+    plt.yticks(np.arange(0, 150, 10))
+    plt.legend((p5[0], p4[0], p2[0], p3[0]), ('3 Repeats', '4 Repeats', '1 Repeats', '2 Repeats'))
+    plt.savefig('GP1BA.png', dpi=300)
+
+
 def plot_paccbio_flanking_region_sizes():
     import matplotlib.pyplot as plt
     import numpy as np
@@ -378,4 +405,5 @@ for a, b in edges:
 # plot_copy_count_comparison(eliminated_nodes)
 # plot_FP_for_specific_sensitivity(eliminated_nodes)
 # plot_gc_content_violin_plot()
-plot_paccbio_flanking_region_sizes()
+# plot_paccbio_flanking_region_sizes()
+plot_frequency_of_repeats_in_population()
