@@ -45,6 +45,7 @@ accurate_vntr_list = [7, 119, 1214, 1218, 1220, 1221, 377, 378, 809] # short VNT
 accurate_vntr_list = [1123, 1214, 1220, 1221, 1222] # grant
 #accurate_vntr_list = [377, 378, 809, 69, 1123] # frameshift
 #accurate_vntr_list = [69, 1123]
+accurate_vntr_list = [1215] # INS
 
 for i in range(len(reference_vntrs)):
     if not reference_vntrs[i].is_non_overlapping() or reference_vntrs[i].has_homologous_vntr():
@@ -58,6 +59,7 @@ for i in range(len(reference_vntrs)):
             copy_number = vntr_finder.find_repeat_count_from_pacbio_alignment_file(input_file, working_directory)
         else:
             copy_number = vntr_finder.find_repeat_count_from_pacbio_reads(input_file, working_directory)
+        print(sum(copy_number) / len(copy_number))
     else:
         if input_is_alignment_file:
             copy_number = vntr_finder.find_repeat_count_from_alignment_file(input_file, working_directory)
