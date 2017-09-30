@@ -369,6 +369,17 @@ def plot_frequency_of_repeats_in_population():
     plt.savefig('GP1BA.png', dpi=300)
 
 
+def plot_ins_simulation_pacbio_results():
+    sim_repeats = [52, 78, 28, 50, 54, 56, 88, 76, 24, 82, 26, 80, 74, 84, 112, 22, 70, 72, 58, 86, 20, 62, 48, 96, 30, 18, 94, 32, 60, 36, 90, 64, 66, 34, 92, 46, 14, 98, 16, 44, 108, 38, 12, 40, 42, 68, 10]
+    estimated_repeats = [52,  78,  28,  50,  54,  57,  88,  76,  24,  82,  26,  80,  75,  86,  113,  22,  70,  73,  59,  86,  20,  62,  48,  96,  30,  18,  94,  32,  61,  37,  91,  64,  66,  35,  93,  46,  14,  99,  16,  44,  108,  38,  12,  40,  42,  68,  10]
+    import matplotlib.pyplot as plt
+    plt.plot(sim_repeats, estimated_repeats, 'o')
+    plt.title('Result of estimation on PacBio simulated reads')
+    plt.ylabel('Estimated Copy Number')
+    plt.xlabel('Simulated Copy Number')
+    plt.savefig('INS_simulation_results.png', dpi=300)
+
+
 def plot_paccbio_flanking_region_sizes():
     import matplotlib.pyplot as plt
     import numpy as np
