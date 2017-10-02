@@ -17,6 +17,9 @@ class PacBioHaplotyper:
         self.reads = [read.upper() for read in reads]
 
     def get_error_corrected_haplotypes(self):
+        if len(self.reads) < 2:
+            logging.log('There is only one spanning read. Returning it as the only available haplotype')
+            return self.reads
         haplotypes = []
         clusters = self.get_read_clusters()
         logging.debug('Cluster sizes: %s, %s' % (len(clusters[0]), len(clusters[1])))
