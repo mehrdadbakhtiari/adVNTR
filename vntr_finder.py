@@ -336,6 +336,9 @@ class VNTRFinder:
 
     @time_usage
     def get_haplotype_copy_numbers_from_spanning_reads(self, spanning_reads):
+        if len(spanning_reads) < 1:
+            logging.log('There is no spanning read')
+            return 0
         max_length = 0
         for read in spanning_reads:
             if len(read) - 100 > max_length:
