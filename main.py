@@ -16,6 +16,8 @@ parser.add_argument('-fs', '--frameshift', action='store_true',
                     help='Search for a frameshift in VNTR instead of copy number')
 parser.add_argument('-p', '--pacbio', action='store_true',
                     help='Input file contains PacBio reads instead of Illumina reads')
+parser.add_argument('-n', '--nanopore', action='store_true',
+                    help='Input file contains Nanopore MinION reads instead of Illumina reads')
 parser.add_argument('-wd', '--working_directory', type=str, metavar='DIRECTORY',
                     help='Working directory for creating temporary files needed for computation')
 parser.add_argument('-t', '--threads', type=int, metavar='<nthreads>', default=4,
@@ -25,6 +27,9 @@ args = parser.parse_args()
 if args.alignment_file is None and args.fasta is None:
     parser.print_help()
     sys.exit("ERROR: No input specified. Please specify alignment file or fasta file")
+
+if args.nanopore:
+    settings.MAX_ERROR_RATE = 0.3
 
 if args.threads < 1:
     parser.error('threads cannot be less than 1')

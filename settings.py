@@ -20,6 +20,8 @@ QUALITY_SCORE_CUTOFF = 20
 LOW_QUALITY_BP_TO_DISCARD_READ = 0.10
 MAPQ_CUTOFF = 0
 
+MAX_ERROR_RATE = 0.2
+
 hostname = socket.gethostname()
 if hostname.startswith('genome'):
     CORES = 20
