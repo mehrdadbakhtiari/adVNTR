@@ -296,10 +296,6 @@ def get_constant_number_of_repeats_matcher_hmm(patterns, copies):
 
     trained_model = get_trained_model_for_one_mixed_repeat(patterns)
     trained_transitions_mat = trained_model.dense_transition_matrix()
-    for state in trained_model.states:
-        if state.name.startswith('I'):
-            print(state.name)
-            print(state.distribution)
     fit_emissions = {state.name: state.distribution for state in trained_model.states}
     fit_transitions = {}
     for i, source_state in enumerate(trained_model.states):
