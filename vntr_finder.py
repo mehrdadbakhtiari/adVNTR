@@ -35,7 +35,7 @@ class VNTRFinder:
 
     @time_usage
     def build_vntr_matcher_hmm(self, copies, flanking_region_size=100):
-        patterns = self.reference_vntr.get_repeat_segments() * 100
+        patterns = self.reference_vntr.get_repeat_segments() * 10
         left_flanking_region = self.reference_vntr.left_flanking_region[-flanking_region_size:]
         right_flanking_region = self.reference_vntr.right_flanking_region[:flanking_region_size]
 
