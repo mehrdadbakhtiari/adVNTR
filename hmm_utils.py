@@ -2,7 +2,9 @@ from pomegranate import DiscreteDistribution, State
 from pomegranate import HiddenMarkovModel as Model
 import numpy as np
 
+from profile_hmm import build_profile_hmm_for_repeats
 import settings
+
 
 def path_to_alignment(x, y, path):
     for i, (index, state) in enumerate(path[1:-1]):
@@ -294,14 +296,7 @@ def get_constant_number_of_repeats_matcher_hmm(patterns, copies):
     pattern = patterns[0]
     model = Model(name="Repeating Pattern Matcher HMM Model")
 
-    trained_model = get_trained_model_for_one_mixed_repeat(patterns)
-    trained_transitions_mat = trained_model.dense_transition_matrix()
-    fit_emissions = {state.name: state.distribution for state in trained_model.states}
-    fit_transitions = {}
-    for i, source_state in enumerate(trained_model.states):
-        fit_transitions[source_state.name] = {}
-        for j, dest_state in enumerate(trained_model.states):
-            fit_transitions[source_state.name][dest_state.name] = trained_transitions_mat[i][j]
+    transitions, emissions = build_profile_hmm_for_repeats(patterns, settings.MAX_ERROR_RATE)
 
     last_end = None
     for repeat in range(copies):
@@ -309,14 +304,14 @@ def get_constant_number_of_repeats_matcher_hmm(patterns, copies):
         match_states = []
         delete_states = []
         for i in range(len(pattern) + 1):
-            insert_distribution = fit_emissions['I%s' % i]
+            insert_distribution = DiscreteDistribution(emissions['I%s' % i])
             insert_states.append(State(insert_distribution, name='I%s_%s' % (i, repeat)))
 
-        for i in range(len(pattern)):
-            match_distribution = fit_emissions['M%s' % i]
+        for i in range(1, len(pattern) + 1):
+            match_distribution = DiscreteDistribution(emissions['M%s' % i])
             match_states.append(State(match_distribution, name='M%s_%s' % (str(i), repeat)))
 
-        for i in range(len(pattern)):
+        for i in range(1, len(pattern) + 1):
             delete_states.append(State(None, name='D%s_%s' % (str(i), repeat)))
 
         unit_start = State(None, name='unit_start_%s' % repeat)
@@ -332,36 +327,36 @@ def get_constant_number_of_repeats_matcher_hmm(patterns, copies):
         if repeat == copies - 1:
             model.add_transition(unit_end, model.end, 1)
 
-        model.add_transition(unit_start, match_states[0], fit_transitions['unit_start']['M0'])
-        model.add_transition(unit_start, delete_states[0], fit_transitions['unit_start']['D0'])
-        model.add_transition(unit_start, insert_states[0], fit_transitions['unit_start']['I0'])
+        model.add_transition(unit_start, match_states[0], transitions['unit_start']['M1'])
+        model.add_transition(unit_start, delete_states[0], transitions['unit_start']['D1'])
+        model.add_transition(unit_start, insert_states[0], transitions['unit_start']['I0'])
 
-        model.add_transition(insert_states[0], insert_states[0], fit_transitions['I0']['I0'])
-        model.add_transition(insert_states[0], delete_states[0], fit_transitions['I0']['D0'])
-        model.add_transition(insert_states[0], match_states[0], fit_transitions['I0']['M0'])
+        model.add_transition(insert_states[0], insert_states[0], transitions['I0']['I0'])
+        model.add_transition(insert_states[0], delete_states[0], transitions['I0']['D1'])
+        model.add_transition(insert_states[0], match_states[0], transitions['I0']['M1'])
 
-        model.add_transition(delete_states[n], unit_end, fit_transitions['D%s' % n]['unit_end'])
-        model.add_transition(delete_states[n], insert_states[n+1], fit_transitions['D%s' % n]['I%s' % (n+1)])
+        model.add_transition(delete_states[n], unit_end, transitions['D%s' % (n+1)]['unit_end'])
+        model.add_transition(delete_states[n], insert_states[n+1], transitions['D%s' % (n+1)]['I%s' % (n+1)])
 
-        model.add_transition(match_states[n], unit_end, fit_transitions['M%s' % n]['unit_end'])
-        model.add_transition(match_states[n], insert_states[n+1], fit_transitions['M%s' % n]['I%s' % (n+1)])
+        model.add_transition(match_states[n], unit_end, transitions['M%s' % (n+1)]['unit_end'])
+        model.add_transition(match_states[n], insert_states[n+1], transitions['M%s' % (n+1)]['I%s' % (n+1)])
 
-        model.add_transition(insert_states[n+1], insert_states[n+1], fit_transitions['I%s' % (n+1)]['I%s' % (n+1)])
-        model.add_transition(insert_states[n+1], unit_end, fit_transitions['I%s' % (n+1)]['unit_end'])
+        model.add_transition(insert_states[n+1], insert_states[n+1], transitions['I%s' % (n+1)]['I%s' % (n+1)])
+        model.add_transition(insert_states[n+1], unit_end, transitions['I%s' % (n+1)]['unit_end'])
 
-        for i in range(0, len(pattern)):
-            model.add_transition(match_states[i], insert_states[i+1], fit_transitions['M%s' % i]['I%s' % (i+1)])
-            model.add_transition(delete_states[i], insert_states[i+1], fit_transitions['D%s' % i]['I%s' % (i+1)])
-            model.add_transition(insert_states[i+1], insert_states[i+1], fit_transitions['I%s' % (i+1)]['I%s' % (i+1)])
-            if i < len(pattern) - 1:
-                model.add_transition(insert_states[i+1], match_states[i+1], fit_transitions['I%s' % (i+1)]['M%s' % (i+1)])
-                model.add_transition(insert_states[i+1], delete_states[i+1], fit_transitions['I%s' % (i+1)]['D%s' % (i+1)])
+        for i in range(1, len(pattern)+1):
+            model.add_transition(match_states[i-1], insert_states[i], transitions['M%s' % i]['I%s' % i])
+            model.add_transition(delete_states[i-1], insert_states[i], transitions['D%s' % i]['I%s' % i])
+            model.add_transition(insert_states[i], insert_states[i], transitions['I%s' % i]['I%s' % i])
+            if i < len(pattern):
+                model.add_transition(insert_states[i], match_states[i], transitions['I%s' % i]['M%s' % (i+1)])
+                model.add_transition(insert_states[i], delete_states[i], transitions['I%s' % i]['D%s' % (i+1)])
 
-                model.add_transition(match_states[i], match_states[i+1], fit_transitions['M%s' % i]['M%s' % (i+1)])
-                model.add_transition(match_states[i], delete_states[i+1], fit_transitions['M%s' % i]['D%s' % (i+1)])
+                model.add_transition(match_states[i-1], match_states[i], transitions['M%s' % i]['M%s' % (i+1)])
+                model.add_transition(match_states[i-1], delete_states[i], transitions['M%s' % i]['D%s' % (i+1)])
 
-                model.add_transition(delete_states[i], match_states[i+1], fit_transitions['D%s' % i]['M%s' % (i+1)])
-                model.add_transition(delete_states[i], delete_states[i+1], fit_transitions['D%s' % i]['D%s' % (i+1)])
+                model.add_transition(delete_states[i-1], match_states[i], transitions['D%s' % i]['M%s' % (i+1)])
+                model.add_transition(delete_states[i-1], delete_states[i], transitions['D%s' % i]['D%s' % (i+1)])
 
         last_end = unit_end
 
@@ -413,6 +408,7 @@ def get_variable_number_of_repeats_matcher_hmm(patterns, copies=1):
     state_names = [state.name for state in states]
     distributions = [state.distribution for state in states]
     new_model = Model.from_matrix(mat, distributions, starts, ends, name='Repeat Matcher HMM Model', state_names=state_names, merge=None)
+    new_model.bake(merge=None)
     return new_model
 
 

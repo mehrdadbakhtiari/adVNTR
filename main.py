@@ -30,6 +30,10 @@ if args.alignment_file is None and args.fasta is None:
 
 if args.nanopore:
     settings.MAX_ERROR_RATE = 0.3
+elif args.pacbio:
+    settings.MAX_ERROR_RATE = 0.2
+else:
+    settings.MAX_ERROR_RATE = 0.05
 
 if args.threads < 1:
     parser.error('threads cannot be less than 1')
@@ -64,7 +68,10 @@ for i in range(len(reference_vntrs)):
             copy_number = vntr_finder.find_repeat_count_from_pacbio_alignment_file(input_file, working_directory)
         else:
             copy_number = vntr_finder.find_repeat_count_from_pacbio_reads(input_file, working_directory)
-        print(sum(copy_number) / len(copy_number))
+        if len(copy_number) > 1:
+            print(sum(copy_number) / len(copy_number))
+        else:
+            print(copy_number)
     else:
         if input_is_alignment_file:
             copy_number = vntr_finder.find_repeat_count_from_alignment_file(input_file, working_directory)
