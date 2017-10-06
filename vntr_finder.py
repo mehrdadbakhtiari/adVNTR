@@ -114,28 +114,35 @@ class VNTRFinder:
         result_scores.append(logp)
         sema.release()
 
-    def add_false_read_scores_of_chromosome(self, samfile, reference, hmm, false_scores):
+    def is_true_read(self, read):
+        read_start = read.reference_start
+        read_end = read.reference_end if read.reference_end else read_start + len(read.seq)
+        vntr_start = self.reference_vntr.start_point
+        vntr_end = vntr_start + self.reference_vntr.get_length()
+        reference_name = read.reference_name
+        if not reference_name.startswith('chr'):
+            reference_name = 'chr' + reference_name
+        if reference_name == self.reference_vntr.chromosome and (
+                    vntr_start <= read_start < vntr_end or vntr_start < read_end <= vntr_end):
+            return True
+        return False
+
+    def find_score_distribution_of_ref(self, samfile, reference, hmm, false_scores, true_scores):
         process_list = []
-        sema = Semaphore(5)
+        sema = Semaphore(settings.CORES)
         for read in samfile.fetch(reference, multiple_iterators=True):
             if read.is_unmapped:
                 continue
-            if random() > settings.SCORE_FINDING_READS_FRACTION:
-                continue
-            read_start = read.reference_start
-            read_end = read.reference_end if read.reference_end else read_start + len(read.seq)
-            vntr_start = self.reference_vntr.start_point
-            vntr_end = vntr_start + self.reference_vntr.get_length()
-            reference_name = read.reference_name
-            if not reference_name.startswith('chr'):
-                reference_name = 'chr' + reference_name
-            if reference_name == self.reference_vntr.chromosome and (
-                        vntr_start <= read_start < vntr_end or vntr_start < read_end <= vntr_end):
-                continue
             if read.seq.count('N') > 0:
                 continue
+            if random() > settings.SCORE_FINDING_READS_FRACTION:
+                continue
+
             sema.acquire()
-            p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, false_scores))
+            if self.is_true_read(read):
+                p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, true_scores))
+            else:
+                p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, false_scores))
             process_list.append(p)
             p.start()
         for p in process_list:
@@ -149,11 +156,12 @@ class VNTRFinder:
         process_list = []
         manager = Manager()
         false_scores = manager.list()
+        true_scores = manager.list()
         read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
         samfile = pysam.AlignmentFile(alignment_file, read_mode)
         refs = [ref for ref in samfile.references if ref in settings.CHROMOSOMES or 'chr' + ref in settings.CHROMOSOMES]
         for ref in refs:
-            p = Process(target=self.add_false_read_scores_of_chromosome, args=(samfile, ref, hmm, false_scores))
+            p = Process(target=self.find_score_distribution_of_ref, args=(samfile, ref, hmm, false_scores, true_scores))
             process_list.append(p)
             p.start()
         for p in process_list:
