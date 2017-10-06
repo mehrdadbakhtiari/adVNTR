@@ -148,6 +148,13 @@ class VNTRFinder:
         for p in process_list:
             p.join()
 
+    @staticmethod
+    def save_scores(true_scores, false_scores, alignment_file):
+        with open('true_scores_dist_%s' % os.path.basename(alignment_file)) as out:
+            out.write(','.join(list(true_scores)))
+        with open('false_scores_dist_%s' % os.path.basename(alignment_file)) as out:
+            out.write(','.join(list(false_scores)))
+
     @time_usage
     def calculate_min_score_to_select_a_read(self, hmm, alignment_file):
         """Calculate the score distribution of false positive reads
@@ -166,6 +173,9 @@ class VNTRFinder:
             p.start()
         for p in process_list:
             p.join()
+
+        if settings.SAVE_SCORE_DISTRIBUTION:
+            self.save_scores(false_scores, true_scores, alignment_file)
 
         score = numpy.percentile(false_scores, 100 - 0.0001)
         return score
