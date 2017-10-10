@@ -142,9 +142,15 @@ def build_profile_hmm_pseudocounts_for_alignment(thresh, pseu, alphabet, alignme
                     if len(transition[key]) == 2:
                         transition[key][sub_key] = 1.0 / 2
 
-    for key1 in transition:
-        for key2 in transition:
-            if key2 not in transition[key1]:
+    index_list = ['unit_start', 'I0']
+    for i in xrange(1, len(alignment[0])-len(insert_index)+1):
+        index_list.extend(['M'+str(i), 'D'+str(i), 'I'+str(i)])
+    index_list.append('unit_end')
+    for key1 in index_list:
+        if key1 not in transition.keys():
+            transition[key1] = {}
+        for key2 in index_list:
+            if key2 not in transition[key1].keys():
                 transition[key1][key2] = 0
     return transition, emission
 
