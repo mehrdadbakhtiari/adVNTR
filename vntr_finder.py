@@ -135,13 +135,14 @@ class VNTRFinder:
                 continue
             if read.seq.count('N') > 0:
                 continue
-            if random() > settings.SCORE_FINDING_READS_FRACTION:
-                continue
 
-            sema.acquire()
             if self.is_true_read(read):
+                sema.acquire()
                 p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, true_scores))
             else:
+                if random() > settings.SCORE_FINDING_READS_FRACTION:
+                    continue
+                sema.acquire()
                 p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, false_scores))
             process_list.append(p)
             p.start()
@@ -176,7 +177,7 @@ class VNTRFinder:
             p.join()
 
         if settings.SAVE_SCORE_DISTRIBUTION:
-            self.save_scores(false_scores, true_scores, alignment_file)
+            self.save_scores(true_scores, false_scores, alignment_file)
 
         score = numpy.percentile(false_scores, 100 - 0.0001)
         return score
