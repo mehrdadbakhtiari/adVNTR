@@ -293,25 +293,25 @@ def get_trained_model_for_one_mixed_repeat(patterns):
 
 
 def get_constant_number_of_repeats_matcher_hmm(patterns, copies):
-    pattern = patterns[0]
     model = Model(name="Repeating Pattern Matcher HMM Model")
 
     transitions, emissions = build_profile_hmm_for_repeats(patterns, settings.MAX_ERROR_RATE)
+    matches = [m for m in emissions.keys() if m.startswith('M')]
 
     last_end = None
     for repeat in range(copies):
         insert_states = []
         match_states = []
         delete_states = []
-        for i in range(len(pattern) + 1):
+        for i in range(len(matches) + 1):
             insert_distribution = DiscreteDistribution(emissions['I%s' % i])
             insert_states.append(State(insert_distribution, name='I%s_%s' % (i, repeat)))
 
-        for i in range(1, len(pattern) + 1):
+        for i in range(1, len(matches) + 1):
             match_distribution = DiscreteDistribution(emissions['M%s' % i])
             match_states.append(State(match_distribution, name='M%s_%s' % (str(i), repeat)))
 
-        for i in range(1, len(pattern) + 1):
+        for i in range(1, len(matches) + 1):
             delete_states.append(State(None, name='D%s_%s' % (str(i), repeat)))
 
         unit_start = State(None, name='unit_start_%s' % repeat)
@@ -344,11 +344,11 @@ def get_constant_number_of_repeats_matcher_hmm(patterns, copies):
         model.add_transition(insert_states[n+1], insert_states[n+1], transitions['I%s' % (n+1)]['I%s' % (n+1)])
         model.add_transition(insert_states[n+1], unit_end, transitions['I%s' % (n+1)]['unit_end'])
 
-        for i in range(1, len(pattern)+1):
+        for i in range(1, len(matches)+1):
             model.add_transition(match_states[i-1], insert_states[i], transitions['M%s' % i]['I%s' % i])
             model.add_transition(delete_states[i-1], insert_states[i], transitions['D%s' % i]['I%s' % i])
             model.add_transition(insert_states[i], insert_states[i], transitions['I%s' % i]['I%s' % i])
-            if i < len(pattern):
+            if i < len(matches):
                 model.add_transition(insert_states[i], match_states[i], transitions['I%s' % i]['M%s' % (i+1)])
                 model.add_transition(insert_states[i], delete_states[i], transitions['I%s' % i]['D%s' % (i+1)])
 
