@@ -222,7 +222,7 @@ def print_emission_and_transition_matrices(emission, transition, alignment, alph
 def build_profile_hmm_for_repeats(repeats, error_rate):
     alphabet = 'ACGT'
     pseudocounts = (len(repeats) / 4.0) * (error_rate / 10)
-    threshold = 0.1
+    threshold = 0.5
 
     muscle_cline = MuscleCommandline(settings.MUSCLE_DIR, clwstrict=True)
     data = '\n'.join(['>%s\n' % str(i) + repeats[i] for i in range(len(repeats))])
