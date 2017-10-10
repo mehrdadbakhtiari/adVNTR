@@ -150,9 +150,11 @@ class VNTRFinder:
 
     def save_scores(self, true_scores, false_scores, alignment_file):
         with open('true_scores_dist_%s_%s' % (self.reference_vntr.id, os.path.basename(alignment_file)), 'w') as out:
-            out.write(','.join(list(true_scores)))
+            for score in true_scores:
+                out.write('%.4f\n' % score)
         with open('false_scores_dist_%s_%s' % (self.reference_vntr.id, os.path.basename(alignment_file)), 'w') as out:
-            out.write(','.join(list(false_scores)))
+            for score in false_scores:
+                out.write('%.4f\n' % score)
 
     @time_usage
     def calculate_min_score_to_select_a_read(self, hmm, alignment_file):
