@@ -148,11 +148,10 @@ class VNTRFinder:
         for p in process_list:
             p.join()
 
-    @staticmethod
-    def save_scores(true_scores, false_scores, alignment_file):
-        with open('true_scores_dist_%s' % os.path.basename(alignment_file)) as out:
+    def save_scores(self, true_scores, false_scores, alignment_file):
+        with open('true_scores_dist_%s_%s' % (self.reference_vntr.id, os.path.basename(alignment_file))) as out:
             out.write(','.join(list(true_scores)))
-        with open('false_scores_dist_%s' % os.path.basename(alignment_file)) as out:
+        with open('false_scores_dist_%s_%s' % (self.reference_vntr.id, os.path.basename(alignment_file))) as out:
             out.write(','.join(list(false_scores)))
 
     @time_usage
