@@ -383,7 +383,7 @@ class VNTRFinder:
         logging.info('unmapped reads extracted')
 
         unaligned_spanning_reads = self.get_spanning_reads_of_unaligned_pacbio_reads(unmapped_reads, working_directory)
-        mapped_spanning_reads = self.get_spanning_reads_of_aligned_pacbio_reads()
+        mapped_spanning_reads = self.get_spanning_reads_of_aligned_pacbio_reads(alignment_file)
 
         spanning_reads = mapped_spanning_reads + unaligned_spanning_reads
         copy_numbers = self.get_haplotype_copy_numbers_from_spanning_reads(spanning_reads)
