@@ -369,9 +369,19 @@ def plot_frequency_of_repeats_in_population():
     plt.savefig('GP1BA.png', dpi=300)
 
 
-def plot_ins_simulation_pacbio_results():
-    sim_repeats = [52, 78, 28, 50, 54, 56, 88, 76, 24, 82, 26, 80, 74, 84, 112, 22, 70, 72, 58, 86, 20, 62, 48, 96, 30, 18, 94, 32, 60, 36, 90, 64, 66, 34, 92, 46, 14, 98, 16, 44, 108, 38, 12, 40, 42, 68, 10]
-    estimated_repeats = [52,  78,  28,  50,  54,  57,  88,  76,  24,  82,  26,  80,  75,  86,  113,  22,  70,  73,  59,  86,  20,  62,  48,  96,  30,  18,  94,  32,  61,  37,  91,  64,  66,  35,  93,  46,  14,  99,  16,  44,  108,  38,  12,  40,  42,  68,  10]
+def plot_ins_simulation_pacbio_results(results_dir='out/'):
+    import glob
+    files = glob.glob(results_dir + 'out_INS*')
+    points = []
+    for file_name in files:
+        sim = int(file_name.split('_')[2])
+        with open(file_name) as input:
+            lines = input.readlines()
+            estimate = int(lines[-1].strip())
+        points.append((sim, estimate))
+    points = sorted(points)
+    sim_repeats = [sim for sim, estimate in points]
+    estimated_repeats = [estimate for sim, estimate in points]
     import matplotlib.pyplot as plt
     plt.plot(sim_repeats, estimated_repeats, 'o')
     plt.title('Result of estimation on PacBio simulated reads')
