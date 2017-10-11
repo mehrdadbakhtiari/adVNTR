@@ -119,6 +119,13 @@ def get_x_and_y_from_file(file_name, exclude_x=None):
     return X, Y
 
 
+def get_numbers_from_file(file_name):
+    with open(file_name) as input_file:
+        lines = input_file.readlines()
+        result = [float(line.strip()) for line in lines]
+    return result
+
+
 def get_pattern_result_map(file_name):
     res = {}
     min_len = 100
@@ -388,6 +395,31 @@ def plot_ins_simulation_pacbio_results(results_dir='out/'):
     plt.ylabel('Estimated Copy Number')
     plt.xlabel('Simulated Copy Number')
     plt.savefig('INS_simulation_results.png', dpi=300)
+
+
+def plot_false_read_and_true_read_score_distribution(results_dir='results/score_distribution/'):
+    import glob
+    import os
+    false_scores_files = glob.glob(results_dir + 'false_scores*')
+    for i in range(len(false_scores_files)):
+        false_scores_file = false_scores_files[i]
+        true_scores_file = results_dir + 'true_' + '_'.join(os.path.basename(false_scores_file).split('_')[1:])
+        false_scores = get_numbers_from_file(false_scores_file)
+        true_scores = get_numbers_from_file(true_scores_file)
+        import matplotlib.pyplot as plt
+        n_bins = 50
+        labels = ['False Reads Scores', 'True Reads Scores']
+        plt.hist([false_scores, true_scores], n_bins, histtype='bar', label=labels)
+        plt.yscale('log')
+        plt.title('Score distribution among mapped reads')
+        plt.ylabel('Number of reads')
+        plt.xlabel('Score')
+        plt.legend(prop={'size': 10})
+        vntr_id = os.path.basename(false_scores_file).split('_')[3]
+        plt.savefig('score_distribution_%s.png' % vntr_id, dpi=300)
+        plt.cla()
+        plt.clf()
+        plt.close()
 
 
 def plot_paccbio_flanking_region_sizes():
