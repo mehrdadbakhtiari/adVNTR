@@ -61,22 +61,19 @@ for i in range(len(reference_vntrs)):
         continue
     if reference_vntrs[i].id not in accurate_vntr_list:
         continue
-    print(i, len(reference_vntrs[i].get_repeat_segments()))
+    print(i)
     vntr_finder = VNTRFinder(reference_vntrs[i])
     if args.pacbio:
         if input_is_alignment_file:
             copy_number = vntr_finder.find_repeat_count_from_pacbio_alignment_file(input_file, working_directory)
         else:
             copy_number = vntr_finder.find_repeat_count_from_pacbio_reads(input_file, working_directory)
-        if len(copy_number) > 1:
-            print(sum(copy_number) / len(copy_number))
-        else:
-            print(copy_number)
     else:
         if input_is_alignment_file:
             copy_number = vntr_finder.find_repeat_count_from_alignment_file(input_file, working_directory)
         else:
             copy_number = vntr_finder.find_repeat_count_from_short_reads(input_file)
+    print(copy_number)
 
 # print(len(reference_vntrs))
 # nodes, edges = get_nodes_and_edges_of_vntr_graph(reference_vntrs)
