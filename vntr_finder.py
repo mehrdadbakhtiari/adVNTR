@@ -322,7 +322,7 @@ class VNTRFinder:
                 p.start()
         for p in process_list:
             p.join()
-        logging.info('length_distribution of unmapped spanning reads: ', list(shared_length_distribution))
+        logging.info('length_distribution of unmapped spanning reads: %s' % list(shared_length_distribution))
         return list(shared_spanning_reads)
 
     @time_usage
@@ -351,7 +351,7 @@ class VNTRFinder:
         for p in process_list:
             p.join()
 
-        logging.info('length_distribution of mapped spanning reads: ', list(shared_length_distribution))
+        logging.info('length_distribution of mapped spanning reads: %s' % list(shared_length_distribution))
         return list(mapped_spanning_reads)
 
     @time_usage
