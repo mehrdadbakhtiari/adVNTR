@@ -3,6 +3,7 @@ from pomegranate import HiddenMarkovModel as Model
 import numpy as np
 
 from profile_hmm import build_profile_hmm_for_repeats
+from profiler import time_usage
 import settings
 
 
@@ -100,6 +101,7 @@ def get_right_flanking_region_size_in_vpath(vpath):
     return result
 
 
+@time_usage
 def get_prefix_matcher_hmm(pattern):
     model = Model(name="Prefix Matcher HMM Model")
     insert_distribution = DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
@@ -164,6 +166,7 @@ def get_prefix_matcher_hmm(pattern):
     return model
 
 
+@time_usage
 def get_suffix_matcher_hmm(pattern):
     model = Model(name="Suffix Matcher HMM Model")
     insert_distribution = DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
@@ -292,6 +295,7 @@ def get_trained_model_for_one_mixed_repeat(patterns):
     return model
 
 
+@time_usage
 def get_constant_number_of_repeats_matcher_hmm(patterns, copies):
     model = Model(name="Repeating Pattern Matcher HMM Model")
 
@@ -364,6 +368,7 @@ def get_constant_number_of_repeats_matcher_hmm(patterns, copies):
     return model
 
 
+@time_usage
 def get_variable_number_of_repeats_matcher_hmm(patterns, copies=1):
     model = get_constant_number_of_repeats_matcher_hmm(patterns, copies)
 
@@ -412,6 +417,7 @@ def get_variable_number_of_repeats_matcher_hmm(patterns, copies=1):
     return new_model
 
 
+@time_usage
 def get_read_matcher_model(left_flanking_region, right_flanking_region, patterns, copies=1):
     model = get_suffix_matcher_hmm(left_flanking_region)
     right_flanking_matcher = get_prefix_matcher_hmm(right_flanking_region)
