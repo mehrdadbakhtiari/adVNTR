@@ -160,7 +160,7 @@ class VNTRFinder:
     @time_usage
     def calculate_min_score_to_select_a_read(self, hmm, alignment_file):
         """Calculate the score distribution of false positive reads
-        and return score to select the 0.0001 percentile of the distribution
+        and return score to select the 1e-8 percentile of the distribution
         """
         process_list = []
         manager = Manager()
@@ -179,7 +179,7 @@ class VNTRFinder:
         if settings.SAVE_SCORE_DISTRIBUTION:
             self.save_scores(true_scores, false_scores, alignment_file)
 
-        score = numpy.percentile(false_scores, 100 - 0.0001)
+        score = numpy.percentile(false_scores, 100 - settings.SCORE_SELECTION_PERCENTILE)
         return score
 
     def get_min_score_to_select_a_read(self, hmm, alignment_file, read_length):
