@@ -145,4 +145,19 @@ def load_unique_vntrs_data(vntrseek_output='repeats_length_patterns_chromosomes_
     return vntrs
 
 
+def extend_flanking_regions_in_processed_vntrs(flanking_size=500, output_file='repeats_and_segments2.txt'):
+    vntrs = load_unique_vntrs_data()
+    reference_genomes = {}
+    for vntr in vntrs:
+        comma_separated_segments = ','.join(vntr.get_repeat_segments())
+        if vntr.chromosome not in reference_genomes.keys():
+            reference_genomes[vntr.chromosome] = get_chromosome_reference_sequence(vntr.chromosome)
+        start = vntr.start_point
+        left_flanking_region = reference_genomes[vntr.chromosome][start-flanking_size:start].upper()
+        end = vntr.start_point + vntr.get_length()
+        right_flanking_region = reference_genomes[vntr.chromosome][end:end+flanking_size].upper()
+        with open(output_file, 'a') as out:
+            out.write('%s %s %s %s %s\n' % (vntr.id, vntr.is_non_overlapping(), left_flanking_region,
+                                            right_flanking_region, comma_separated_segments))
+
 # process_vntrseek_data()
