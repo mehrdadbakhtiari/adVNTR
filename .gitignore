@@ -8,4 +8,5 @@ hg19_chromosomes/*
 !hg19_chromosomes/PLACE_HOLDER
 trained_HMMs/*
 !trained_HMMs/PLACE_HOLDER
+results/
 
