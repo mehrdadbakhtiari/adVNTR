@@ -12,16 +12,16 @@ class GenomeAnalyzer:
         self.working_dir = working_directory
 
         self.vntr_finder = {}
-        for id in self.target_vntr_ids:
-            self.vntr_finder[id] = VNTRFinder(self.reference_vntrs[id])
+        for vntr_id in self.target_vntr_ids:
+            self.vntr_finder[vntr_id] = VNTRFinder(self.reference_vntrs[vntr_id])
 
     @time_usage
-    def get_vntr_filtered_reads_map(self, read_file):
+    def get_vntr_filtered_reads_map(self, read_file, illumina=True):
         vntr_reads = {}
         vntr_read_ids = {}
         for id in self.target_vntr_ids:
             vntr_reads[id] = []
-            read_ids = self.vntr_finder[id].filter_reads_with_keyword_matching(self.working_dir, read_file, False)
+            read_ids = self.vntr_finder[id].filter_reads_with_keyword_matching(self.working_dir, read_file, illumina)
             vntr_read_ids[id] = read_ids
 
         unmapped_reads = SeqIO.parse(read_file, 'fasta')
@@ -33,7 +33,7 @@ class GenomeAnalyzer:
 
     def find_repeat_counts_from_pacbio_alignment_file(self, alignment_file):
         unmapped_reads_file = extract_unmapped_reads_to_fasta_file(alignment_file, self.working_dir)
-        vntr_reads = self.get_vntr_filtered_reads_map(unmapped_reads_file)
+        vntr_reads = self.get_vntr_filtered_reads_map(unmapped_reads_file, False)
 
         for id in self.target_vntr_ids:
             reads = vntr_reads[id]
@@ -42,15 +42,18 @@ class GenomeAnalyzer:
             print(copy_numbers)
 
     def find_repeat_counts_from_pacbio_reads(self, read_file):
-        vntr_reads = self.get_vntr_filtered_reads_map(read_file)
+        vntr_reads = self.get_vntr_filtered_reads_map(read_file, False)
         for id in self.target_vntr_ids:
             copy_numbers = self.vntr_finder[id].find_repeat_count_from_pacbio_reads(vntr_reads[id])
             print(id)
             print(copy_numbers)
 
     def find_repeat_counts_from_alignment_file(self, alignment_file):
+        unmapped_reads_file = extract_unmapped_reads_to_fasta_file(alignment_file, self.working_dir)
+        vntr_reads = self.get_vntr_filtered_reads_map(unmapped_reads_file)
         for id in self.target_vntr_ids:
-            copy_number = self.vntr_finder[id].find_repeat_count_from_alignment_file(alignment_file)
+            unmapped_reads = vntr_reads[id]
+            copy_number = self.vntr_finder[id].find_repeat_count_from_alignment_file(alignment_file, unmapped_reads)
             print(id)
             print(copy_number)
 

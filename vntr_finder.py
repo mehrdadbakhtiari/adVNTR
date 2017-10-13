@@ -395,13 +395,8 @@ class VNTRFinder:
         return copy_numbers
 
     @time_usage
-    def find_repeat_count_from_alignment_file(self, alignment_file, working_directory='./'):
+    def find_repeat_count_from_alignment_file(self, alignment_file, unmapped_filtered_reads):
         logging.debug('finding repeat count from alignment file for %s' % self.reference_vntr.id)
-        unmapped_read_file = extract_unmapped_reads_to_fasta_file(alignment_file, working_directory)
-        logging.info('unmapped reads extracted')
-
-        filtered_read_ids = self.filter_reads_with_keyword_matching(working_directory, unmapped_read_file)
-        logging.info('unmapped reads filtered')
 
         hmm = None
         min_score_to_count_read = None
@@ -420,8 +415,7 @@ class VNTRFinder:
         best_seq['vpath'] = ''
         best_seq['seq'] = ''
 
-        unmapped_reads = SeqIO.parse(unmapped_read_file, 'fasta')
-        for read_segment in unmapped_reads:
+        for read_segment in unmapped_filtered_reads:
             if number_of_reads == 0:
                 read_length = len(str(read_segment.seq))
             number_of_reads += 1
@@ -432,12 +426,11 @@ class VNTRFinder:
             if len(read_segment.seq) < read_length:
                 continue
 
-            if read_segment.id in filtered_read_ids:
-                sema.acquire()
-                p = Process(target=self.process_unmapped_read, args=(sema, read_segment, hmm, min_score_to_count_read,
-                                                                     vntr_bp_in_unmapped_reads, selected_reads, best_seq))
-                process_list.append(p)
-                p.start()
+            sema.acquire()
+            p = Process(target=self.process_unmapped_read, args=(sema, read_segment, hmm, min_score_to_count_read,
+                                                                 vntr_bp_in_unmapped_reads, selected_reads, best_seq))
+            process_list.append(p)
+            p.start()
         for p in process_list:
             p.join()
 
