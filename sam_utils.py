@@ -2,7 +2,10 @@ import pysam
 import os
 import settings
 
+from profiler import time_usage
 
+
+@time_usage
 def extract_unmapped_reads_to_fasta_file(alignment_file, working_directory='./', use_existing_computed_files=True):
     base_name = os.path.basename(alignment_file).rsplit('.', 1)[0]
     unmapped_bam_file = working_directory + base_name + '.unmapped.bam'
