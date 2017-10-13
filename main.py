@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 
-from vntr_finder import VNTRFinder
+from genome_analyzer import GenomeAnalyzer
 from reference_vntr import identify_homologous_vntrs, load_unique_vntrs_data
 import settings
 # from vntr_graph import plot_graph_components, get_nodes_and_edges_of_vntr_graph
@@ -50,30 +50,33 @@ reference_vntrs = load_unique_vntrs_data()
 
 # reference_vntrs = identify_homologous_vntrs(reference_vntrs, 'chr15')
 accurate_vntr_list = [7, 69, 119, 970, 1123, 1213, 1214, 1215, 1216, 1217, 1218, 1219, 1220, 809, 377, 378]
-accurate_vntr_list = [7, 119, 1214, 1218, 1220, 1221, 377, 378, 809] # short VNTRs
-accurate_vntr_list = [1123, 1214, 1220, 1221, 1222] # grant
+accurate_vntr_list += [7, 119, 1214, 1218, 1220, 1221, 377, 378, 809] # short VNTRs
+accurate_vntr_list += [1123, 1214, 1220, 1221, 1222] # grant
 #accurate_vntr_list = [377, 378, 809, 69, 1123] # frameshift
 #accurate_vntr_list = [69, 1123]
-accurate_vntr_list = [1215] # INS
+accurate_vntr_list += [1215] # INS
+accurate_vntr_list += [970, 1213, 1215, 1216, 1217, 1219, 1222]
 
+target_vntrs = []
 for i in range(len(reference_vntrs)):
     if not reference_vntrs[i].is_non_overlapping() or reference_vntrs[i].has_homologous_vntr():
         continue
-    if reference_vntrs[i].id not in accurate_vntr_list:
+    if reference_vntrs[i].id in accurate_vntr_list:
         continue
-    print(i)
-    vntr_finder = VNTRFinder(reference_vntrs[i])
-    if args.pacbio:
-        if input_is_alignment_file:
-            copy_number = vntr_finder.find_repeat_count_from_pacbio_alignment_file(input_file, working_directory)
-        else:
-            copy_number = vntr_finder.find_repeat_count_from_pacbio_reads(input_file, working_directory)
+    target_vntrs.append(i)
+
+target_vntrs = [0, 1, 3]
+genome_analyzier = GenomeAnalyzer(reference_vntrs, target_vntrs, working_directory)
+if args.pacbio:
+    if input_is_alignment_file:
+        copy_number = genome_analyzier.find_repeat_counts_from_pacbio_alignment_file(input_file)
     else:
-        if input_is_alignment_file:
-            copy_number = vntr_finder.find_repeat_count_from_alignment_file(input_file, working_directory)
-        else:
-            copy_number = vntr_finder.find_repeat_count_from_short_reads(input_file)
-    print(copy_number)
+        copy_number = genome_analyzier.find_repeat_counts_from_pacbio_reads(input_file)
+else:
+    if input_is_alignment_file:
+        copy_number = genome_analyzier.find_repeat_counts_from_alignment_file(input_file)
+    else:
+        copy_number = genome_analyzier.find_repeat_counts_from_short_reads(input_file)
 
 # print(len(reference_vntrs))
 # nodes, edges = get_nodes_and_edges_of_vntr_graph(reference_vntrs)

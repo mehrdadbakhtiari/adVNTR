@@ -302,24 +302,19 @@ class VNTRFinder:
         sema.release()
 
     @time_usage
-    def get_spanning_reads_of_unaligned_pacbio_reads(self, unmapped_read_file, working_directory):
+    def get_spanning_reads_of_unaligned_pacbio_reads(self, unmapped_filtered_reads):
         sema = Semaphore(settings.CORES)
         manager = Manager()
         shared_length_distribution = manager.list()
         shared_spanning_reads = manager.list()
 
-        filtered_read_ids = self.filter_reads_with_keyword_matching(working_directory, unmapped_read_file, False)
-        logging.info('unmapped reads filtered')
-
-        unmapped_reads = SeqIO.parse(unmapped_read_file, 'fasta')
         process_list = []
-        for read in unmapped_reads:
-            if read.id in filtered_read_ids:
-                sema.acquire()
-                p = Process(target=self.check_if_pacbio_read_spans_vntr, args=(sema, read, shared_length_distribution,
-                                                                               shared_spanning_reads))
-                process_list.append(p)
-                p.start()
+        for read in unmapped_filtered_reads:
+            sema.acquire()
+            p = Process(target=self.check_if_pacbio_read_spans_vntr, args=(sema, read, shared_length_distribution,
+                                                                           shared_spanning_reads))
+            process_list.append(p)
+            p.start()
         for p in process_list:
             p.join()
         logging.info('length_distribution of unmapped spanning reads: %s' % list(shared_length_distribution))
@@ -360,10 +355,14 @@ class VNTRFinder:
             logging.info('There is no spanning read')
             return None
         max_length = 0
+        import numpy
+        median = numpy.median([len(l) for l in spanning_reads])
+        spanning_reads = [r for r in spanning_reads if len(r) < median * 2]
         for read in spanning_reads:
             if len(read) - 100 > max_length:
                 max_length = len(read) - 100
         max_copies = int(round(max_length / float(len(self.reference_vntr.pattern))))
+        max_copies = min(max_copies, 2 * len(self.reference_vntr.get_repeat_segments()))
         vntr_matcher = self.build_vntr_matcher_hmm(max_copies)
         haplotyper = PacBioHaplotyper(spanning_reads)
         haplotypes = haplotyper.get_error_corrected_haplotypes()
@@ -378,13 +377,10 @@ class VNTRFinder:
         return copy_numbers
 
     @time_usage
-    def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, working_directory='./'):
+    def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, unmapped_filtered_reads):
         logging.debug('finding repeat count from pacbio alignment file for %s' % self.reference_vntr.id)
 
-        unmapped_reads = extract_unmapped_reads_to_fasta_file(alignment_file, working_directory)
-        logging.info('unmapped reads extracted')
-
-        unaligned_spanning_reads = self.get_spanning_reads_of_unaligned_pacbio_reads(unmapped_reads, working_directory)
+        unaligned_spanning_reads = self.get_spanning_reads_of_unaligned_pacbio_reads(unmapped_filtered_reads)
         mapped_spanning_reads = self.get_spanning_reads_of_aligned_pacbio_reads(alignment_file)
 
         spanning_reads = mapped_spanning_reads + unaligned_spanning_reads
@@ -392,9 +388,9 @@ class VNTRFinder:
         return copy_numbers
 
     @time_usage
-    def find_repeat_count_from_pacbio_reads(self, pacbio_read_file, working_directory='./'):
+    def find_repeat_count_from_pacbio_reads(self, unmapped_filtered_reads):
         logging.debug('finding repeat count from pacbio reads file for %s' % self.reference_vntr.id)
-        spanning_reads = self.get_spanning_reads_of_unaligned_pacbio_reads(pacbio_read_file, working_directory)
+        spanning_reads = self.get_spanning_reads_of_unaligned_pacbio_reads(unmapped_filtered_reads)
         copy_numbers = self.get_haplotype_copy_numbers_from_spanning_reads(spanning_reads)
         return copy_numbers
 
