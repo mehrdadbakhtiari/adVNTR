@@ -65,7 +65,6 @@ for i in range(len(reference_vntrs)):
         continue
     target_vntrs.append(i)
 
-target_vntrs = [0, 1, 3]
 genome_analyzier = GenomeAnalyzer(reference_vntrs, target_vntrs, working_directory)
 if args.pacbio:
     if input_is_alignment_file:
