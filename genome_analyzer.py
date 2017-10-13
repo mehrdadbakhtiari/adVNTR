@@ -29,7 +29,6 @@ class GenomeAnalyzer:
             for vntr_id in vntr_read_ids.keys():
                 if read.id in vntr_read_ids[vntr_id]:
                     vntr_reads[vntr_id].append(read)
-                    break
         return vntr_reads
 
     def find_repeat_counts_from_pacbio_alignment_file(self, alignment_file):

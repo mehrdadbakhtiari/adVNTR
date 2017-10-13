@@ -103,7 +103,7 @@ class VNTRFinder:
             else:
                 blast_ids = search_results[0] & search_results[1]
 
-        logging.info('blast selected %s reads' % len(blast_ids))
+        logging.info('blast selected %s reads for %s' % (len(blast_ids), self.reference_vntr.id))
         if len(blast_ids) == len(self.reference_vntr.get_repeat_segments()) * 50 * 1000:
             logging.error('maximum number of read selected in filtering for pattern %s' % self.reference_vntr.id)
         return blast_ids
