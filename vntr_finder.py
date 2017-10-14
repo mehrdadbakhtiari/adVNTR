@@ -6,16 +6,17 @@ from random import random
 from uuid import uuid4
 
 import pysam
-from Bio import SeqIO, pairwise2
+from Bio import pairwise2
 from Bio.Seq import Seq
 
 from blast_wrapper import get_blast_matched_ids, make_blast_database
 from coverage_bias import CoverageBiasDetector, CoverageCorrector
 from hmm_utils import *
 from pacbio_haplotyper import PacBioHaplotyper
+from pomegranate import HiddenMarkovModel as Model
 from profiler import time_usage
 from sam_utils import get_reference_genome_of_alignment_file
-from sam_utils import get_related_reads_and_read_count_in_samfile, extract_unmapped_reads_to_fasta_file
+from sam_utils import get_related_reads_and_read_count_in_samfile
 import settings
 from utils import is_low_quality_read
 
