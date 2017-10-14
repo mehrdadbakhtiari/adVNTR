@@ -434,8 +434,8 @@ class VNTRFinder:
         for p in process_list:
             p.join()
 
-        logging.debug('vntr base pairs in unmapped reads:', vntr_bp_in_unmapped_reads.value)
-        logging.debug('highest logp in unmapped reads: %s', best_seq['logp'])
+        logging.debug('vntr base pairs in unmapped reads: %s' % vntr_bp_in_unmapped_reads.value)
+        logging.debug('highest logp in unmapped reads: %s' % best_seq['logp'])
         logging.debug('best sequence %s' % best_seq['seq'])
         logging.debug('best vpath: %s' % [state.name for idx, state in list(best_seq['vpath'])[1:-1]])
 
@@ -474,7 +474,7 @@ class VNTRFinder:
                 end = min(read_end, vntr_end)
                 start = max(read.reference_start, vntr_start)
                 vntr_bp_in_mapped_reads += end - start
-        logging.debug('vntr base pairs in mapped reads:', vntr_bp_in_mapped_reads)
+        logging.debug('vntr base pairs in mapped reads: %s' % vntr_bp_in_mapped_reads)
 
         return selected_reads
 
