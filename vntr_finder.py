@@ -265,7 +265,9 @@ class VNTRFinder:
         avg_bp_coverage = float(repeating_bps_in_data) / self.reference_vntr.get_length()
         logging.info('Average coverage for each base pair: %s' % avg_bp_coverage)
         if frameshift_candidate[1] > avg_bp_coverage / 3:
-            print('There is a frameshift at %s' % frameshift_candidate[0])
+            logging.info('There is a frameshift at %s' % frameshift_candidate[0])
+            return frameshift_candidate[0]
+        return None
 
     def read_flanks_repeats_with_confidence(self, vpath):
         minimum_left_flanking = 5
@@ -395,9 +397,7 @@ class VNTRFinder:
         return copy_numbers
 
     @time_usage
-    def find_repeat_count_from_alignment_file(self, alignment_file, unmapped_filtered_reads):
-        logging.debug('finding repeat count from alignment file for %s' % self.reference_vntr.id)
-
+    def select_illumina_reads(self, alignment_file, unmapped_filtered_reads):
         hmm = None
         min_score_to_count_read = None
         sema = Semaphore(settings.CORES)
@@ -476,6 +476,21 @@ class VNTRFinder:
                 vntr_bp_in_mapped_reads += end - start
         logging.debug('vntr base pairs in mapped reads:', vntr_bp_in_mapped_reads)
 
+        return selected_reads
+
+    @time_usage
+    def find_frameshift_from_alignment_file(self, alignment_file, unmapped_filtered_reads):
+        logging.debug('finding frameshift from alignment file for %s' % self.reference_vntr.id)
+
+        selected_reads = self.select_illumina_reads(alignment_file, unmapped_filtered_reads)
+        return self.find_frameshift_from_selected_reads(selected_reads)
+
+    @time_usage
+    def find_repeat_count_from_alignment_file(self, alignment_file, unmapped_filtered_reads):
+        logging.debug('finding repeat count from alignment file for %s' % self.reference_vntr.id)
+
+        selected_reads = self.select_illumina_reads(alignment_file, unmapped_filtered_reads)
+
         flanked_repeats = []
         observed_repeats = []
         for sequence, logp, vpath in selected_reads:
@@ -494,8 +509,6 @@ class VNTRFinder:
             observed_repeats.append(repeats)
         print('flanked repeats:', flanked_repeats)
         print('observed repeats:', sorted(observed_repeats))
-
-        self.find_frameshift_from_selected_reads(selected_reads)
 
         # TODO: separate methods
         return 0

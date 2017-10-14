@@ -72,7 +72,9 @@ if args.pacbio:
     else:
         copy_number = genome_analyzier.find_repeat_counts_from_pacbio_reads(input_file)
 else:
-    if input_is_alignment_file:
+    if args.frameshift:
+        genome_analyzier.find_frameshift_from_alignment_file(input_file)
+    elif input_is_alignment_file:
         copy_number = genome_analyzier.find_repeat_counts_from_alignment_file(input_file)
     else:
         copy_number = genome_analyzier.find_repeat_counts_from_short_reads(input_file)
