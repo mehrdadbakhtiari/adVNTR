@@ -21,6 +21,18 @@ import settings
 from utils import is_low_quality_read
 
 
+class SelectedRead:
+    def __init__(self, seq, logp, vpath, mapq=None, reference_start=None):
+        self.seq = seq
+        self.logp = logp
+        self.vpath = vpath
+        self.mapq = mapq
+        self.is_mapped = reference_start is not None
+
+    def is_mapped(self):
+        return self.is_mapped
+
+
 class VNTRFinder:
     """Find the VNTR structure of a reference VNTR in NGS data of the donor."""
 
@@ -224,19 +236,19 @@ class VNTRFinder:
                 if repeat_bps > self.min_repeat_bp_to_count_repeats:
                     vntr_bp_in_unmapped_reads.value += repeat_bps
                 if repeat_bps > self.min_repeat_bp_to_add_read:
-                    selected_reads.append((sequence, logp, vpath))
+                    selected_reads.append(SelectedRead(sequence, logp, vpath))
         sema.release()
 
     def find_frameshift_from_selected_reads(self, selected_reads):
         mutations = {}
         repeating_bps_in_data = 0
         repeats_lengths_distribution = []
-        for sequence, logp, vpath in selected_reads:
-            visited_states = [state.name for idx, state in vpath[1:-1]]
+        for read in selected_reads:
+            visited_states = [state.name for idx, state in read.vpath[1:-1]]
             repeats_lengths = get_repeating_pattern_lengths(visited_states)
             repeats_lengths_distribution += repeats_lengths
             current_repeat = None
-            repeating_bps_in_data += get_number_of_repeat_bp_matches_in_vpath(vpath)
+            repeating_bps_in_data += get_number_of_repeat_bp_matches_in_vpath(read.vpath)
             for i in range(len(visited_states)):
                 if visited_states[i].endswith('fix') or visited_states[i].startswith('M'):
                     continue
@@ -249,11 +261,12 @@ class VNTRFinder:
                     continue
                 if not visited_states[i].startswith('I') and not visited_states[i].startswith('D'):
                     continue
+                if repeats_lengths[current_repeat] == len(self.reference_vntr.pattern):
+                    continue
                 state = visited_states[i].split('_')[0]
                 if state.startswith('I'):
-                    state += get_emitted_basepair_from_visited_states(visited_states[i], visited_states, sequence)
-                if repeats_lengths[current_repeat] != len(self.reference_vntr.pattern) and\
-                        repeats_lengths[current_repeat] < len(self.reference_vntr.pattern) + 5:
+                    state += get_emitted_basepair_from_visited_states(visited_states[i], visited_states, read.sequence)
+                if abs(repeats_lengths[current_repeat] - len(self.reference_vntr.pattern)) <= 2:
                     if state not in mutations.keys():
                         mutations[state] = 0
                     mutations[state] += 1
@@ -471,7 +484,7 @@ class VNTRFinder:
                     if is_low_quality_read(read) and logp < min_score_to_count_read:
                         logging.debug('Rejected Read: %s' % sequence)
                         continue
-                    selected_reads.append((sequence, (logp, read.mapq, read.reference_start), vpath))
+                    selected_reads.append(SelectedRead(sequence, logp, vpath, read.mapq, read.reference_start))
                 end = min(read_end, vntr_end)
                 start = max(read.reference_start, vntr_start)
                 vntr_bp_in_mapped_reads += end - start
@@ -494,17 +507,18 @@ class VNTRFinder:
 
         flanked_repeats = []
         observed_repeats = []
-        for sequence, logp, vpath in selected_reads:
-            repeats = get_number_of_repeats_in_vpath(vpath)
-            logging.debug('logp of read: %s' % str(logp))
-            logging.debug('flankign sizes: %s %s' % (get_left_flanking_region_size_in_vpath(vpath), get_right_flanking_region_size_in_vpath(vpath)))
-            logging.debug('repeating bp: %s' % get_number_of_repeat_bp_matches_in_vpath(vpath))
-            logging.debug(sequence)
-            visited_states = [state.name for idx, state in vpath[1:-1]]
+        for selected_read in selected_reads:
+            repeats = get_number_of_repeats_in_vpath(selected_read.vpath)
+            logging.debug('logp of read: %s' % str(selected_read.logp))
+            logging.debug('left flankign size: %s' % get_left_flanking_region_size_in_vpath(selected_read.vpath))
+            logging.debug('right flanking size: %s' % get_right_flanking_region_size_in_vpath(selected_read.vpath))
+            logging.debug('repeating bp: %s' % get_number_of_repeat_bp_matches_in_vpath(selected_read.vpath))
+            logging.debug(selected_read.sequence)
+            visited_states = [state.name for idx, state in selected_read.vpath[1:-1]]
             # logging.debug('%s' % visited_states)
-            if self.read_flanks_repeats_with_confidence(vpath):
-                logging.debug('spanning read: %s ' % sequence)
-                logging.debug('visited states :%s' % [state.name for idx, state in vpath[1:-1]])
+            if self.read_flanks_repeats_with_confidence(selected_read.vpath):
+                logging.debug('spanning read: %s ' % selected_read.sequence)
+                logging.debug('visited states :%s' % [state.name for idx, state in selected_read.vpath[1:-1]])
                 logging.debug('repeats: %s' % repeats)
                 flanked_repeats.append(repeats)
             observed_repeats.append(repeats)
