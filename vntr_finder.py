@@ -22,8 +22,8 @@ from utils import is_low_quality_read
 
 
 class SelectedRead:
-    def __init__(self, seq, logp, vpath, mapq=None, reference_start=None):
-        self.seq = seq
+    def __init__(self, sequence, logp, vpath, mapq=None, reference_start=None):
+        self.sequence = sequence
         self.logp = logp
         self.vpath = vpath
         self.mapq = mapq
