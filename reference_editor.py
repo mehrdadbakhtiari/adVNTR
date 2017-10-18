@@ -70,3 +70,15 @@ def create_illumina_copy_number_variation_references(illumina_read_dir='../Illum
         for repeat in repeats[id_to_gene[vntr_id]]:
             outfile = illumina_read_dir + id_to_gene[vntr_id] + '/' + str(repeat) + '.fa'
             create_reference_region_with_specific_repeats(reference_vntrs[vntr_id], repeat, outfile, 149)
+
+
+def create_pacbio_copy_number_variation_references(pacbio_read_dir='../Pacbio_copy_number/'):
+    from reference_vntr import load_unique_vntrs_data
+    reference_vntrs = load_unique_vntrs_data()
+    id_to_gene = {1221: 'CSTB', 1216: 'HIC1', 1215: 'INS'}
+    repeats = {'CSTB': range(1, 110), 'HIC1': range(2, 20), 'INS': range(10, 171)}
+
+    for vntr_id in id_to_gene.keys():
+        for repeat in repeats[id_to_gene[vntr_id]]:
+            outfile = pacbio_read_dir + id_to_gene[vntr_id] + '/' + str(repeat) + '.fa'
+            create_reference_region_with_specific_repeats(reference_vntrs[vntr_id], repeat, outfile, 1000)
