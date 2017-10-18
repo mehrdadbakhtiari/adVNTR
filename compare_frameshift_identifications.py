@@ -1,6 +1,6 @@
-from multiprocessing import Process, Manager, Value, Semaphore
 import os
 import glob
+
 
 def get_our_result(file_name):
     print('VeNTeR for %s' % file_name)
@@ -20,6 +20,7 @@ def get_our_result(file_name):
                 return False
             else:
                 return True
+
 
 def get_samtools_result(file_name):
     os.system('samtools mpileup -uf hg19_chromosomes/chr9.fa %s | bcftools view -bvcg - > var.raw.bcf' % (file_name))
@@ -58,11 +59,6 @@ def get_gatk_result(bowtie_bam_file):
                 print('True %s' % line)
                 return True
     return False
-
-
-def get_freebayes_result(bowtie_bam_file):
-    os.system('freebayes -f hg19_chromosomes/chr9.fa %s > %s' % (bowtie_bam_file, ))
-    return A
 
 
 def create_mapped_bam_file_and_index(base_name):
