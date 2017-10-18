@@ -44,17 +44,29 @@ def create_cel_frameshifts(cel_vntr):
             SeqIO.write([record], output_handle, 'fasta')
 
 
-
-def create_reference_region_with_specific_repeats(reference_vntr, desired_repeats, output_name):
+def create_reference_region_with_specific_repeats(reference_vntr, desired_repeats, output_name, flanks=30000):
     record = SeqRecord.SeqRecord('')
     sequence = get_chromosome_reference_sequence(reference_vntr.chromosome)
-    new_sequence = sequence[reference_vntr.start_point-30000:reference_vntr.start_point]
+    new_sequence = sequence[reference_vntr.start_point-flanks:reference_vntr.start_point]
     repeats = reference_vntr.get_repeat_segments()
     for i in range(desired_repeats):
         new_sequence += repeats[i % len(repeats)]
     vntr_end = reference_vntr.start_point + reference_vntr.get_length()
-    new_sequence += sequence[vntr_end:vntr_end+30000]
+    new_sequence += sequence[vntr_end:vntr_end+flanks]
 
     record.seq = Seq.Seq(new_sequence)
     with open(output_name, 'w') as output_handle:
         SeqIO.write([record], output_handle, 'fasta')
+
+
+def create_illumina_copy_number_variation_references(illumina_read_dir='../Illumina_copy_number/'):
+    from reference_vntr import load_unique_vntrs_data
+    reference_vntrs = load_unique_vntrs_data()
+    id_to_gene = {119: 'DRD4', 1220: 'GP1BA', 1221: 'CSTB', 1214: 'MAOA', 1219: 'IL1RN'}
+    repeats = {'DRD4': range(1, 15), 'GP1BA': range(1, 8), 'CSTB': range(1, 16), 'MAOA': range(1, 9),
+               'IL1RN': range(1, 10)}
+
+    for vntr_id in id_to_gene.keys():
+        for repeat in repeats[id_to_gene[vntr_id]]:
+            outfile = illumina_read_dir + id_to_gene[vntr_id] + '/' + str(repeat) + '.fa'
+            create_reference_region_with_specific_repeats(reference_vntrs[vntr_id], repeat, outfile, 149)
