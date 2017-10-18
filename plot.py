@@ -422,7 +422,7 @@ def plot_false_read_and_true_read_score_distribution(results_dir='results/score_
         plt.close()
 
 
-def plot_paccbio_flanking_region_sizes():
+def plot_pacbio_flanking_region_sizes():
     import matplotlib.pyplot as plt
     import numpy as np
     fig, ax = plt.subplots(1)
