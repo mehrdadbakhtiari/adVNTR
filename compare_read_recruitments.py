@@ -1,7 +1,6 @@
 import os
 import glob
 import pysam
-from multiprocessing import Process, Manager, Value, Semaphore
 
 from Bio import SeqIO
 
@@ -61,11 +60,6 @@ def blasr_alignment(fq_file):
     return blasr_alignment_file[:-4] + '.bam'
 
 
-def blasr_alignment_parallel(sema, fq_file):
-    blasr_alignment(fq_file)
-    sema.release()
-
-
 def get_our_selected_reads_count(fq_file, vntr_finder):
     hmm = vntr_finder.get_vntr_matcher_hmm(read_length=150)
     min_score_to_count_read = vntr_finder.get_min_score_to_select_a_read(hmm, None, 150)
@@ -91,10 +85,8 @@ def get_pacbio_comparison_result():
     reference_vntrs = load_unique_vntrs_data()
     id_to_gene = {1221: 'CSTB', 1216: 'HIC1', 1215: 'INS'}
     genes = glob.glob('Pacbio_copy_number/*')
-    sema = Semaphore(24)
-    process_list = []
     for gene_dir in genes:
-        if gene_dir.endswith('INS'):
+        if not gene_dir.endswith('INS'):
             continue
         print(gene_dir)
         files = glob.glob(gene_dir + '/*30x.fastq.sam')
@@ -104,15 +96,7 @@ def get_pacbio_comparison_result():
             make_bam_and_index(file_name)
             base_name = file_name[:-4]
             bwasw_alignment(base_name)
-#            blasr_alignment(base_name)
-
-            sema.acquire()
-            p = Process(target=blasr_alignment_parallel, args=(sema, base_name))
-            process_list.append(p)
-            p.start()
-
-    for p in process_list:
-        p.join()
+            blasr_alignment(base_name)
 
 
 def get_illumina_comparison_result():
