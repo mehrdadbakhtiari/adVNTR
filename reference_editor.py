@@ -63,7 +63,7 @@ def create_illumina_copy_number_variation_references(illumina_read_dir='../Illum
     from reference_vntr import load_unique_vntrs_data
     reference_vntrs = load_unique_vntrs_data()
     id_to_gene = {119: 'DRD4', 1220: 'GP1BA', 1221: 'CSTB', 1214: 'MAOA', 1219: 'IL1RN'}
-    repeats = {'DRD4': range(1, 15), 'GP1BA': range(1, 8), 'CSTB': range(1, 16), 'MAOA': range(1, 9),
+    repeats = {'DRD4': range(1, 12), 'GP1BA': range(1, 6), 'CSTB': range(1, 16), 'MAOA': range(1, 6),
                'IL1RN': range(1, 10)}
 
     for vntr_id in id_to_gene.keys():

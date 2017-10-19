@@ -376,6 +376,49 @@ def plot_frequency_of_repeats_in_population():
     plt.savefig('GP1BA.png', dpi=300)
 
 
+def plot_read_selection_and_mapping_comparison(results_dir='../Illumina_copy_number/'):
+    import glob
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    ax = list([])
+    ax.append(fig.add_subplot(221))
+    ax.append(fig.add_subplot(222))
+    ax.append(fig.add_subplot(223))
+    ax.append(fig.add_subplot(224))
+    titles = 'ABCDEF'
+
+    gene_dirs = glob.glob(results_dir + '*')
+    ax_counter = 0
+    for gene_dir in gene_dirs:
+        gene_name = gene_dir.split('/')[-1]
+        result_file = gene_dir + '/result.txt'
+        if gene_name == 'IL1RN':
+            continue
+        copies= []
+        bwa_result = []
+        bowtie_result = []
+        our_selection_result = []
+        with open(result_file) as input:
+            lines = input.readlines()
+            for line in lines:
+                copy, original, our_filtering, our_selection, bwa, bowtie = line.split()
+                original = int(original)
+                copies.append(copy)
+                our_selection_result.append(float(our_selection) / original)
+                bwa_result.append(float(bwa) / original)
+                bowtie_result.append(float(bowtie) / original)
+        ax[ax_counter].title.set_text(titles[ax_counter] + ') %s' % gene_name)
+        ax[ax_counter].plot(copies, bwa_result, '--o', label='BWA-MEM')
+        ax[ax_counter].plot(copies, bowtie_result, '--o', label='Bowtie2')
+        ax[ax_counter].plot(copies, our_selection_result, '--.', label='Out Method')
+        ax[ax_counter].set_xlabel('Copy Number in Simulated Data')
+        ax[ax_counter].set_ylabel('Read Selection Recall')
+        ax[ax_counter].legend(loc=0, fontsize='x-small')
+        ax_counter += 1
+
+    plt.savefig('selection_mapping_comparison.eps', format='eps', dpi=1000)
+
+
 def plot_ins_simulation_pacbio_results(results_dir='out/'):
     import glob
     files = glob.glob(results_dir + 'out_INS*')
