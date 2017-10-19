@@ -1,6 +1,7 @@
 import os
 import glob
 import pysam
+from multiprocessing import Process, Manager, Value, Semaphore
 
 from Bio import SeqIO
 
@@ -46,6 +47,25 @@ def bwamem_alignment(fq_file):
     return bwa_alignment_file[:-4] + '.bam'
 
 
+def bwasw_alignment(fq_file):
+    bwa_alignment_file = fq_file[:-3] + '_bwasw_aln.sam'
+    os.system('bwa bwasw -t 20 hg19_chromosomes/CombinedHG19_Reference.fa %s > %s' % (fq_file, bwa_alignment_file))
+    make_bam_and_index(bwa_alignment_file)
+    return bwa_alignment_file[:-4] + '.bam'
+
+
+def blasr_alignment(fq_file):
+    blasr_alignment_file = fq_file[:-3] + '_blasr_aln.sam'
+    os.system('blasr %s hg19_chromosomes/CombinedHG19_Reference.fa -sam -out %s -nproc 8' % (fq_file, blasr_alignment_file))
+    make_bam_and_index(blasr_alignment_file)
+    return blasr_alignment_file[:-4] + '.bam'
+
+
+def blasr_alignment_parallel(sema, fq_file):
+    blasr_alignment(fq_file)
+    sema.release()
+
+
 def get_our_selected_reads_count(fq_file, vntr_finder):
     hmm = vntr_finder.get_vntr_matcher_hmm(read_length=150)
     min_score_to_count_read = vntr_finder.get_min_score_to_select_a_read(hmm, None, 150)
@@ -67,36 +87,67 @@ def get_our_filtered_reads_count(fq_file, vntr_finder):
     return len(filtered_ids)
 
 
-reference_vntrs = load_unique_vntrs_data()
-id_to_gene = {119: 'DRD4', 1220: 'GP1BA', 1221: 'CSTB', 1214: 'MAOA', 1219: 'IL1RN'}
-genes = glob.glob('../Illumina_copy_number/*')
-for gene_dir in genes:
-    print(gene_dir)
-    files = glob.glob(gene_dir + '/*30x.sam')
-    gene_name = gene_dir.split('/')[-1]
-    print(len(files))
-    mapped_reads = {}
-    for file_name in files:
-        copies = file_name.split('_')[-2]
-        make_bam_and_index(file_name)
-        base_name = file_name[:-4]
-        bowtie_bam = bowtie_alignment(base_name + '.fq')
-        bwa_bam = bwamem_alignment(base_name + '.fq')
-        original_bam = file_name[:-4] + '.bam'
+def get_pacbio_comparison_result():
+    reference_vntrs = load_unique_vntrs_data()
+    id_to_gene = {1221: 'CSTB', 1216: 'HIC1', 1215: 'INS'}
+    genes = glob.glob('Pacbio_copy_number/*')
+    sema = Semaphore(24)
+    process_list = []
+    for gene_dir in genes:
+        if gene_dir.endswith('INS'):
+            continue
+        print(gene_dir)
+        files = glob.glob(gene_dir + '/*30x.fastq.sam')
+        gene_name = gene_dir.split('/')[-1]
+        for file_name in files:
+            copies = file_name.split('_')[-2]
+            make_bam_and_index(file_name)
+            base_name = file_name[:-4]
+            bwasw_alignment(base_name)
+#            blasr_alignment(base_name)
 
-        vntr_id = None
-        for vid, gname in id_to_gene.items():
-            if gname == gene_name:
-                vntr_id = vid
+            sema.acquire()
+            p = Process(target=blasr_alignment_parallel, args=(sema, base_name))
+            process_list.append(p)
+            p.start()
 
-        vntr_finder = VNTRFinder(reference_vntrs[vntr_id])
-        original = count_reads(original_bam)
-        our_selection = get_our_selected_reads_count(base_name + '.fq', vntr_finder)
-        our_filtering = get_our_filtered_reads_count(base_name + '.fq', vntr_finder)
-        bwa = count_reads_mapped_to_vntr(bwa_bam, reference_vntrs[vntr_id])
-        bowtie = count_reads_mapped_to_vntr(bowtie_bam, reference_vntrs[vntr_id])
-        mapped_reads[copies] = [original, our_filtering, our_selection, bwa, bowtie]
-    with open(gene_dir + '/result.txt', 'w') as out:
-        for copies in mapped_reads.keys():
-            original, our_filtering, our_selection, bwa, bowtie = mapped_reads[copies]
-            out.write('%s %s %s %s %s %s\n' % (copies, original, our_filtering, our_selection, bwa, bowtie))
+    for p in process_list:
+        p.join()
+
+
+def get_illumina_comparison_result():
+    reference_vntrs = load_unique_vntrs_data()
+    id_to_gene = {119: 'DRD4', 1220: 'GP1BA', 1221: 'CSTB', 1214: 'MAOA', 1219: 'IL1RN'}
+    genes = glob.glob('../Illumina_copy_number/*')
+    for gene_dir in genes:
+        print(gene_dir)
+        files = glob.glob(gene_dir + '/*30x.sam')
+        gene_name = gene_dir.split('/')[-1]
+        print(len(files))
+        mapped_reads = {}
+        for file_name in files:
+            copies = file_name.split('_')[-2]
+            make_bam_and_index(file_name)
+            base_name = file_name[:-4]
+            bowtie_bam = bowtie_alignment(base_name + '.fq')
+            bwa_bam = bwamem_alignment(base_name + '.fq')
+            original_bam = file_name[:-4] + '.bam'
+
+            vntr_id = None
+            for vid, gname in id_to_gene.items():
+                if gname == gene_name:
+                    vntr_id = vid
+
+            vntr_finder = VNTRFinder(reference_vntrs[vntr_id])
+            original = count_reads(original_bam)
+            our_selection = get_our_selected_reads_count(base_name + '.fq', vntr_finder)
+            our_filtering = get_our_filtered_reads_count(base_name + '.fq', vntr_finder)
+            bwa = count_reads_mapped_to_vntr(bwa_bam, reference_vntrs[vntr_id])
+            bowtie = count_reads_mapped_to_vntr(bowtie_bam, reference_vntrs[vntr_id])
+            mapped_reads[int(copies)] = [original, our_filtering, our_selection, bwa, bowtie]
+        with open(gene_dir + '/result.txt', 'w') as out:
+            for copies in sorted(mapped_reads.iterkeys()):
+                original, our_filtering, our_selection, bwa, bowtie = mapped_reads[copies]
+                out.write('%s %s %s %s %s %s\n' % (copies, original, our_filtering, our_selection, bwa, bowtie))
+
+get_pacbio_comparison_result()
