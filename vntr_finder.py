@@ -278,7 +278,7 @@ class VNTRFinder:
         logging.info('Observed repeating base pairs in data: %s' % repeating_bps_in_data)
         avg_bp_coverage = float(repeating_bps_in_data) / self.reference_vntr.get_length()
         logging.info('Average coverage for each base pair: %s' % avg_bp_coverage)
-        if frameshift_candidate[1] > avg_bp_coverage / 3:
+        if frameshift_candidate[1] > avg_bp_coverage / 4:
             logging.info('There is a frameshift at %s' % frameshift_candidate[0])
             return frameshift_candidate[0]
         return None
