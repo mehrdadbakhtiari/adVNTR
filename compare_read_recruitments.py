@@ -48,15 +48,18 @@ def bwamem_alignment(fq_file):
 
 def bwasw_alignment(fq_file):
     bwa_alignment_file = fq_file[:-3] + '_bwasw_aln.sam'
-    os.system('bwa bwasw -t 20 hg19_chromosomes/CombinedHG19_Reference.fa %s > %s' % (fq_file, bwa_alignment_file))
-    make_bam_and_index(bwa_alignment_file)
+    if not os.path.exists(bwa_alignment_file[:-4] + '.bam'):
+        os.system('bwa bwasw -t 20 hg19_chromosomes/CombinedHG19_Reference.fa %s > %s' % (fq_file, bwa_alignment_file))
+        make_bam_and_index(bwa_alignment_file)
     return bwa_alignment_file[:-4] + '.bam'
 
 
 def blasr_alignment(fq_file):
     blasr_alignment_file = fq_file[:-3] + '_blasr_aln.sam'
-    os.system('blasr %s hg19_chromosomes/CombinedHG19_Reference.fa -sam -out %s -nproc 8' % (fq_file, blasr_alignment_file))
-    make_bam_and_index(blasr_alignment_file)
+    if not os.path.exists(blasr_alignment_file[:-4] + '.bam'):
+        print('Running Blasr for %s' % blasr_alignment_file[:-4] + '.bam')
+        os.system('blasr %s hg19_chromosomes/CombinedHG19_Reference.fa -sam -out %s -nproc 8' % (fq_file, blasr_alignment_file))
+        make_bam_and_index(blasr_alignment_file)
     return blasr_alignment_file[:-4] + '.bam'
 
 
