@@ -47,12 +47,18 @@ def create_cel_frameshifts(cel_vntr):
 def create_reference_region_with_specific_repeats(reference_vntr, desired_repeats, output_name, flanks=30000):
     record = SeqRecord.SeqRecord('')
     sequence = get_chromosome_reference_sequence(reference_vntr.chromosome)
-    new_sequence = sequence[reference_vntr.start_point-flanks:reference_vntr.start_point]
+    vntr_end = reference_vntr.start_point + reference_vntr.get_length()
+    if flanks is None:
+        region_start = 0
+        region_end = len(sequence)
+    else:
+        region_start = reference_vntr.start_point - flanks
+        region_end = vntr_end + flanks
+    new_sequence = sequence[region_start:reference_vntr.start_point]
     repeats = reference_vntr.get_repeat_segments()
     for i in range(desired_repeats):
         new_sequence += repeats[i % len(repeats)]
-    vntr_end = reference_vntr.start_point + reference_vntr.get_length()
-    new_sequence += sequence[vntr_end:vntr_end+flanks]
+    new_sequence += sequence[vntr_end:region_end]
 
     record.seq = Seq.Seq(new_sequence)
     with open(output_name, 'w') as output_handle:
