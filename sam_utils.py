@@ -86,18 +86,25 @@ def get_id_of_reads_mapped_to_vntr_in_bamfile(bam_file, reference_vntr):
     return reads
 
 
-def get_id_of_reads_mapped_to_vntr_in_samfile(sam_file, reference_vntr, read_length=150):
+def get_reads_mapped_to_vntr_in_samfile(sam_file, reference_vntr, read_length=150):
     alignment_file = pysam.AlignmentFile(sam_file, 'r')
     start = reference_vntr.start_point
     end = reference_vntr.start_point + reference_vntr.get_length()
     reads = []
     for read in alignment_file.fetch():
+        if read.is_unmapped:
+            continue
         if read.is_secondary or read.is_supplementary:
             continue
         if reference_vntr.chromosome == read.reference_name:
             if start - read_length < read.reference_start < end:
-                reads.append(read.qname)
+                reads.append(read)
     return reads
+
+
+def get_id_of_reads_mapped_to_vntr_in_samfile(sam_file, reference_vntr, read_length=150):
+    reads = get_reads_mapped_to_vntr_in_samfile(sam_file, reference_vntr, read_length)
+    return [read.qname for read in reads]
 
 
 def get_related_reads_and_read_count_in_samfile(pattern, pattern_start, repeats=None, read_file='', pattern_end=None):
