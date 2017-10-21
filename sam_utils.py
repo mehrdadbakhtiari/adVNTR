@@ -19,6 +19,12 @@ def extract_unmapped_reads_to_fasta_file(alignment_file, working_directory='./',
     return unmapped_read_file
 
 
+def make_bam_and_index(samfile):
+    bamfile = samfile[:-4]
+    os.system('samtools view -bS %s | samtools sort - %s' % (samfile, bamfile))
+    os.system('samtools index %s %s' % (bamfile + '.bam', bamfile + '.bai'))
+
+
 def get_reference_genome_of_alignment_file(samfile):
     result = None
     if '1' in samfile.references:
@@ -66,6 +72,32 @@ def get_reads_from_samfile(read_names, read_file='original_reads/paired_dat.sam'
             if name == read_name:
                 result.append((name, read))
     return result
+
+
+def get_id_of_reads_mapped_to_vntr_in_bamfile(bam_file, reference_vntr):
+    alignment_file = pysam.AlignmentFile(bam_file, 'rb')
+    start = reference_vntr.start_point
+    end = reference_vntr.start_point + reference_vntr.get_length()
+    reads = []
+    for read in alignment_file.fetch(reference_vntr.chromosome, start, end):
+        if read.is_secondary or read.is_supplementary:
+            continue
+        reads.append(read.qname)
+    return reads
+
+
+def get_id_of_reads_mapped_to_vntr_in_samfile(sam_file, reference_vntr, read_length=150):
+    alignment_file = pysam.AlignmentFile(sam_file, 'r')
+    start = reference_vntr.start_point
+    end = reference_vntr.start_point + reference_vntr.get_length()
+    reads = []
+    for read in alignment_file.fetch():
+        if read.is_secondary or read.is_supplementary:
+            continue
+        if reference_vntr.chromosome == read.reference_name:
+            if start - read_length < read.reference_start < end:
+                reads.append(read.qname)
+    return reads
 
 
 def get_related_reads_and_read_count_in_samfile(pattern, pattern_start, repeats=None, read_file='', pattern_end=None):
