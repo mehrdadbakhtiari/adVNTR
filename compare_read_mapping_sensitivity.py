@@ -25,7 +25,7 @@ def find_info_by_mapping(sim_dir='simulation_data/', dir_index=0):
     for fasta_file in files:
         if fasta_file.endswith('WGS_30x.fasta'):
 
-            gene_name = simulation_dir.split('/')[-1]
+            gene_name = simulation_dir.split('/')[-1].split('_')[0]
             vntr_id = None
             for vid, gname in id_to_gene.items():
                 if gname == gene_name:
@@ -37,7 +37,7 @@ def find_info_by_mapping(sim_dir='simulation_data/', dir_index=0):
                 for true_read in true_reads:
                     out.write('%s\n' % true_read)
             for i, parameter in enumerate([-0.6, -0.3, -1]):
-                bowtie_alignment_file = '/mnt/_gene%s_' % dir_index + 'bowtie_alignment_%s.sam' % i
+                bowtie_alignment_file = '/tmp/_gene%s_' % dir_index + 'bowtie_alignment_%s.sam' % i
                 bowtie_alignment(fasta_file, bowtie_alignment_file, parameter)
                 bowtie_ids = get_id_of_reads_mapped_to_vntr_in_samfile(bowtie_alignment_file, reference_vntrs[vntr_id])
                 with open(fasta_file[:-6] + '_%s_mapped_reads.txt' % abs(parameter), 'w') as out:
