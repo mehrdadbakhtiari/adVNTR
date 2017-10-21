@@ -5,6 +5,7 @@ import pysam
 from Bio import SeqIO
 
 from reference_vntr import load_unique_vntrs_data
+from sam_utils import get_id_of_reads_mapped_to_vntr_in_bamfile, make_bam_and_index
 from vntr_finder import VNTRFinder
 
 
@@ -14,22 +15,22 @@ def count_reads(bam_file):
     return alignment_file.unmapped + alignment_file.mapped
 
 
-def count_reads_mapped_to_vntr(bam_file, reference_vntr):
+def count_reads_mapped_to_vntr_in_bamfile(bam_file, reference_vntr):
+    return len(get_id_of_reads_mapped_to_vntr_in_bamfile(bam_file, reference_vntr))
+
+
+def get_pacbio_true_read_ids(bam_file, reference_vntr, ref_length):
     alignment_file = pysam.AlignmentFile(bam_file, 'rb')
-    start = reference_vntr.start_point
-    end = reference_vntr.start_point + reference_vntr.get_length()
-    reads = []
-    for read in alignment_file.fetch(reference_vntr.chromosome, start, end):
-        if read.is_secondary or read.is_supplementary:
+    true_read_ids = []
+    for read in alignment_file.fetch():
+        if 1000 <= read.reference_start < ref_length - 1000:
+            true_read_ids.append(read.qname)
             continue
-        reads.append(read)
-    return len(reads)
-
-
-def make_bam_and_index(samfile):
-    bamfile = samfile[:-4]
-    os.system('samtools view -bS %s | samtools sort - %s' % (samfile, bamfile))
-    os.system('samtools index %s %s' % (bamfile + '.bam', bamfile + '.bai'))
+        read_end = read.reference_start + len(read.seq)
+        if 1000 < read_end < ref_length - 1000:
+            true_read_ids.append(read.qname)
+            continue
+    return true_read_ids
 
 
 def bowtie_alignment(fq_file):
@@ -87,17 +88,26 @@ def get_our_filtered_reads_count(fq_file, vntr_finder):
 def get_pacbio_comparison_result():
     reference_vntrs = load_unique_vntrs_data()
     id_to_gene = {1221: 'CSTB', 1216: 'HIC1', 1215: 'INS'}
-    genes = glob.glob('Pacbio_copy_number/*')
+    genes = glob.glob('../Pacbio_copy_number/*')
     for gene_dir in genes:
-        if not gene_dir.endswith('INS'):
+        if not gene_dir.endswith('CSTB'):
             continue
         print(gene_dir)
         files = glob.glob(gene_dir + '/*30x.fastq.sam')
         gene_name = gene_dir.split('/')[-1]
         for file_name in files:
-            copies = file_name.split('_')[-2]
+            copies = int(file_name.split('_')[-2])
             make_bam_and_index(file_name)
             base_name = file_name[:-4]
+            original_bam = base_name + '.bam'
+
+            vntr_id = None
+            for vid, gname in id_to_gene.items():
+                if gname == gene_name:
+                    vntr_id = vid
+
+            ref_length = copies * len(reference_vntrs[vntr_id].pattern) + 2000
+            true_ids = get_pacbio_true_read_ids(original_bam, reference_vntrs[vntr_id], ref_length)
             bwasw_alignment(base_name)
             blasr_alignment(base_name)
 
@@ -129,8 +139,8 @@ def get_illumina_comparison_result():
             original = count_reads(original_bam)
             our_selection = get_our_selected_reads_count(base_name + '.fq', vntr_finder)
             our_filtering = get_our_filtered_reads_count(base_name + '.fq', vntr_finder)
-            bwa = count_reads_mapped_to_vntr(bwa_bam, reference_vntrs[vntr_id])
-            bowtie = count_reads_mapped_to_vntr(bowtie_bam, reference_vntrs[vntr_id])
+            bwa = count_reads_mapped_to_vntr_in_bamfile(bwa_bam, reference_vntrs[vntr_id])
+            bowtie = count_reads_mapped_to_vntr_in_bamfile(bowtie_bam, reference_vntrs[vntr_id])
             mapped_reads[int(copies)] = [original, our_filtering, our_selection, bwa, bowtie]
         with open(gene_dir + '/result.txt', 'w') as out:
             for copies in sorted(mapped_reads.iterkeys()):
