@@ -78,7 +78,7 @@ def find_info_by_mapping(sim_dir='simulation_data/', dir_index=0):
             else:
                 with open(true_reads_file) as input:
                     lines = input.readlines()
-                    true_reads = [line.strip() for line in lines in line.strip() != '']
+                    true_reads = [line.strip() for line in lines if line.strip() != '']
 
             for i, parameter in enumerate([30]):
                 positive_file = fasta_file[:-6] + '_bwa_%s_positive_reads.txt' % abs(parameter)
