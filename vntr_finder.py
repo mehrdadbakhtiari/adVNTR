@@ -124,6 +124,9 @@ class VNTRFinder:
     @staticmethod
     def add_hmm_score_to_list(sema, hmm, read, result_scores):
         logp, vpath = hmm.viterbi(str(read.seq))
+        rev_logp, rev_vpath = hmm.viterbi(str(Seq(str(read.seq)).reverse_complement()))
+        if logp < rev_logp:
+            logp = rev_logp
         result_scores.append(logp)
         sema.release()
 

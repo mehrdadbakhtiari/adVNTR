@@ -1,10 +1,12 @@
 import glob
+from multiprocessing import Process, Manager, Value, Semaphore
 import os
 import pysam
 import sys
 
 from reference_vntr import load_unique_vntrs_data
 from sam_utils import get_id_of_reads_mapped_to_vntr_in_samfile
+from vntr_finder import VNTRFinder
 
 
 def clean_up_tmp():
@@ -52,6 +54,40 @@ def get_positive_and_fn_reads_from_samfile(sam_file, reference_vntr, true_reads,
     return positive_reads, false_negative_reads
 
 
+def write_hmm_scores(simulated_sam_file, true_reads_hmm_scores, false_reads_hmm_scores, ref_vntr):
+    vntr_finder = VNTRFinder(ref_vntr)
+    hmm = vntr_finder.get_vntr_matcher_hmm(150)
+
+    manager = Manager()
+    false_scores = manager.list()
+    true_scores = manager.list()
+
+    process_list = []
+    sema = Semaphore(16)
+    samfile = pysam.AlignmentFile(simulated_sam_file, 'r')
+    for read in samfile.fetch():
+        if read.seq.count('N') > 0:
+            continue
+
+        if vntr_finder.is_true_read(read):
+            sema.acquire()
+            p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, true_scores))
+        else:
+            sema.acquire()
+            p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, false_scores))
+        process_list.append(p)
+        p.start()
+    for p in process_list:
+        p.join()
+
+    with open(true_reads_hmm_scores) as out:
+        for score in true_scores:
+            out.write('%s\n' % score)
+    with open(false_reads_hmm_scores) as out:
+        for score in false_scores:
+            out.write('%s\n' % score)
+
+
 def find_info_by_mapping(sim_dir='simulation_data/', dir_index=0):
     reference_vntrs = load_unique_vntrs_data()
     id_to_gene = {119: 'DRD4', 1220: 'GP1BA', 1221: 'CSTB', 1214: 'MAOA', 1219: 'IL1RN'}
@@ -69,8 +105,8 @@ def find_info_by_mapping(sim_dir='simulation_data/', dir_index=0):
             ref_vntr = reference_vntrs[vntr_id]
 
             true_reads_file = fasta_file[:-6] + '_true_reads.txt'
+            simulated_sam_file = fasta_file[:-6] + '.sam'
             if not os.path.exists(true_reads_file):
-                simulated_sam_file = fasta_file[:-6] + '.sam'
                 true_reads = get_id_of_reads_mapped_to_vntr_in_samfile(simulated_sam_file, ref_vntr)
                 with open(true_reads_file) as out:
                     for true_read in true_reads:
@@ -79,6 +115,11 @@ def find_info_by_mapping(sim_dir='simulation_data/', dir_index=0):
                 with open(true_reads_file) as input:
                     lines = input.readlines()
                     true_reads = [line.strip() for line in lines if line.strip() != '']
+
+            true_reads_hmm_scores = fasta_file[:-6] + '_true_reads_hmm_score.txt'
+            false_reads_hmm_scores = fasta_file[:-6] + '_false_reads_hmm_score.txt'
+            if not os.path.exists(true_reads_hmm_scores):
+                write_hmm_scores(simulated_sam_file, true_reads_hmm_scores, false_reads_hmm_scores, ref_vntr)
 
             for i, parameter in enumerate([30]):
                 positive_file = fasta_file[:-6] + '_bwa_%s_positive_reads.txt' % abs(parameter)
