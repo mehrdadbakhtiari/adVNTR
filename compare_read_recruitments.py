@@ -23,11 +23,8 @@ def get_pacbio_true_read_ids(bam_file, reference_vntr, ref_length):
     alignment_file = pysam.AlignmentFile(bam_file, 'rb')
     true_read_ids = []
     for read in alignment_file.fetch():
-        if 1000 <= read.reference_start < ref_length - 1000:
-            true_read_ids.append(read.qname)
-            continue
         read_end = read.reference_start + len(read.seq)
-        if 1000 < read_end < ref_length - 1000:
+        if read.reference_start < ref_length - 1000 and read_end > 1000:
             true_read_ids.append(read.qname)
             continue
     return true_read_ids
@@ -79,10 +76,25 @@ def get_our_selected_reads_count(fq_file, vntr_finder):
 
 
 def get_our_filtered_reads_count(fq_file, vntr_finder):
-    unmapped_reads_file = fq_file[:-3] + '.fa'
+    unmapped_reads_file = fq_file[:-3] + 'fa'
     os.system("cat %s | paste - - - - | sed 's/^@/>/g'| cut -f1-2 | tr '\t' '\n' > %s" % (fq_file, unmapped_reads_file))
     filtered_ids = vntr_finder.filter_reads_with_keyword_matching('working_directory/', unmapped_reads_file)
     return len(filtered_ids)
+
+
+def get_out_pacbio_filtered_counts(fq_file, vntr_finder):
+    unmapped_reads_file = fq_file[:-3] + 'fa'
+    # os.system("cat %s | paste - - - - | sed 's/^@/>/g'| cut -f1-2 | tr '\t' '\n' > %s" % (fq_file, unmapped_reads_file))
+    os.system('../seqtk/seqtk seq -a %s > %s' % (fq_file, unmapped_reads_file))
+    filtered_ids = vntr_finder.filter_reads_with_keyword_matching('working_directory/', unmapped_reads_file, False)
+    return len(filtered_ids)
+
+    unmapped_reads = SeqIO.parse(unmapped_reads_file, 'fasta')
+    filtered_reads = []
+    for read in unmapped_reads:
+        for read.id in filtered_ids:
+            filtered_reads.append(read)
+    return len(vntr_finder.get_spanning_reads_of_unaligned_pacbio_reads(filtered_reads))
 
 
 def get_pacbio_comparison_result():
@@ -95,11 +107,16 @@ def get_pacbio_comparison_result():
         print(gene_dir)
         files = glob.glob(gene_dir + '/*30x.fastq.sam')
         gene_name = gene_dir.split('/')[-1]
+        mapped_reads = {}
         for file_name in files:
             copies = int(file_name.split('_')[-2])
             make_bam_and_index(file_name)
             base_name = file_name[:-4]
             original_bam = base_name + '.bam'
+            bwasw_alignment(base_name)
+            blasr_alignment(base_name)
+            bwasw_alignment_file = base_name[:-3] + '_bwasw_aln.bam'
+            blasr_alignment_file = base_name[:-3] + '_blasr_aln.bam'
 
             vntr_id = None
             for vid, gname in id_to_gene.items():
@@ -108,8 +125,18 @@ def get_pacbio_comparison_result():
 
             ref_length = copies * len(reference_vntrs[vntr_id].pattern) + 2000
             true_ids = get_pacbio_true_read_ids(original_bam, reference_vntrs[vntr_id], ref_length)
-            bwasw_alignment(base_name)
-            blasr_alignment(base_name)
+            blasr_ids = get_id_of_reads_mapped_to_vntr_in_bamfile(blasr_alignment_file, reference_vntrs[vntr_id])
+            bwasw_ids = get_id_of_reads_mapped_to_vntr_in_bamfile(bwasw_alignment_file, reference_vntrs[vntr_id])
+            blasr_tp = [read_id for read_id in blasr_ids if read_id in true_ids]
+            bwasw_tp = [read_id for read_id in bwasw_ids if read_id in true_ids]
+            vntr_finder = VNTRFinder(reference_vntrs[vntr_id])
+            our_filtering = get_out_pacbio_filtered_counts(base_name, vntr_finder)
+            our_selection = our_filtering
+            mapped_reads[copies] = [len(true_ids), our_filtering, our_selection, len(bwasw_tp), len(blasr_tp)]
+        with open(gene_dir + '/result.txt', 'w') as out:
+            for copies in sorted(mapped_reads.iterkeys()):
+                original, our_filtering, our_selection, bwasw, blasr = mapped_reads[copies]
+                out.write('%s %s %s %s %s %s\n' % (copies, original, our_filtering, our_selection, bwasw, blasr))
 
 
 def get_illumina_comparison_result():
