@@ -2,6 +2,7 @@ import glob
 from multiprocessing import Process, Manager, Value, Semaphore
 import os
 import pysam
+from random import random
 import sys
 
 from reference_vntr import load_unique_vntrs_data
@@ -33,12 +34,12 @@ def save_reads_stat(file_name, reads):
 
 
 def get_positive_and_fn_reads_from_samfile(sam_file, reference_vntr, true_reads, read_length=150):
-    alignment_file = pysam.AlignmentFile(sam_file, 'r')
+    alignment_file = pysam.AlignmentFile(sam_file, 'r', ignore_truncation=True)
     start = reference_vntr.start_point
     end = reference_vntr.start_point + reference_vntr.get_length()
     positive_reads = []
     false_negative_reads = []
-    for read in alignment_file.fetch():
+    for read in alignment_file.fetch(until_eof=True):
         if read.is_unmapped:
             if read.qname in true_reads:
                 false_negative_reads.append(read)
@@ -54,7 +55,7 @@ def get_positive_and_fn_reads_from_samfile(sam_file, reference_vntr, true_reads,
     return positive_reads, false_negative_reads
 
 
-def write_hmm_scores(simulated_sam_file, true_reads_hmm_scores, false_reads_hmm_scores, ref_vntr):
+def write_hmm_scores(simulated_samfile, true_reads_hmm_scores, false_reads_hmm_scores, ref_vntr, true_reads):
     vntr_finder = VNTRFinder(ref_vntr)
     hmm = vntr_finder.get_vntr_matcher_hmm(150)
 
@@ -64,15 +65,28 @@ def write_hmm_scores(simulated_sam_file, true_reads_hmm_scores, false_reads_hmm_
 
     process_list = []
     sema = Semaphore(16)
-    samfile = pysam.AlignmentFile(simulated_sam_file, 'r')
-    for read in samfile.fetch():
+    samfile = pysam.AlignmentFile(simulated_samfile, 'r', ignore_truncation=True)
+    for read in samfile.fetch(until_eof=True):
         if read.seq.count('N') > 0:
+            continue
+        if False:
+            if read.is_unmapped:
+                if read.qname in true_reads:
+                    sema.acquire()
+                    p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, true_scores))
+                else:
+                    sema.acquire()
+                    p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, false_scores))
+                process_list.append(p)
+                p.start()
             continue
 
         if vntr_finder.is_true_read(read):
             sema.acquire()
             p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, true_scores))
         else:
+            if random() > 0.0001:
+                continue
             sema.acquire()
             p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, false_scores))
         process_list.append(p)
@@ -116,10 +130,10 @@ def find_info_by_mapping(sim_dir='simulation_data/', dir_index=0):
                     lines = input.readlines()
                     true_reads = [line.strip() for line in lines if line.strip() != '']
 
-            true_reads_hmm_scores = fasta_file[:-6] + '_true_reads_hmm_score.txt'
-            false_reads_hmm_scores = fasta_file[:-6] + '_false_reads_hmm_score.txt'
+            true_reads_hmm_scores = fasta_file[:-6] + '_fn_reads_hmm_score.txt'
+            false_reads_hmm_scores = fasta_file[:-6] + '_tn_reads_hmm_score.txt'
             if not os.path.exists(true_reads_hmm_scores):
-                write_hmm_scores(simulated_sam_file, true_reads_hmm_scores, false_reads_hmm_scores, ref_vntr)
+                write_hmm_scores(simulated_sam_file, true_reads_hmm_scores, false_reads_hmm_scores, ref_vntr, true_reads)
 
             for i, parameter in enumerate([30]):
                 positive_file = fasta_file[:-6] + '_bwa_%s_positive_reads.txt' % abs(parameter)
@@ -144,8 +158,10 @@ def find_info_by_mapping(sim_dir='simulation_data/', dir_index=0):
                 positive_reads, fn_reads = get_positive_and_fn_reads_from_samfile(bowtie_alignment_file, ref_vntr, true_reads)
                 save_reads_stat(positive_file, positive_reads)
                 save_reads_stat(false_negative_file, fn_reads)
+                os.system('cp %s /pedigree2/projects/VeNTeR/bowtie_alignment_%s.sam' % (bowtie_alignment_file, i))
 
                 clean_up_tmp()
+
 
 
 find_info_by_mapping('simulation_data/', int(sys.argv[1]))

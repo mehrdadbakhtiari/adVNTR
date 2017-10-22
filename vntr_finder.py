@@ -46,6 +46,9 @@ class VNTRFinder:
         self.minimum_left_flanking_size = {}
         self.minimum_right_flanking_size = {119: 19, 1214: 12}
 
+        self.vntr_start = self.reference_vntr.start_point
+        self.vntr_end = self.vntr_start + self.reference_vntr.get_length()
+
     @time_usage
     def build_vntr_matcher_hmm(self, copies, flanking_region_size=100):
         patterns = self.reference_vntr.get_repeat_segments()
@@ -133,13 +136,10 @@ class VNTRFinder:
     def is_true_read(self, read):
         read_start = read.reference_start
         read_end = read.reference_end if read.reference_end else read_start + len(read.seq)
-        vntr_start = self.reference_vntr.start_point
-        vntr_end = vntr_start + self.reference_vntr.get_length()
         reference_name = read.reference_name
         if not reference_name.startswith('chr'):
             reference_name = 'chr' + reference_name
-        if reference_name == self.reference_vntr.chromosome and (
-                    vntr_start <= read_start < vntr_end or vntr_start < read_end <= vntr_end):
+        if reference_name == self.reference_vntr.chromosome and self.vntr_start - len(read.seq) < read_start < self.vntr_end:
             return True
         return False
 
