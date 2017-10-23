@@ -69,28 +69,28 @@ def write_hmm_scores(simulated_samfile, true_reads_hmm_scores, false_reads_hmm_s
     for read in samfile.fetch(until_eof=True):
         if read.seq.count('N') > 0:
             continue
-        if False:
-            if read.is_unmapped:
-                if read.qname in true_reads:
-                    sema.acquire()
-                    p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, true_scores))
-                else:
-                    sema.acquire()
-                    p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, false_scores))
-                process_list.append(p)
-                p.start()
-            continue
-
-        if vntr_finder.is_true_read(read):
-            sema.acquire()
-            p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, true_scores))
+        if True:
+            if read.qname in true_reads:
+                sema.acquire()
+                p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, true_scores))
+            else:
+                if random() > 0.001:
+                    continue
+                sema.acquire()
+                p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, false_scores))
+            process_list.append(p)
+            p.start()
         else:
-            if random() > 0.001:
-                continue
-            sema.acquire()
-            p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, false_scores))
-        process_list.append(p)
-        p.start()
+            if vntr_finder.is_true_read(read):
+                sema.acquire()
+                p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, true_scores))
+            else:
+                if random() > 0.001:
+                    continue
+                sema.acquire()
+                p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, false_scores))
+            process_list.append(p)
+            p.start()
     for p in process_list:
         p.join()
 
@@ -105,6 +105,7 @@ def write_hmm_scores(simulated_samfile, true_reads_hmm_scores, false_reads_hmm_s
 def find_info_by_mapping(sim_dir='simulation_data/', dir_index=0):
     reference_vntrs = load_unique_vntrs_data()
     id_to_gene = {119: 'DRD4', 1220: 'GP1BA', 1221: 'CSTB', 1214: 'MAOA', 1219: 'IL1RN'}
+    gene_to_length = {'DRD4': 528, 'GP1BA': 39, 'CSTB': 168, 'MAOA': 30}
     clean_up_tmp()
     dirs = glob.glob(sim_dir+'/*')
     simulation_dir = dirs[dir_index]
@@ -121,7 +122,8 @@ def find_info_by_mapping(sim_dir='simulation_data/', dir_index=0):
             true_reads_file = fasta_file[:-6] + '_true_reads.txt'
             simulated_sam_file = fasta_file[:-6] + '.sam'
             if not os.path.exists(true_reads_file):
-                true_reads = get_id_of_reads_mapped_to_vntr_in_samfile(simulated_sam_file, ref_vntr)
+                region = [ref_vntr.start_point, ref_vntr.start_point + gene_to_length[gene_name]]
+                true_reads = get_id_of_reads_mapped_to_vntr_in_samfile(simulated_sam_file, ref_vntr, region=region)
                 with open(true_reads_file) as out:
                     for true_read in true_reads:
                         out.write('%s\n' % true_read)
@@ -130,14 +132,14 @@ def find_info_by_mapping(sim_dir='simulation_data/', dir_index=0):
                     lines = input.readlines()
                     true_reads = [line.strip() for line in lines if line.strip() != '']
 
-            true_reads_hmm_scores = fasta_file[:-6] + '_fn_reads_hmm_score.txt'
-            false_reads_hmm_scores = fasta_file[:-6] + '_tn_reads_hmm_score.txt'
+            true_reads_hmm_scores = fasta_file[:-6] + '_t_reads_hmm_score.txt'
+            false_reads_hmm_scores = fasta_file[:-6] + '_f_reads_hmm_score.txt'
             if not os.path.exists(true_reads_hmm_scores):
                 write_hmm_scores(simulated_sam_file, true_reads_hmm_scores, false_reads_hmm_scores, ref_vntr, true_reads)
 
             for i, parameter in enumerate([30]):
                 positive_file = fasta_file[:-6] + '_bwa_%s_positive_reads.txt' % abs(parameter)
-                false_negative_file = fasta_file[:-6] + '_bwa_%s_fp_reads.txt' % abs(parameter)
+                false_negative_file = fasta_file[:-6] + '_bwa_%s_fn_reads.txt' % abs(parameter)
                 if os.path.exists(positive_file) and os.path.exists(false_negative_file):
                     continue
                 bwa_alignment_file = '/tmp/_gene%s_' % dir_index + 'bwa_alignment_%s.sam' % i
@@ -150,7 +152,7 @@ def find_info_by_mapping(sim_dir='simulation_data/', dir_index=0):
 
             for i, parameter in enumerate([-0.6]):
                 positive_file = fasta_file[:-6] + '_bowtie_%s_positive_reads.txt' % abs(parameter)
-                false_negative_file = fasta_file[:-6] + '_bowtie_%s_fp_reads.txt' % abs(parameter)
+                false_negative_file = fasta_file[:-6] + '_bowtie_%s_fn_reads.txt' % abs(parameter)
                 if os.path.exists(positive_file) and os.path.exists(false_negative_file):
                     continue
                 bowtie_alignment_file = '/tmp/_gene%s_' % dir_index + 'bowtie_alignment_%s.sam' % i

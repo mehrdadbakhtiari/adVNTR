@@ -86,10 +86,13 @@ def get_id_of_reads_mapped_to_vntr_in_bamfile(bam_file, reference_vntr):
     return reads
 
 
-def get_reads_mapped_to_vntr_in_samfile(sam_file, reference_vntr, read_length=150):
+def get_reads_mapped_to_vntr_in_samfile(sam_file, reference_vntr, read_length=150, region=None):
     alignment_file = pysam.AlignmentFile(sam_file, 'r')
-    start = reference_vntr.start_point
-    end = reference_vntr.start_point + reference_vntr.get_length()
+    if not region:
+        start = reference_vntr.start_point
+        end = reference_vntr.start_point + reference_vntr.get_length()
+    else:
+        start, end = region
     reads = []
     for read in alignment_file.fetch():
         if read.is_unmapped:
@@ -102,8 +105,8 @@ def get_reads_mapped_to_vntr_in_samfile(sam_file, reference_vntr, read_length=15
     return reads
 
 
-def get_id_of_reads_mapped_to_vntr_in_samfile(sam_file, reference_vntr, read_length=150):
-    reads = get_reads_mapped_to_vntr_in_samfile(sam_file, reference_vntr, read_length)
+def get_id_of_reads_mapped_to_vntr_in_samfile(sam_file, reference_vntr, read_length=150, region=None):
+    reads = get_reads_mapped_to_vntr_in_samfile(sam_file, reference_vntr, read_length, region=region)
     return [read.qname for read in reads]
 
 
