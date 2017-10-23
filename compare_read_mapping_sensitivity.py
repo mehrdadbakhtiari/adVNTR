@@ -85,7 +85,7 @@ def write_hmm_scores(simulated_samfile, true_reads_hmm_scores, false_reads_hmm_s
             sema.acquire()
             p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, true_scores))
         else:
-            if random() > 0.0001:
+            if random() > 0.001:
                 continue
             sema.acquire()
             p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, false_scores))
