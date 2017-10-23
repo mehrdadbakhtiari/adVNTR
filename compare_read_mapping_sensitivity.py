@@ -124,7 +124,7 @@ def find_info_by_mapping(sim_dir='simulation_data/', dir_index=0):
             if not os.path.exists(true_reads_file):
                 region = [ref_vntr.start_point, ref_vntr.start_point + gene_to_length[gene_name]]
                 true_reads = get_id_of_reads_mapped_to_vntr_in_samfile(simulated_sam_file, ref_vntr, region=region)
-                with open(true_reads_file) as out:
+                with open(true_reads_file, 'w') as out:
                     for true_read in true_reads:
                         out.write('%s\n' % true_read)
             else:
