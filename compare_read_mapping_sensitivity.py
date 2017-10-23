@@ -94,10 +94,10 @@ def write_hmm_scores(simulated_samfile, true_reads_hmm_scores, false_reads_hmm_s
     for p in process_list:
         p.join()
 
-    with open(true_reads_hmm_scores) as out:
+    with open(true_reads_hmm_scores, 'w') as out:
         for score in true_scores:
             out.write('%s\n' % score)
-    with open(false_reads_hmm_scores) as out:
+    with open(false_reads_hmm_scores, 'w') as out:
         for score in false_scores:
             out.write('%s\n' % score)
 
