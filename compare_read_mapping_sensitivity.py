@@ -39,19 +39,25 @@ def get_positive_and_fn_reads_from_samfile(sam_file, reference_vntr, true_reads,
     end = reference_vntr.start_point + reference_vntr.get_length()
     positive_reads = []
     false_negative_reads = []
-    for read in alignment_file.fetch(until_eof=True):
-        if read.is_unmapped:
+    try:
+        for read in alignment_file.fetch(until_eof=True):
+            if read.is_unmapped:
+                if read.qname in true_reads:
+                    false_negative_reads.append(read)
+                continue
+            if read.is_supplementary:
+                continue
+            # if read.is_secondary:
+            #     continue
+            if reference_vntr.chromosome == read.reference_name:
+                if start - read_length < read.reference_start < end:
+                    positive_reads.append(read)
+                    continue
             if read.qname in true_reads:
                 false_negative_reads.append(read)
-            continue
-        if read.is_secondary or read.is_supplementary:
-            continue
-        if reference_vntr.chromosome == read.reference_name:
-            if start - read_length < read.reference_start < end:
-                positive_reads.append(read)
-                continue
-        if read.qname in true_reads:
-            false_negative_reads.append(read)
+    except IOError as err:
+        print('Catched IOError: ', err)
+        print('positive len:', len(positive_reads))
     return positive_reads, false_negative_reads
 
 
@@ -160,7 +166,8 @@ def find_info_by_mapping(sim_dir='simulation_data/', dir_index=0):
                 positive_reads, fn_reads = get_positive_and_fn_reads_from_samfile(bowtie_alignment_file, ref_vntr, true_reads)
                 save_reads_stat(positive_file, positive_reads)
                 save_reads_stat(false_negative_file, fn_reads)
-                os.system('cp %s /pedigree2/projects/VeNTeR/bowtie_alignment_%s.sam' % (bowtie_alignment_file, i))
+                if gene_name == 'MAOA':
+                    os.system('cp %s /pedigree2/projects/VeNTeR/bowtie_alignment_%s.sam' % (bowtie_alignment_file, i))
 
                 clean_up_tmp()
 
