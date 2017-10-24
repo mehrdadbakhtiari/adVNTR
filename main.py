@@ -22,6 +22,8 @@ parser.add_argument('-wd', '--working_directory', type=str, metavar='DIRECTORY',
                     help='Working directory for creating temporary files needed for computation')
 parser.add_argument('-t', '--threads', type=int, metavar='<nthreads>', default=4,
                     help='Run the tool on <nthreads> parallel threads which will run on separate processors/cores')
+parser.add_argument('-vid', '--vntr_id', type=int, metavar='<VNTR ID>', default=None,
+                    help='ID of the VNTR')
 args = parser.parse_args()
 
 if args.alignment_file is None and args.fasta is None:
@@ -65,6 +67,8 @@ for i in range(len(reference_vntrs)):
         continue
     target_vntrs.append(i)
 
+if args.vntr_id:
+    target_vntrs = [args.vntr_id]
 genome_analyzier = GenomeAnalyzer(reference_vntrs, target_vntrs, working_directory)
 if args.pacbio:
     if input_is_alignment_file:
