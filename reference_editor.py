@@ -88,3 +88,49 @@ def create_pacbio_copy_number_variation_references(pacbio_read_dir='../Pacbio_co
         for repeat in repeats[id_to_gene[vntr_id]]:
             outfile = pacbio_read_dir + id_to_gene[vntr_id] + '/' + str(repeat) + '.fa'
             create_reference_region_with_specific_repeats(reference_vntrs[vntr_id], repeat, outfile, 1000)
+
+
+def create_pacbio_coverage_data_for_3_genes_and_10_cn(pacbio_read_dir='../pacbio_coverage_experiment/'):
+    from reference_vntr import load_unique_vntrs_data
+    reference_vntrs = load_unique_vntrs_data()
+    id_to_gene = {1221: 'CSTB', 1216: 'HIC1', 1215: 'INS'}
+    repeats = {'CSTB': range(2, 42), 'HIC1': range(2, 22), 'INS': range(10, 110)}
+
+    for vntr_id in id_to_gene.keys():
+        for repeat in repeats[id_to_gene[vntr_id]]:
+            if id_to_gene[vntr_id] == 'INS' and repeat % 5 != 0:
+                continue
+            if id_to_gene[vntr_id] == 'CSTB' and repeat % 2 != 0:
+                continue
+            if id_to_gene[vntr_id] != 'INS':
+                continue
+            outfile = pacbio_read_dir + id_to_gene[vntr_id] + '/' + str(repeat) + '.fa'
+            create_reference_region_with_specific_repeats(reference_vntrs[vntr_id], repeat, outfile, 3000)
+
+
+def create_pacbio_ru_length_data_for_all_vntrs(pacbio_read_dir='../pacbio_ru_data_for_all_vntrs/'):
+    from reference_vntr import load_unique_vntrs_data
+    reference_vntrs = load_unique_vntrs_data()
+
+    repeat_units = {}
+    for vntr_id in range(len(reference_vntrs)):
+        ru = len(reference_vntrs[vntr_id].pattern)
+        if ru % 2 == 1:
+            continue
+        if ru not in repeat_units.keys():
+            repeat_units[ru] = []
+        if len(repeat_units[ru]) >= 3:
+            continue
+        repeat_units[ru].append(vntr_id)
+
+    import os
+    for ru in repeat_units.keys():
+        if len(repeat_units[ru]) < 3:
+            continue
+        for vntr_id in repeat_units[ru]:
+            original_repeats = len(reference_vntrs[vntr_id].get_repeat_segments())
+            for repeat in range(original_repeats-1, original_repeats + 10):
+                outfile = pacbio_read_dir + str(ru) + '/vntr_id_' + str(vntr_id) + '_' + str(repeat) + '.fa'
+                if not os.path.exists(os.path.dirname(outfile)):
+                    os.makedirs(os.path.dirname(outfile))
+                create_reference_region_with_specific_repeats(reference_vntrs[vntr_id], repeat, outfile, 1000)
