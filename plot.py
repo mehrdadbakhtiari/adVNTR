@@ -376,7 +376,7 @@ def plot_frequency_of_repeats_in_population():
     plt.savefig('GP1BA.png', dpi=300)
 
 
-def plot_read_selection_and_mapping_comparison(results_dir='../Illumina_copy_number/'):
+def plot_read_selection_and_mapping_sensitivity_comparison(results_dir='../Illumina_copy_number/'):
     import glob
     import matplotlib.pyplot as plt
     fig = plt.figure()
@@ -438,6 +438,104 @@ def plot_ins_simulation_pacbio_results(results_dir='out/'):
     plt.ylabel('Estimated Copy Number')
     plt.xlabel('Simulated Copy Number')
     plt.savefig('INS_simulation_results.png', dpi=300)
+
+
+def plot_pacbio_coverage_results(results_dir='../pacbio_coverage_experiment/'):
+    from matplotlib import rc, rcParams
+    import matplotlib.pyplot as plt
+    plt.style.use('ggplot')
+    plt.rcParams['axes.facecolor'] = '#FFFFFF'
+    rc('text', usetex=True)
+    rcParams['text.latex.preamble'] = [r'\usepackage{sfmath} \boldmath']
+    plt.title('Effect of Sequencing Coverage on Copy Number Estimation')
+    plt.ylabel(r'\emph{Estimated Copy Number}')
+    plt.xlabel(r'\emph{Sequencing Coverage}')
+    plt.gca().spines['bottom'].set_color('black')
+    plt.gca().spines['left'].set_color('black')
+
+    import glob
+    gene_dirs = glob.glob(results_dir + '*')
+    coverages_label = [i for i in range(1, 40)]
+    coverages = {}
+    for gene_dir in gene_dirs:
+        gene_name = gene_dir.split('/')[-1]
+        coverages[gene_name] = [0 for i in range(1, 40)]
+        files = glob.glob(gene_dir + '/*.fasta.out')
+        for file_name in files:
+            coverage = int(file_name.split('_')[-1].split('.')[0][:-1])
+            sim = int(file_name.split('_')[-2])
+            correct = False
+            with open(file_name) as input:
+                lines = input.readlines()
+                if len(lines) > 1:
+                    if lines[-1].strip() != 'None' and len(lines[-1]) < 10:
+                        estimate = int(lines[-1].strip())
+                        if estimate == sim:
+                            correct = True
+            if correct:
+                coverages[gene_name][coverage-1] += 1
+        plt.plot(coverages_label, coverages[gene_name], label=gene_name)
+
+    plt.legend(loc=0, fontsize='x-small')
+    plt.savefig('pacbio_coverage_results.png', dpi=300)
+
+
+def plot_pacbio_copy_number_simulation_results(results_dir='../Pacbio_copy_number/'):
+    import matplotlib.pyplot as plt
+    import matplotlib.cm as cm
+    import glob
+
+    gene_dirs = glob.glob(results_dir + '*')
+    for directory in gene_dirs:
+        gene_name = directory.split('/')[-1]
+        if gene_name != 'CSTB':
+            continue
+        files = glob.glob(directory + '/*.out')
+        points = []
+        for file_name in files:
+            sim = int(file_name.split('_')[-2])
+            if sim % 4 != 0:
+                continue
+            with open(file_name) as input:
+                lines = input.readlines()
+                estimate = int(lines[-1].strip())
+            points.append((sim, estimate))
+        points = sorted(points)
+        sim_repeats = [sim for sim, estimate in points]
+        estimated_repeats = [estimate for sim, estimate in points]
+        plt.title('Result of estimation on PacBio simulated reads')
+        plt.ylabel('Estimated Copy Number')
+        plt.xlabel('Simulated Copy Number')
+
+        ind = sim_repeats  # the x locations for the groups
+        width = 1.0  # the width of the bars
+
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111)
+
+        yvals = sim_repeats
+        rects1 = plt.bar(ind, yvals, width, label=gene_name, color=cm.Accent(float(0) / 3))
+        zvals = sim_repeats
+        rects2 = plt.bar([i + width for i in ind], zvals, width, color=cm.Accent(float(1) / 3))
+        kvals = sim_repeats
+        rects3 = plt.bar([i + width * 2 for i in ind], kvals, width, color=cm.Accent(float(2) / 3))
+
+        # plt.xticks([i + width for i in ind])
+        # plt.set_xticklabels(('2011-Jan-4', '2011-Jan-5', '2011-Jan-6'))
+        plt.legend((rects1[0], rects2[0], rects3[0]), ('VNTR1', 'VNTR2', 'VNTR3'))
+
+        def autolabel(rects):
+            for rect in rects:
+                continue
+                h = rect.get_height()
+                plt.text(rect.get_x() + rect.get_width() / 2., 1.05 * h, '%d' % int(h),
+                        ha='center', va='bottom')
+
+        autolabel(rects1)
+        autolabel(rects2)
+        autolabel(rects3)
+
+        plt.savefig('Pacbio_copy_number_simulation_results.png', dpi=300)
 
 
 def plot_false_read_and_true_read_score_distribution(results_dir='results/score_distribution/'):
@@ -502,4 +600,5 @@ for a, b in edges:
 # plot_FP_for_specific_sensitivity(eliminated_nodes)
 # plot_gc_content_violin_plot()
 # plot_paccbio_flanking_region_sizes()
-plot_frequency_of_repeats_in_population()
+# plot_frequency_of_repeats_in_population()
+plot_pacbio_coverage_results()
