@@ -23,10 +23,15 @@ class PacBioHaplotyper:
         haplotypes = []
         clusters = self.get_read_clusters()
         logging.debug('Cluster sizes: %s, %s' % (len(clusters[0]), len(clusters[1])))
-        homozygous = max(len(clusters[0]), len(clusters[1])) >= 7 * min(len(clusters[0]), len(clusters[1]))
+        smaller_cluster_size = min(len(clusters[0]), len(clusters[1]))
+        larger_cluster_size = max(len(clusters[0]), len(clusters[1]))
+        homozygous = larger_cluster_size >= 7 * smaller_cluster_size
         for cluster in clusters:
-            if len(cluster) < 2 and homozygous:
+            if len(cluster) == smaller_cluster_size and homozygous:
                 logging.info('Both haplotypes are similar (homozygous copy number)')
+                continue
+            #Temporary for haploid simulation
+            if len(cluster) != larger_cluster_size:
                 continue
             if len(cluster) < 2:
                 logging.debug('Cluster has only one sequence. Skipping multiple alignment')
