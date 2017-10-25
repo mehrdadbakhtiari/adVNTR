@@ -45,8 +45,8 @@ def get_positive_and_fn_reads_from_samfile(sam_file, reference_vntr, true_reads,
                 if read.qname in true_reads:
                     false_negative_reads.append(read)
                 continue
-            if read.is_supplementary:
-                continue
+            # if read.is_supplementary:
+            #     continue
             # if read.is_secondary:
             #     continue
             if reference_vntr.chromosome == read.reference_name:
@@ -143,9 +143,9 @@ def find_info_by_mapping(sim_dir='simulation_data/', dir_index=0):
             if not os.path.exists(true_reads_hmm_scores):
                 write_hmm_scores(simulated_sam_file, true_reads_hmm_scores, false_reads_hmm_scores, ref_vntr, true_reads)
 
-            for i, parameter in enumerate([30]):
-                positive_file = fasta_file[:-6] + '_bwa_%s_positive_reads.txt' % abs(parameter)
-                false_negative_file = fasta_file[:-6] + '_bwa_%s_fn_reads.txt' % abs(parameter)
+            for i, parameter in enumerate([10]):
+                positive_file = fasta_file[:-6] + '_bwa_%s_positive_supplementary_reads.txt' % abs(parameter)
+                false_negative_file = fasta_file[:-6] + '_bwa_%s_fn_supplementary_reads.txt' % abs(parameter)
                 if os.path.exists(positive_file) and os.path.exists(false_negative_file):
                     continue
                 bwa_alignment_file = '/tmp/_gene%s_' % dir_index + 'bwa_alignment_%s.sam' % i
@@ -156,9 +156,11 @@ def find_info_by_mapping(sim_dir='simulation_data/', dir_index=0):
 
                 clean_up_tmp()
 
-            for i, parameter in enumerate([-0.6]):
-                positive_file = fasta_file[:-6] + '_bowtie_%s_positive_reads.txt' % abs(parameter)
-                false_negative_file = fasta_file[:-6] + '_bowtie_%s_fn_reads.txt' % abs(parameter)
+            for i, parameter in enumerate([-0.6, -2]):
+                if i == 0:
+                    continue
+                positive_file = fasta_file[:-6] + '_bowtie_%s_positive_supplementary_reads.txt' % abs(parameter)
+                false_negative_file = fasta_file[:-6] + '_bowtie_%s_fn_supplementary_reads.txt' % abs(parameter)
                 if os.path.exists(positive_file) and os.path.exists(false_negative_file):
                     continue
                 bowtie_alignment_file = '/tmp/_gene%s_' % dir_index + 'bowtie_alignment_%s.sam' % i
