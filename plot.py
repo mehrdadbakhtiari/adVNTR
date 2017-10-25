@@ -440,6 +440,50 @@ def plot_ins_simulation_pacbio_results(results_dir='out/'):
     plt.savefig('INS_simulation_results.png', dpi=300)
 
 
+def plot_pacbio_ru_length_result(results_dir='../pacbio_ru_data_for_all_vntrs/'):
+    from matplotlib import rc, rcParams
+    import matplotlib.pyplot as plt
+    plt.style.use('ggplot')
+    plt.rcParams['axes.facecolor'] = '#FFFFFF'
+    rc('text', usetex=True)
+    rcParams['text.latex.preamble'] = [r'\usepackage{sfmath} \boldmath']
+    plt.title('Effect of RU Length on Copy Number Estimation')
+    plt.ylabel(r'\emph{Correct Estimated Copy Number}')
+    plt.xlabel(r'\emph{RU Length}')
+    plt.gca().spines['bottom'].set_color('black')
+    plt.gca().spines['left'].set_color('black')
+    import glob
+    ru_dirs = glob.glob(results_dir + '*')
+    points = []
+    for ru_dir in ru_dirs:
+        ru_length = ru_dir.split('/')[-1]
+        files = glob.glob(ru_dir + '/*.fasta.out')
+        corrects = 0
+        for file_name in files:
+            sim = int(file_name.split('_')[-2])
+            correct = False
+            with open(file_name) as input:
+                lines = input.readlines()
+                if len(lines) > 1:
+                    if lines[-1].strip() != 'None' and len(lines[-1]) < 10:
+                        estimate = int(lines[-1].strip())
+                        if estimate == sim:
+                            correct = True
+            if not correct and ru_length == 20:
+                print file_name
+            if correct:
+                corrects += 1
+        points.append((ru_length, corrects))
+    points = sorted(points)
+    print points
+    ru_lengths = [x for x, y in points]
+    corrects = [y for x, y in points]
+    plt.plot(ru_lengths, corrects, label='Correct Estimates')
+
+    plt.legend(loc=0, fontsize='x-small')
+    plt.savefig('pacbio_ru_length_results.png', dpi=300)
+
+
 def plot_pacbio_coverage_results(results_dir='../pacbio_coverage_experiment/'):
     from matplotlib import rc, rcParams
     import matplotlib.pyplot as plt
@@ -448,7 +492,7 @@ def plot_pacbio_coverage_results(results_dir='../pacbio_coverage_experiment/'):
     rc('text', usetex=True)
     rcParams['text.latex.preamble'] = [r'\usepackage{sfmath} \boldmath']
     plt.title('Effect of Sequencing Coverage on Copy Number Estimation')
-    plt.ylabel(r'\emph{Estimated Copy Number}')
+    plt.ylabel(r'\emph{Correct Estimated Copy Number}')
     plt.xlabel(r'\emph{Sequencing Coverage}')
     plt.gca().spines['bottom'].set_color('black')
     plt.gca().spines['left'].set_color('black')
@@ -457,6 +501,8 @@ def plot_pacbio_coverage_results(results_dir='../pacbio_coverage_experiment/'):
     gene_dirs = glob.glob(results_dir + '*')
     coverages_label = [i for i in range(1, 40)]
     coverages = {}
+    shapes = ['^', '*', '.']
+    shape = 0
     for gene_dir in gene_dirs:
         gene_name = gene_dir.split('/')[-1]
         coverages[gene_name] = [0 for i in range(1, 40)]
@@ -472,15 +518,19 @@ def plot_pacbio_coverage_results(results_dir='../pacbio_coverage_experiment/'):
                         estimate = int(lines[-1].strip())
                         if estimate == sim:
                             correct = True
+            if not correct and gene_name == 'CSTB' and coverage == 15:
+                print file_name
             if correct:
                 coverages[gene_name][coverage-1] += 1
-        plt.plot(coverages_label, coverages[gene_name], label=gene_name)
+        plt.plot(coverages_label, coverages[gene_name], shapes[shape], label=gene_name)
+        shape += 1
 
     plt.legend(loc=0, fontsize='x-small')
     plt.savefig('pacbio_coverage_results.png', dpi=300)
 
 
 def plot_pacbio_copy_number_simulation_results(results_dir='../Pacbio_copy_number/'):
+    #NEEDS VINEET's COMMENT BEFORE PROCEEDING
     import matplotlib.pyplot as plt
     import matplotlib.cm as cm
     import glob
@@ -601,4 +651,6 @@ for a, b in edges:
 # plot_gc_content_violin_plot()
 # plot_paccbio_flanking_region_sizes()
 # plot_frequency_of_repeats_in_population()
+
 plot_pacbio_coverage_results()
+# plot_pacbio_ru_length_result()
