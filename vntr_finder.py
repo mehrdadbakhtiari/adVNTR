@@ -381,7 +381,7 @@ class VNTRFinder:
             if len(read) - 100 > max_length:
                 max_length = len(read) - 100
         max_copies = int(round(max_length / float(len(self.reference_vntr.pattern))))
-        max_copies = min(max_copies, 2 * len(self.reference_vntr.get_repeat_segments()))
+        # max_copies = min(max_copies, 2 * len(self.reference_vntr.get_repeat_segments()))
         vntr_matcher = self.build_vntr_matcher_hmm(max_copies)
         haplotyper = PacBioHaplotyper(spanning_reads)
         haplotypes = haplotyper.get_error_corrected_haplotypes()
