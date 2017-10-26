@@ -337,7 +337,7 @@ class VNTRFinder:
         for p in process_list:
             p.join()
         logging.info('length_distribution of unmapped spanning reads: %s' % list(shared_length_distribution))
-        return list(shared_spanning_reads)
+        return list(shared_spanning_reads), list(shared_length_distribution)
 
     @time_usage
     def get_spanning_reads_of_aligned_pacbio_reads(self, alignment_file):
@@ -399,7 +399,7 @@ class VNTRFinder:
     def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, unmapped_filtered_reads):
         logging.debug('finding repeat count from pacbio alignment file for %s' % self.reference_vntr.id)
 
-        unaligned_spanning_reads = self.get_spanning_reads_of_unaligned_pacbio_reads(unmapped_filtered_reads)
+        unaligned_spanning_reads, length_dist = self.get_spanning_reads_of_unaligned_pacbio_reads(unmapped_filtered_reads)
         mapped_spanning_reads = self.get_spanning_reads_of_aligned_pacbio_reads(alignment_file)
 
         spanning_reads = mapped_spanning_reads + unaligned_spanning_reads
@@ -407,10 +407,16 @@ class VNTRFinder:
         return copy_numbers
 
     @time_usage
-    def find_repeat_count_from_pacbio_reads(self, unmapped_filtered_reads):
+    def find_repeat_count_from_pacbio_reads(self, unmapped_filtered_reads, naive=False):
         logging.debug('finding repeat count from pacbio reads file for %s' % self.reference_vntr.id)
-        spanning_reads = self.get_spanning_reads_of_unaligned_pacbio_reads(unmapped_filtered_reads)
-        copy_numbers = self.get_haplotype_copy_numbers_from_spanning_reads(spanning_reads)
+        spanning_reads, length_dist = self.get_spanning_reads_of_unaligned_pacbio_reads(unmapped_filtered_reads)
+        if naive:
+            if len(length_dist):
+                copy_numbers = [round(sum(length_dist) / float(len(length_dist)) / len(self.reference_vntr.pattern))] * 2
+            else:
+                copy_numbers = None
+        else:
+            copy_numbers = self.get_haplotype_copy_numbers_from_spanning_reads(spanning_reads)
         return copy_numbers
 
     @time_usage

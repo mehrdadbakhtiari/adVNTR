@@ -41,10 +41,10 @@ class GenomeAnalyzer:
             print(id)
             print(copy_numbers)
 
-    def find_repeat_counts_from_pacbio_reads(self, read_file):
+    def find_repeat_counts_from_pacbio_reads(self, read_file, naive=False):
         vntr_reads = self.get_vntr_filtered_reads_map(read_file, False)
         for id in self.target_vntr_ids:
-            copy_numbers = self.vntr_finder[id].find_repeat_count_from_pacbio_reads(vntr_reads[id])
+            copy_numbers = self.vntr_finder[id].find_repeat_count_from_pacbio_reads(vntr_reads[id], naive)
             print(id)
             print(copy_numbers)
             print(sum(copy_numbers) / len(copy_numbers))

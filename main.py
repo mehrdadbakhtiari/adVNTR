@@ -24,6 +24,8 @@ parser.add_argument('-t', '--threads', type=int, metavar='<nthreads>', default=4
                     help='Run the tool on <nthreads> parallel threads which will run on separate processors/cores')
 parser.add_argument('-vid', '--vntr_id', type=int, metavar='<VNTR ID>', default=None,
                     help='ID of the VNTR')
+parser.add_argument('-naive', '--naive', action='store_true', default=False,
+                    help='Use naive approach for PacBio reads')
 args = parser.parse_args()
 
 if args.alignment_file is None and args.fasta is None:
@@ -74,7 +76,7 @@ if args.pacbio:
     if input_is_alignment_file:
         copy_number = genome_analyzier.find_repeat_counts_from_pacbio_alignment_file(input_file)
     else:
-        copy_number = genome_analyzier.find_repeat_counts_from_pacbio_reads(input_file)
+        copy_number = genome_analyzier.find_repeat_counts_from_pacbio_reads(input_file, args.naive)
 else:
     if args.frameshift:
         genome_analyzier.find_frameshift_from_alignment_file(input_file)
