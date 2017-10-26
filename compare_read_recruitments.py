@@ -56,7 +56,7 @@ def blasr_alignment(fq_file):
     blasr_alignment_file = fq_file[:-3] + '_blasr_aln.sam'
     if not os.path.exists(blasr_alignment_file[:-4] + '.bam'):
         print('Running Blasr for %s' % blasr_alignment_file[:-4] + '.bam')
-        os.system('blasr %s hg19_chromosomes/CombinedHG19_Reference.fa -sam -out %s -nproc 8' % (fq_file, blasr_alignment_file))
+        os.system('blasr %s hg19_chromosomes/CombinedHG19_Reference.fa -sam -noSplitSubreads -out %s -nproc 8' % (fq_file, blasr_alignment_file))
         make_bam_and_index(blasr_alignment_file)
     return blasr_alignment_file[:-4] + '.bam'
 
@@ -102,8 +102,6 @@ def get_pacbio_comparison_result():
     id_to_gene = {1221: 'CSTB', 1216: 'HIC1', 1215: 'INS'}
     genes = glob.glob('../Pacbio_copy_number/*')
     for gene_dir in genes:
-        if not gene_dir.endswith('CSTB'):
-            continue
         print(gene_dir)
         files = glob.glob(gene_dir + '/*30x.fastq.sam')
         gene_name = gene_dir.split('/')[-1]
