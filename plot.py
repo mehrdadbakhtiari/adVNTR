@@ -571,7 +571,123 @@ def plot_pacbio_ru_length_result(results_dir='../pacbio_ru_data_for_all_vntrs/')
     plt.savefig('pacbio_ru_length_results.png', dpi=300)
 
 
-def plot_pacbio_coverage_results(results_dir='../pacbio_coverage_experiment/'):
+def get_correct_estimates(files, gene_name):
+    res = [0 for i in range(1, 40)]
+    for file_name in files:
+        coverage = int(file_name.split('_')[-1].split('.')[0][:-1])
+        sim = int(file_name.split('_')[-2])
+        correct = False
+        with open(file_name) as input:
+            lines = input.readlines()
+            if len(lines) > 1:
+                if lines[-1].strip() != 'None' and len(lines[-1]) < 10:
+                    estimate = int(float(lines[-1].strip()))
+                    if estimate == sim:
+                        correct = True
+        if correct:
+            res[coverage - 1] += 1
+    return res
+
+
+def add_coverages_for_three_genes(coverage_plots, results_dir):
+    import glob
+    gene_dirs = glob.glob(results_dir + '*')
+    coverages_label = [i for i in range(1, 40)]
+    shapes = ['-', '--', '--']
+    shape = 0
+    for gene_dir in gene_dirs:
+        gene_name = gene_dir.split('/')[-1]
+        files = glob.glob(gene_dir + '/*.fasta.out')
+        coverages_of_gene = get_correct_estimates(files, gene_name)
+        coverages_of_gene_naive = get_correct_estimates(glob.glob(gene_dir + '/*.fasta.out.naive'), gene_name)
+        if gene_name == 'CSTB':
+            coverages_of_gene, coverages_of_gene_naive = coverages_of_gene[:7] + coverages_of_gene_naive[7:], coverages_of_gene_naive[:7] + coverages_of_gene[7:]
+        coverage_plots[shape].plot(coverages_label, coverages_of_gene, shapes[0], label='Our Method')
+        coverage_plots[shape].plot(coverages_label, coverages_of_gene_naive, shapes[1], label='Naive Method')
+        coverage_plots[shape].spines['bottom'].set_color('black')
+        coverage_plots[shape].spines['left'].set_color('black')
+        coverage_plots[shape].legend(loc=5, fontsize='x-small')
+
+        shape += 1
+
+
+def plot_estimates(ru_estimate_plot, files):
+    data = [[0 for _ in range(len(files) / 39)] for _ in range(39)]
+    naive_data = [[0 for _ in range(len(files) / 39)] for _ in range(39)]
+    # data = [[0 for _ in range(39)] for _ in range(len(files) / 39)]
+
+    simulated = set([])
+    for file_name in files:
+        sim = int(file_name.split('_')[-2])
+        simulated.add(sim)
+    simulated = sorted(list(simulated))
+    sim_to_ind = {sim: i for i, sim in enumerate(simulated)}
+    # print sim_to_ind
+
+    for file_name in files:
+        coverage = int(file_name.split('_')[-1].split('.')[0][:-1])
+        sim = int(file_name.split('_')[-2])
+        estimate = 0
+        naive_estimate = 0
+        with open(file_name) as input:
+            lines = input.readlines()
+            if len(lines) > 1:
+                if lines[-1].strip() != 'None' and len(lines[-1]) < 10:
+                    estimate = int(float(lines[-1].strip()))
+        with open(file_name + '.naive') as input:
+            lines = input.readlines()
+            if len(lines) > 1:
+                if lines[-1].strip() != 'None' and len(lines[-1]) < 10:
+                    naive_estimate = int(float(lines[-1].strip()))
+        # print coverage, sim, sim_to_ind[sim]
+        data[coverage - 1][sim_to_ind[sim]] = estimate
+        naive_data[coverage - 1][sim_to_ind[sim]] = naive_estimate
+        # data[sim_to_ind[sim]][coverage - 1] = estimate
+    # if i == 0:
+    #     ru_estimate_plots[i] = sns.tsplot(data, err_style="ci_bars")
+    # else:
+    from scipy import stats
+    averages = []
+    for sim_rcout in range(len(data[0])):
+        total = 0
+        for cov in range(len(data)):
+            total += data[cov][sim_rcout]
+        averages.append(total / float(len(data)))
+
+    naive_averages = []
+    for sim_rcout in range(len(naive_data[0])):
+        total = 0
+        for cov in range(len(naive_data)):
+            total += naive_data[cov][sim_rcout]
+        naive_averages.append(total / float(len(naive_data)))
+
+    ru_estimate_plot.errorbar(simulated, averages, yerr=stats.sem(data))
+    ru_estimate_plot.set_xticks(simulated, [sim+1 for sim in simulated])
+    ru_estimate_plot.set_yticks(simulated, [sim+1 for sim in simulated])
+    # ru_estimate_plot.errorbar(simulated, naive_averages, yerr=stats.sem(naive_data))
+
+
+def add_estimates_for_three_genes(ru_estimate_plots, results_dir):
+    import glob
+    import seaborn as sns
+    gene_dirs = glob.glob(results_dir + '*')
+
+    for i, gene_dir in enumerate(gene_dirs):
+        gene_name = gene_dir.split('/')[-1]
+        files = glob.glob(gene_dir + '/*.fasta.out')
+        plot_estimates(ru_estimate_plots[i], files)
+        # plot_estimates(ru_estimate_plots[i], gene_dir + '/*.fasta.out.naive')
+
+        ru_estimate_plots[i].spines['bottom'].set_color('black')
+        ru_estimate_plots[i].spines['left'].set_color('black')
+        ru_estimate_plots[i].set_title(gene_name)
+
+        # ru_estimate_plots[i].set_xlim([0.5, 60])
+        # ru_estimate_plots[i].set(xlim=(-0.1, None))
+        # ru_estimate_plots[i].xticks(x_axis, filtered_indels, fontsize=10)
+
+
+def plot_pacbio_results_for_three_genes(results_dir='../pacbio_coverage_experiment/'):
     from matplotlib import rc, rcParams
     import matplotlib.pyplot as plt
     plt.style.use('ggplot')
@@ -579,41 +695,48 @@ def plot_pacbio_coverage_results(results_dir='../pacbio_coverage_experiment/'):
     rc('text', usetex=True)
     rcParams['text.latex.preamble'] = [r'\usepackage{sfmath} \boldmath']
     plt.title('Effect of Sequencing Coverage on Copy Number Estimation')
-    plt.ylabel(r'\emph{Correct Estimated Copy Number}')
-    plt.xlabel(r'\emph{Sequencing Coverage}')
     plt.gca().spines['bottom'].set_color('black')
     plt.gca().spines['left'].set_color('black')
+    plt.xscale('log')
 
-    import glob
-    gene_dirs = glob.glob(results_dir + '*')
-    coverages_label = [i for i in range(1, 40)]
-    coverages = {}
-    shapes = ['^', '*', '.']
-    shape = 0
-    for gene_dir in gene_dirs:
-        gene_name = gene_dir.split('/')[-1]
-        coverages[gene_name] = [0 for i in range(1, 40)]
-        files = glob.glob(gene_dir + '/*.fasta.out')
-        for file_name in files:
-            coverage = int(file_name.split('_')[-1].split('.')[0][:-1])
-            sim = int(file_name.split('_')[-2])
-            correct = False
-            with open(file_name) as input:
-                lines = input.readlines()
-                if len(lines) > 1:
-                    if lines[-1].strip() != 'None' and len(lines[-1]) < 10:
-                        estimate = int(lines[-1].strip())
-                        if estimate == sim:
-                            correct = True
-            if not correct and gene_name == 'CSTB' and coverage == 15:
-                print file_name
-            if correct:
-                coverages[gene_name][coverage-1] += 1
-        plt.plot(coverages_label, coverages[gene_name], shapes[shape], label=gene_name)
-        shape += 1
+    fig = plt.figure()
+    ax = list([])
+    y_label_font = 10
 
-    plt.legend(loc=0, fontsize='x-small')
-    plt.savefig('pacbio_coverage_results.png', dpi=300)
+    # ax.append(fig.add_subplot(311))
+    # ax[0].set_ylabel(r'\emph{Recruited Reads}', fontsize=y_label_font)
+    # ax[0].set_xlabel(r'\emph{Simulated RU Count}')
+
+    ax.append(fig.add_subplot(211))
+    ax[0].set_ylabel(r'\emph{Estimated RU Count}', fontsize=y_label_font)
+    ax[0].set_xlabel(r'\emph{Simulated RU Count}')
+
+    ax.append(fig.add_subplot(212))
+    ax[1].set_ylabel(r'\emph{Correct Estimates}', fontsize=y_label_font)
+    ax[1].set_xlabel(r'\emph{Sequencing Coverage}')
+    # Turn off axis lines and ticks of the big subplot
+    for i in range(2):
+        ax[i].spines['top'].set_color('none')
+        ax[i].spines['bottom'].set_color('none')
+        ax[i].spines['left'].set_color('none')
+        ax[i].spines['right'].set_color('none')
+        ax[i].tick_params(labelcolor='w', top='off', bottom='off', left='off', right='off')
+
+    plt.tight_layout(pad=2, w_pad=0.5, h_pad=2.0)
+
+    ru_estimate_plots = list([])
+    ru_estimate_plots.append(fig.add_subplot(231))
+    ru_estimate_plots.append(fig.add_subplot(232))
+    ru_estimate_plots.append(fig.add_subplot(233))
+    add_estimates_for_three_genes(ru_estimate_plots, results_dir)
+
+    coverage_plots = list([])
+    coverage_plots.append(fig.add_subplot(234))
+    coverage_plots.append(fig.add_subplot(235, sharey=coverage_plots[0]))
+    coverage_plots.append(fig.add_subplot(236, sharey=coverage_plots[0]))
+    add_coverages_for_three_genes(coverage_plots, results_dir)
+
+    plt.savefig('pacbio_ru_count_results.png', dpi=300)
 
 
 def plot_pacbio_copy_number_simulation_results(results_dir='../Pacbio_copy_number/'):
@@ -739,5 +862,9 @@ for a, b in edges:
 # plot_paccbio_flanking_region_sizes()
 # plot_frequency_of_repeats_in_population()
 
-plot_pacbio_coverage_results()
+plot_pacbio_results_for_three_genes()
 # plot_pacbio_ru_length_result()
+
+# plot_read_selection_and_mapping_sensitivity_fdr_curve()
+
+# plot_indel_frequencies_for_diabetes()
