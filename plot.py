@@ -376,6 +376,93 @@ def plot_frequency_of_repeats_in_population():
     plt.savefig('GP1BA.png', dpi=300)
 
 
+def get_diabetes_pattern_interavls():
+    pattern = 'GGCCCCCCCCGTGCCGCCCACGGGTGACTCCGG'
+    last = pattern[0]
+    start = 0
+    intervals = []
+    for i in range(1, len(pattern)+1):
+        if i == len(pattern):
+            intervals.append((start+1, i))
+            break
+        if pattern[i] != last:
+            intervals.append((start+1, i))
+            last = pattern[i]
+            start = i
+    return intervals
+
+
+def plot_indel_frequencies_for_diabetes():
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib import rc, rcParams
+    plt.style.use('ggplot')
+    plt.rcParams['axes.facecolor'] = '#FFFFFF'
+    rc('text', usetex=True)
+    rcParams['text.latex.preamble'] = [r'\usepackage{sfmath} \boldmath']
+    plt.title('Frameshift Frequency in Diabetes Patients')
+    plt.xlabel(r'\emph{Frameshift Position}')
+    plt.ylabel(r'\emph{\# of Individuals}')
+    plt.gca().spines['bottom'].set_color('black')
+    plt.gca().spines['left'].set_color('black')
+    plt.tight_layout(pad=4.0, w_pad=0.5, h_pad=2.0)
+
+    raw_case = [('I0C', 1), ('D16', 1), ('D10', 1), ('I16T', 1), ('I28G', 1), ('I13C,D10', 1), ('I31A,D30,D31,I33T', 1), ('I9A', 1), ('I20C', 1), ('I3A', 1), ('I5C', 1), ('I19C', 1), ('I26G', 1), ('I31A', 1), ('I23C', 1), ('I33G', 1), ('I33C', 1), ('I2T', 1), ('I8T', 1), ('D13,I13C', 2), ('I24C', 2), ('I21A', 2), ('I10C', 3), ('I33T', 3), ('I12C', 4), ('D5', 5)]
+    raw_control = [('D16', 1), ('D10', 1), ('I33C', 1), ('I7A', 1), ('I8C', 1), ('I24C', 1), ('I33C,I25T', 1), ('I28C', 1), ('I19G', 1), ('I13G', 1), ('I9C', 1), ('I11C', 1), ('I6C', 2), ('D5', 2), ('I10C', 3), ('I12C', 7)]
+    case = {}
+    control = {}
+    for keys, value in raw_case:
+        for key in keys.split(','):
+            if key in case.keys():
+                case[key] += value
+            else:
+                case[key] = value
+
+    for keys, value in raw_control:
+        for key in keys.split(','):
+            if key in control.keys():
+                control[key] += value
+            else:
+                control[key] = value
+
+    total_indes = [pos for pos, num in case.items()]
+    total_indes += [pos for pos, num in control.items()]
+    total_indes = list(set(total_indes))
+    total_indel_sorted = []
+    intervals = get_diabetes_pattern_interavls()
+    print intervals
+
+    width = 0.35
+    case_array = []
+    control_array = []
+    filtered_indels = []
+    for pos in total_indes:
+        case_count = case[pos] if pos in case.keys() else 0
+        control_count = control[pos] if pos in control.keys() else 0
+        if case_count + control_count < 2:
+            continue
+        case_array += [case_count]
+        control_array += [control_count]
+        filtered_indels += [pos]
+        print case_count, control_count
+    case_array = np.array(case_array)
+    control_array = np.array(control_array)
+    print(case_array)
+    print(control_array)
+    print(filtered_indels)
+
+    filtered_indels = ['[3-10]D', '[3-10]I\_C', '[12]I\_C', '[13]D', '[13]I\_C', '[16]D', '[21]I\_A', '[22-24]I\_C', '[30-31]I\_A', '[32-33]I\_C','[32-33]I\_T']
+    case_array = np.array([5+2, 3, 4, 2, 3, 1, 2, 1, 2, 1, 4])
+    control_array = np.array([2+1, 2+3, 7, 0, 0, 1, 0, 1, 0, 2, 0])
+
+    x_axis = [i for i, indel in enumerate(filtered_indels)]
+    p0 = plt.bar(x_axis, case_array, width)
+    p1 = plt.bar(x_axis, control_array, width, bottom=case_array)
+    plt.xticks(x_axis, filtered_indels, fontsize=6, rotation=45)
+    plt.legend((p0[0], p1[0]), ('Case', 'Control'))
+    plt.savefig('diabetes_indels.png', dpi=300)
+
+
 def plot_read_selection_and_mapping_sensitivity_comparison(results_dir='../Illumina_copy_number/'):
     import glob
     import matplotlib.pyplot as plt
