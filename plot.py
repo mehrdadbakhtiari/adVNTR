@@ -707,6 +707,8 @@ def plot_estimates(ru_estimate_plot, files):
 
     for file_name in files:
         coverage = int(file_name.split('_')[-1].split('.')[0][:-1])
+        if coverage < 3:
+            continue
         sim = int(file_name.split('_')[-2])
         estimate = 0
         naive_estimate = 0
@@ -721,8 +723,8 @@ def plot_estimates(ru_estimate_plot, files):
                 if lines[-1].strip() != 'None' and len(lines[-1]) < 10:
                     naive_estimate = int(float(lines[-1].strip()))
         # print coverage, sim, sim_to_ind[sim]
-        data[coverage - 1][sim_to_ind[sim]] = estimate
-        naive_data[coverage - 1][sim_to_ind[sim]] = naive_estimate
+        data[coverage - 3][sim_to_ind[sim]] = estimate
+        naive_data[coverage - 3][sim_to_ind[sim]] = naive_estimate
         # data[sim_to_ind[sim]][coverage - 1] = estimate
     # if i == 0:
     #     ru_estimate_plots[i] = sns.tsplot(data, err_style="ci_bars")
@@ -732,6 +734,8 @@ def plot_estimates(ru_estimate_plot, files):
     for sim_rcout in range(len(data[0])):
         total = 0
         for cov in range(len(data)):
+            if data[cov][sim_rcout] == 0:
+                print cov+9, sim_rcout
             total += data[cov][sim_rcout]
         averages.append(total / float(len(data)))
 
@@ -768,7 +772,7 @@ def add_estimates_for_three_genes(ru_estimate_plots, results_dir):
         # ru_estimate_plots[i].xticks(x_axis, filtered_indels, fontsize=10)
 
 
-def plot_pacbio_results_for_three_genes(results_dir='../pacbio_coverage_experiment/'):
+def plot_pacbio_ru_results_for_three_genes(results_dir='../pacbio_coverage_experiment/'):
     from matplotlib import rc, rcParams
     import matplotlib.pyplot as plt
     plt.style.use('ggplot')
