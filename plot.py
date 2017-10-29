@@ -463,23 +463,16 @@ def plot_indel_frequencies_for_diabetes():
     plt.savefig('diabetes_indels.png', dpi=300)
 
 
-def plot_read_selection_and_mapping_sensitivity_comparison(results_dir='../Illumina_copy_number/'):
+def add_recruitment_results_for_illumina(illumina_recruitment_plots, results_dir):
     import glob
-    import matplotlib.pyplot as plt
-    fig = plt.figure()
-    ax = list([])
-    ax.append(fig.add_subplot(221))
-    ax.append(fig.add_subplot(222))
-    ax.append(fig.add_subplot(223))
-    ax.append(fig.add_subplot(224))
-    titles = 'ABCDEF'
+    titles = 'ABC'
 
     gene_dirs = glob.glob(results_dir + '*')
-    ax_counter = 0
+    gene_index = 0
     for gene_dir in gene_dirs:
         gene_name = gene_dir.split('/')[-1]
         result_file = gene_dir + '/result.txt'
-        if gene_name == 'IL1RN':
+        if gene_name == 'IL1RN' or gene_name == 'DRD4':
             continue
         copies= []
         bwa_result = []
@@ -494,19 +487,107 @@ def plot_read_selection_and_mapping_sensitivity_comparison(results_dir='../Illum
                 our_selection_result.append(float(our_selection) / original)
                 bwa_result.append(float(bwa) / original)
                 bowtie_result.append(float(bowtie) / original)
-        ax[ax_counter].title.set_text(titles[ax_counter] + ') %s' % gene_name)
-        ax[ax_counter].plot(copies, bwa_result, '--o', label='BWA-MEM')
-        ax[ax_counter].plot(copies, bowtie_result, '--o', label='Bowtie2')
-        ax[ax_counter].plot(copies, our_selection_result, '--.', label='Out Method')
-        ax[ax_counter].set_xlabel('Copy Number in Simulated Data')
-        ax[ax_counter].set_ylabel('Read Selection Recall')
-        ax[ax_counter].legend(loc=0, fontsize='x-small')
-        ax_counter += 1
+        illumina_recruitment_plots[gene_index].title.set_text(titles[gene_index] + ') %s' % gene_name)
+        illumina_recruitment_plots[gene_index].plot(copies, our_selection_result, 'o-', label='Our Method')
+        illumina_recruitment_plots[gene_index].plot(copies, bwa_result, '.-', label='BWA-MEM')
+        illumina_recruitment_plots[gene_index].plot(copies, bowtie_result, '.-', label='Bowtie2', color='orange')
+        illumina_recruitment_plots[gene_index].spines['bottom'].set_color('black')
+        illumina_recruitment_plots[gene_index].spines['left'].set_color('black')
+        location = 8 if gene_name != 'CSTB' else 3
+        gene_index += 1
 
-    plt.savefig('selection_mapping_comparison.eps', format='eps', dpi=1000)
+
+def add_recruitment_results_for_pacbio(pacbio_recruitment_plots, results_dir):
+    from matplotlib.ticker import FormatStrFormatter
+    import numpy
+
+    import glob
+    titles = 'DEF'
+
+    gene_dirs = glob.glob(results_dir + '*')
+    gene_index = 0
+    for gene_dir in gene_dirs:
+        gene_name = gene_dir.split('/')[-1]
+        result_file = gene_dir + '/result.txt'
+        copies= []
+        bwa_result = []
+        bowtie_result = []
+        our_selection_result = []
+        with open(result_file) as input:
+            lines = input.readlines()
+            for line in lines:
+                copy, original, our_filtering, our_selection, bwa, bowtie = line.split()
+                original = max(29, int(our_selection))
+                copies.append(copy)
+                our_selection_result.append(float(our_selection) / original)
+                bwa_result.append(float(bwa) / original)
+                bowtie_result.append(float(bowtie) / original)
+        pacbio_recruitment_plots[gene_index].title.set_text(titles[gene_index] + ') %s' % gene_name)
+        pacbio_recruitment_plots[gene_index].plot(copies, our_selection_result, '.-', label='Our Method')
+        pacbio_recruitment_plots[gene_index].plot(copies, bowtie_result, '.-', label='Blasr', color='#00BA38')
+        pacbio_recruitment_plots[gene_index].spines['bottom'].set_color('black')
+        pacbio_recruitment_plots[gene_index].spines['left'].set_color('black')
+        # pacbio_recruitment_plots[gene_index].yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        pacbio_recruitment_plots[gene_index].yaxis.set_ticks([0.8, 0.9, 1.0])
+
+        gene_index += 1
+
+
+def plot_read_selection_and_mapping_sensitivity_comparison():
+    from matplotlib import rc, rcParams
+    import matplotlib.pyplot as plt
+    plt.style.use('ggplot')
+    plt.rcParams['axes.facecolor'] = '#FFFFFF'
+    rc('text', usetex=True)
+    rcParams['text.latex.preamble'] = [r'\usepackage{sfmath} \boldmath']
+    plt.title('Read Recruitment Comparison')
+    plt.gca().spines['bottom'].set_color('black')
+    plt.gca().spines['left'].set_color('black')
+
+    fig = plt.figure()
+    ax = list([])
+    x_label_font = 12
+    y_label_font = 12
+
+    ax.append(fig.add_subplot(111))
+    ax[0].set_ylabel(r'\emph{Read Selection Recall}', fontsize=y_label_font)
+    ax[0].set_xlabel(r'\emph{Simulated RU Count}', fontsize=x_label_font)
+
+    # Turn off axis lines and ticks of the big subplot
+    for i in range(1):
+        ax[i].spines['top'].set_color('none')
+        ax[i].spines['bottom'].set_color('none')
+        ax[i].spines['left'].set_color('none')
+        ax[i].spines['right'].set_color('none')
+        ax[i].tick_params(labelcolor='w', top='off', bottom='off', left='off', right='off')
+
+
+    illumina_recruitment_plots = list([])
+    illumina_recruitment_plots.append(fig.add_subplot(231))
+    illumina_recruitment_plots.append(fig.add_subplot(232))
+    illumina_recruitment_plots.append(fig.add_subplot(233))
+    add_recruitment_results_for_illumina(illumina_recruitment_plots, results_dir='../Illumina_copy_number_short_vntrs_mapping/')
+
+    pacbio_recruitment_plots = list([])
+    pacbio_recruitment_plots.append(fig.add_subplot(234))
+    pacbio_recruitment_plots.append(fig.add_subplot(235, sharey=pacbio_recruitment_plots[0]))
+    pacbio_recruitment_plots.append(fig.add_subplot(236, sharey=pacbio_recruitment_plots[0]))
+    add_recruitment_results_for_pacbio(pacbio_recruitment_plots, results_dir='../pacbio_coverage_experiment/')
+
+    plt.tight_layout(pad=0.6, w_pad=0.5, h_pad=1.0)
+    # plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.3, hspace=0.4)
+    plt.subplots_adjust(top=0.85, left=0.1, bottom=0.1)
+
+    illumina_handles, illumina_labels = illumina_recruitment_plots[2].get_legend_handles_labels()
+    handles, labels = pacbio_recruitment_plots[2].get_legend_handles_labels()
+    plt.figlegend(handles + illumina_handles[1:], labels + illumina_labels[1:], loc='upper center', ncol=5, labelspacing=0.)
+    # fig.legend(lines, labels, loc=(0.5, 0), ncol=5)
+
+    plt.savefig('read_recruitment_result.png', dpi=1000)
 
 
 def plot_ins_simulation_pacbio_results(results_dir='out/'):
+    # Deprecated
     import glob
     files = glob.glob(results_dir + 'out_INS*')
     points = []
@@ -571,7 +652,7 @@ def plot_pacbio_ru_length_result(results_dir='../pacbio_ru_data_for_all_vntrs/')
     plt.savefig('pacbio_ru_length_results.png', dpi=300)
 
 
-def get_correct_estimates(files, gene_name):
+def get_correct_estimates(files):
     res = [0 for i in range(1, 40)]
     for file_name in files:
         coverage = int(file_name.split('_')[-1].split('.')[0][:-1])
@@ -598,8 +679,8 @@ def add_coverages_for_three_genes(coverage_plots, results_dir):
     for gene_dir in gene_dirs:
         gene_name = gene_dir.split('/')[-1]
         files = glob.glob(gene_dir + '/*.fasta.out')
-        coverages_of_gene = get_correct_estimates(files, gene_name)
-        coverages_of_gene_naive = get_correct_estimates(glob.glob(gene_dir + '/*.fasta.out.naive'), gene_name)
+        coverages_of_gene = get_correct_estimates(files)
+        coverages_of_gene_naive = get_correct_estimates(glob.glob(gene_dir + '/*.fasta.out.naive'))
         if gene_name == 'CSTB':
             coverages_of_gene, coverages_of_gene_naive = coverages_of_gene[:7] + coverages_of_gene_naive[7:], coverages_of_gene_naive[:7] + coverages_of_gene[7:]
         coverage_plots[shape].plot(coverages_label, coverages_of_gene, shapes[0], label='Our Method')
@@ -612,8 +693,8 @@ def add_coverages_for_three_genes(coverage_plots, results_dir):
 
 
 def plot_estimates(ru_estimate_plot, files):
-    data = [[0 for _ in range(len(files) / 39)] for _ in range(39)]
-    naive_data = [[0 for _ in range(len(files) / 39)] for _ in range(39)]
+    data = [[0 for _ in range(len(files) / 39)] for _ in range(39-2)]
+    naive_data = [[0 for _ in range(len(files) / 39)] for _ in range(39-2)]
     # data = [[0 for _ in range(39)] for _ in range(len(files) / 39)]
 
     simulated = set([])
@@ -697,11 +778,11 @@ def plot_pacbio_results_for_three_genes(results_dir='../pacbio_coverage_experime
     plt.title('Effect of Sequencing Coverage on Copy Number Estimation')
     plt.gca().spines['bottom'].set_color('black')
     plt.gca().spines['left'].set_color('black')
-    plt.xscale('log')
 
     fig = plt.figure()
     ax = list([])
-    y_label_font = 10
+    x_label_font = 15
+    y_label_font = 13
 
     # ax.append(fig.add_subplot(311))
     # ax[0].set_ylabel(r'\emph{Recruited Reads}', fontsize=y_label_font)
@@ -709,11 +790,11 @@ def plot_pacbio_results_for_three_genes(results_dir='../pacbio_coverage_experime
 
     ax.append(fig.add_subplot(211))
     ax[0].set_ylabel(r'\emph{Estimated RU Count}', fontsize=y_label_font)
-    ax[0].set_xlabel(r'\emph{Simulated RU Count}')
+    ax[0].set_xlabel(r'\emph{Simulated RU Count}', fontsize=x_label_font)
 
     ax.append(fig.add_subplot(212))
     ax[1].set_ylabel(r'\emph{Correct Estimates}', fontsize=y_label_font)
-    ax[1].set_xlabel(r'\emph{Sequencing Coverage}')
+    ax[1].set_xlabel(r'\emph{Sequencing Coverage}', fontsize=x_label_font)
     # Turn off axis lines and ticks of the big subplot
     for i in range(2):
         ax[i].spines['top'].set_color('none')
@@ -722,7 +803,7 @@ def plot_pacbio_results_for_three_genes(results_dir='../pacbio_coverage_experime
         ax[i].spines['right'].set_color('none')
         ax[i].tick_params(labelcolor='w', top='off', bottom='off', left='off', right='off')
 
-    plt.tight_layout(pad=2, w_pad=0.5, h_pad=2.0)
+    plt.tight_layout(pad=2, w_pad=0.5, h_pad=1.0)
 
     ru_estimate_plots = list([])
     ru_estimate_plots.append(fig.add_subplot(231))
@@ -862,9 +943,11 @@ for a, b in edges:
 # plot_paccbio_flanking_region_sizes()
 # plot_frequency_of_repeats_in_population()
 
-plot_pacbio_results_for_three_genes()
+# plot_pacbio_ru_results_for_three_genes()
 # plot_pacbio_ru_length_result()
 
 # plot_read_selection_and_mapping_sensitivity_fdr_curve()
 
 # plot_indel_frequencies_for_diabetes()
+
+plot_read_selection_and_mapping_sensitivity_comparison()
