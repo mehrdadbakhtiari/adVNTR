@@ -303,10 +303,16 @@ class VNTRFinder:
         flanking_region_size = 100
         left_flanking = self.reference_vntr.left_flanking_region[-flanking_region_size:]
         right_flanking = self.reference_vntr.right_flanking_region[:flanking_region_size]
-        left_align = pairwise2.align.localms(read_str, left_flanking, 1, -1, -1, -1)[0]
+        left_alignments = pairwise2.align.localms(read_str, left_flanking, 1, -1, -1, -1)
+        if len(left_alignments) < 1:
+            return
+        left_align = left_alignments[0]
         if left_align[2] < len(left_flanking) * (1 - settings.MAX_ERROR_RATE):
             return
-        right_align = pairwise2.align.localms(read_str, right_flanking, 1, -1, -1, -1)[0]
+        right_alignments = pairwise2.align.localms(read_str, right_flanking, 1, -1, -1, -1)
+        if len(right_alignments) < 1:
+            return
+        right_align = right_alignments[0]
         if right_align[2] < len(right_flanking) * (1 - settings.MAX_ERROR_RATE):
             return
         if right_align[3] < left_align[3]:
