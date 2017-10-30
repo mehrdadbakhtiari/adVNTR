@@ -487,10 +487,11 @@ def add_recruitment_results_for_illumina(illumina_recruitment_plots, results_dir
                 our_selection_result.append(float(our_selection) / original)
                 bwa_result.append(float(bwa) / original)
                 bowtie_result.append(float(bowtie) / original)
+                #'o-',markersize=4.2,
         illumina_recruitment_plots[gene_index].title.set_text(titles[gene_index] + ') %s' % gene_name)
-        illumina_recruitment_plots[gene_index].plot(copies, our_selection_result, 'o-', label='Our Method')
-        illumina_recruitment_plots[gene_index].plot(copies, bwa_result, '.-', label='BWA-MEM')
-        illumina_recruitment_plots[gene_index].plot(copies, bowtie_result, '.-', label='Bowtie2', color='orange')
+        illumina_recruitment_plots[gene_index].plot(copies, our_selection_result, '.-', markersize=4, label='adVNTR')
+        illumina_recruitment_plots[gene_index].plot(copies, bwa_result, '.-', markersize=4, label='BWA-MEM')
+        illumina_recruitment_plots[gene_index].plot(copies, bowtie_result, '.-', markersize=4,  label='Bowtie2', color='orange')
         illumina_recruitment_plots[gene_index].spines['bottom'].set_color('black')
         illumina_recruitment_plots[gene_index].spines['left'].set_color('black')
         location = 8 if gene_name != 'CSTB' else 3
@@ -523,8 +524,8 @@ def add_recruitment_results_for_pacbio(pacbio_recruitment_plots, results_dir):
                 bwa_result.append(float(bwa) / original)
                 bowtie_result.append(float(bowtie) / original)
         pacbio_recruitment_plots[gene_index].title.set_text(titles[gene_index] + ') %s' % gene_name)
-        pacbio_recruitment_plots[gene_index].plot(copies, our_selection_result, '.-', label='Our Method')
-        pacbio_recruitment_plots[gene_index].plot(copies, bowtie_result, '.-', label='Blasr', color='#00BA38')
+        pacbio_recruitment_plots[gene_index].plot(copies, our_selection_result, '.-', markersize=4, label='adVNTR')
+        pacbio_recruitment_plots[gene_index].plot(copies, bowtie_result, '.-', markersize=4, label='Blasr', color='#00BA38')
         pacbio_recruitment_plots[gene_index].spines['bottom'].set_color('black')
         pacbio_recruitment_plots[gene_index].spines['left'].set_color('black')
         # pacbio_recruitment_plots[gene_index].yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
@@ -533,7 +534,7 @@ def add_recruitment_results_for_pacbio(pacbio_recruitment_plots, results_dir):
         gene_index += 1
 
 
-def plot_read_selection_and_mapping_sensitivity_comparison():
+def plot_read_recruitment_results():
     from matplotlib import rc, rcParams
     import matplotlib.pyplot as plt
     plt.style.use('ggplot')
@@ -546,8 +547,8 @@ def plot_read_selection_and_mapping_sensitivity_comparison():
 
     fig = plt.figure()
     ax = list([])
-    x_label_font = 12
-    y_label_font = 12
+    x_label_font = 13
+    y_label_font = 13
 
     ax.append(fig.add_subplot(111))
     ax[0].set_ylabel(r'\emph{Read Selection Recall}', fontsize=y_label_font)
@@ -683,7 +684,7 @@ def add_coverages_for_three_genes(coverage_plots, results_dir):
         coverages_of_gene_naive = get_correct_estimates(glob.glob(gene_dir + '/*.fasta.out.naive'))
         if gene_name == 'CSTB':
             coverages_of_gene, coverages_of_gene_naive = coverages_of_gene[:7] + coverages_of_gene_naive[7:], coverages_of_gene_naive[:7] + coverages_of_gene[7:]
-        coverage_plots[shape].plot(coverages_label, coverages_of_gene, shapes[0], label='Our Method')
+        coverage_plots[shape].plot(coverages_label, coverages_of_gene, shapes[0], label='adVNTR')
         coverage_plots[shape].plot(coverages_label, coverages_of_gene_naive, shapes[1], label='Naive Method')
         coverage_plots[shape].spines['bottom'].set_color('black')
         coverage_plots[shape].spines['left'].set_color('black')
@@ -785,7 +786,7 @@ def plot_pacbio_ru_results_for_three_genes(results_dir='../pacbio_coverage_exper
 
     fig = plt.figure()
     ax = list([])
-    x_label_font = 15
+    x_label_font = 13
     y_label_font = 13
 
     # ax.append(fig.add_subplot(311))
@@ -954,4 +955,4 @@ for a, b in edges:
 
 # plot_indel_frequencies_for_diabetes()
 
-plot_read_selection_and_mapping_sensitivity_comparison()
+plot_read_recruitment_results()
