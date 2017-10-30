@@ -537,11 +537,19 @@ class VNTRFinder:
                 logging.debug('repeats: %s' % repeats)
                 flanked_repeats.append(repeats)
             observed_repeats.append(repeats)
-        print('flanked repeats:', flanked_repeats)
-        print('observed repeats:', sorted(observed_repeats))
+        # print('flanked repeats:', flanked_repeats)
+        # print('observed repeats:', sorted(observed_repeats))
+        observed_repeats = reversed(sorted(observed_repeats))
+        result = set([])
+        for repeat in flanked_repeats:
+            result.add(repeat)
+        for repeat in observed_repeats:
+            if len(result) >= 2:
+                break
+            result.add(repeat)
 
+        return result
         # TODO: separate methods
-        return 0
 
         total_counted_vntr_bp = vntr_bp_in_unmapped_reads.value + vntr_bp_in_mapped_reads
         pattern_occurrences = total_counted_vntr_bp / float(len(self.reference_vntr.pattern))
