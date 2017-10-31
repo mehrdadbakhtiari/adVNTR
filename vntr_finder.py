@@ -487,7 +487,7 @@ class VNTRFinder:
                 logging.debug('Rejecting read for short length: %s' % read.seq)
                 continue
             read_end = read.reference_end if read.reference_end else read.reference_start + len(read.seq)
-            if vntr_start <= read.reference_start < vntr_end or vntr_start < read_end <= vntr_end:
+            if vntr_start - read_length < read.reference_start < vntr_end or vntr_start < read_end < vntr_end:
                 if read.seq.count('N') <= 0:
                     sequence = str(read.seq)
                     logp, vpath = hmm.viterbi(sequence)
@@ -537,8 +537,8 @@ class VNTRFinder:
                 logging.debug('repeats: %s' % repeats)
                 flanked_repeats.append(repeats)
             observed_repeats.append(repeats)
-        # print('flanked repeats:', flanked_repeats)
-        # print('observed repeats:', sorted(observed_repeats))
+        print('flanked repeats:', flanked_repeats)
+        print('observed repeats:', sorted(observed_repeats))
         observed_repeats = reversed(sorted(observed_repeats))
         result = set([])
         for repeat in flanked_repeats:
@@ -548,7 +548,7 @@ class VNTRFinder:
                 break
             result.add(repeat)
 
-        return result
+        return list(result)
         # TODO: separate methods
 
         total_counted_vntr_bp = vntr_bp_in_unmapped_reads.value + vntr_bp_in_mapped_reads
