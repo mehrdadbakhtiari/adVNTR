@@ -66,12 +66,36 @@ def get_number_of_repeats_in_vpath(vpath):
     starts = 0
     ends = 0
     visited_states = [state.name for idx, state in vpath[1:-1]]
+
+    read_length = 0
+    for vs in visited_states:
+        if is_matching_state(vs):
+            read_length += 1
+
+    minimum_required_bp_in_repeat = 3
+    current_bp = 0
+    first_end = None
+    last_end = None
+    first_start = None
+    last_start = None
     for i in range(len(visited_states)):
-        if visited_states[i].startswith('unit_start'):
+        if is_matching_state(visited_states[i]):
+            current_bp += 1
+        if visited_states[i].startswith('unit_start') and read_length - current_bp >= minimum_required_bp_in_repeat:
+            if first_start is None:
+                first_start = current_bp
+            last_start = current_bp
             starts += 1
-        if visited_states[i].startswith('unit_end'):
+        if visited_states[i].startswith('unit_end') and current_bp >= minimum_required_bp_in_repeat:
+            if first_end is None:
+                first_end = current_bp
+            last_end = current_bp
             ends += 1
-    return max(starts, ends)
+    delta = 0
+    if last_start is not None and first_start is not None and last_end is not None and first_end is not None:
+        if first_end < first_start and last_start > last_end:
+            delta = 1
+    return max(starts, ends) + delta
 
 
 def get_number_of_repeat_bp_matches_in_vpath(vpath):
