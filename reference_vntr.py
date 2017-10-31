@@ -173,11 +173,11 @@ def find_similar_region_for_vntr(sema, reference_vntr, vntr_id, result_list):
     ref_file = 'hg19_chromosomes/CombinedHG19_Reference.fa'
     found = 0
     for search in searches:
-        qfile = settings.BLAST_TMP_DIR + str(i) + '_query.fasta'
+        qfile = settings.BLAST_TMP_DIR + str(vntr_id) + '_query.fasta'
         with open(qfile, "w") as output_handle:
             my_rec = SeqRecord.SeqRecord(seq=Seq.Seq(search[0]), id='query', description='')
             SeqIO.write([my_rec], output_handle, 'fasta')
-        output = 'output.psl'
+        output = 'blat_out/output_%s.psl' % vntr_id
         command = 'blat -q=dna -oneOff=1 -tileSize=8 -stepSize=6 -minIdentity=70 %s %s %s' % (ref_file, qfile, output)
         os.system(command)
         os.system('rm %s' % qfile)
@@ -209,7 +209,7 @@ def identify_similar_regions_for_vntrs_using_blat():
     for p in process_list:
         p.join()
     result_list = list(result_list)
-    with open('similar_vntrs.txt', 'w') as out:
+    with open('similar_vntrs.txt', 'a') as out:
         for vntr_id in result_list:
             out.write('%s\n' % vntr_id)
 
