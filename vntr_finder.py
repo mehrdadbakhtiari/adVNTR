@@ -543,8 +543,12 @@ class VNTRFinder:
         result = set([])
         for repeat in flanked_repeats:
             result.add(repeat)
+        result = list(result)
         for repeat in observed_repeats:
             if len(result) >= 2:
+                break
+            if len(result) > 0 and repeat < result[0]:
+                result.add(result[0])
                 break
             result.add(repeat)
 
