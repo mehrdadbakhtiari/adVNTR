@@ -155,7 +155,7 @@ def is_false_vntr_hit(qresult, ref_vntr, position, threshold):
     for hit in qresult:
         for hsp in hit:
             score = hsp.match_num - hsp.mismatch_num - hsp.hit_gapopen_num
-            if score > 65:
+            if score > 75:
                 if ref_vntr.chromosome == hit.id and abs(position - hsp.hit_start) <= threshold:
                     continue
                 else:
@@ -167,23 +167,26 @@ def is_false_vntr_hit(qresult, ref_vntr, position, threshold):
 def find_similar_region_for_vntr(sema, reference_vntr, vntr_id, result_list):
     vntr_len = reference_vntr.get_length()
     searches = list([])
-    searches.append((reference_vntr.pattern * 2, reference_vntr.start_point, 2 * vntr_len + 30))
-    searches.append((reference_vntr.left_flanking_region[-100:], reference_vntr.start_point, vntr_len + 20))
-    searches.append((reference_vntr.right_flanking_region[:100], reference_vntr.start_point + vntr_len, vntr_len + 20))
+    searches.append((reference_vntr.pattern, reference_vntr.start_point, vntr_len + 30))
+    searches.append((reference_vntr.left_flanking_region[-100:], reference_vntr.start_point, 30))
+    searches.append((reference_vntr.right_flanking_region[:100], reference_vntr.start_point + vntr_len, 30))
     ref_file = 'hg19_chromosomes/CombinedHG19_Reference.fa'
     found = 0
     for search_index, search in enumerate(searches):
-        qfile = settings.BLAST_TMP_DIR + str(vntr_id) + '_' + search_index + '_query.fasta'
+        qfile = settings.BLAST_TMP_DIR + str(vntr_id) + '_' + str(search_index) + '_query.fasta'
         with open(qfile, "w") as output_handle:
             my_rec = SeqRecord.SeqRecord(seq=Seq.Seq(search[0]), id='query', description='')
             SeqIO.write([my_rec], output_handle, 'fasta')
         output = 'blat_out/output_%s_%s.psl' % (vntr_id, search_index)
-        command = 'blat -q=dna -oneOff=1 -tileSize=8 -stepSize=6 -minIdentity=70 %s %s %s' % (ref_file, qfile, output)
+        command = 'blat -q=dna -oneOff=1 -tileSize=8 -stepSize=3 -minIdentity=75 %s %s %s' % (ref_file, qfile, output)
         os.system(command)
         os.system('rm %s' % qfile)
-        qresult = SearchIO.read(output, 'blat-psl')
-        if is_false_vntr_hit(qresult, reference_vntr, search[1], search[2]):
-            found += 1
+        try:
+            qresult = SearchIO.read(output, 'blat-psl')
+            if is_false_vntr_hit(qresult, reference_vntr, search[1], search[2]):
+                found += 1
+        except ValueError:
+            pass
     if found > 1:
         print('there is similar sequence for %s' % vntr_id)
         result_list.append(vntr_id)
@@ -198,6 +201,7 @@ def identify_similar_regions_for_vntrs_using_blat():
     manager = Manager()
     result_list = manager.list()
     process_list = []
+    # os.system('cp hg19_chromosomes/CombinedHG19_Reference.fa /tmp/CombinedHG19_Reference.fa')
     for i in range(len(reference_vntrs)):
         if not reference_vntrs[i].is_non_overlapping() or reference_vntrs[i].has_homologous_vntr():
             continue
@@ -229,5 +233,7 @@ def extend_flanking_regions_in_processed_vntrs(flanking_size=500, output_file='r
             out.write('%s %s %s %s %s\n' % (vntr.id, vntr.is_non_overlapping(), left_flanking_region,
                                             right_flanking_region, comma_separated_segments))
 
-# process_vntrseek_data()
-identify_similar_regions_for_vntrs_using_blat()
+
+if __name__ == "__main__":
+    # process_vntrseek_data()
+    identify_similar_regions_for_vntrs_using_blat()
