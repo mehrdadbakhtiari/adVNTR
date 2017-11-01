@@ -305,15 +305,31 @@ class VNTRFinder:
         left_alignments = pairwise2.align.localms(read_str, left_flanking, 1, -1, -1, -1)
         if len(left_alignments) < 1:
             return
+        min_left, max_left = 10e9, 0
+        for aln in left_alignments:
+            min_left = min(min_left, aln[3])
+            max_left = max(max_left, aln[3])
+        if max_left - min_left > 30:
+            with open('vntr_complex.txt', 'a') as out:
+                out.write('%s %s\n' %(self.reference_vntr.id, max_left - min_left))
         left_align = left_alignments[0]
         if left_align[2] < len(left_flanking) * (1 - settings.MAX_ERROR_RATE):
             return
+
         right_alignments = pairwise2.align.localms(read_str, right_flanking, 1, -1, -1, -1)
         if len(right_alignments) < 1:
             return
+        min_right, max_right = 10e9, 0
+        for aln in right_alignments:
+            min_right = min(min_right, aln[3])
+            max_right = max(max_right, aln[3])
+        if max_right - min_right > 30:
+            with open('vntr_complex.txt', 'a') as out:
+                out.write('%s %s\n' %(self.reference_vntr.id, max_right - min_right))
         right_align = right_alignments[0]
         if right_align[2] < len(right_flanking) * (1 - settings.MAX_ERROR_RATE):
             return
+
         if right_align[3] < left_align[3]:
             return
         spanning_reads.append(read_str[left_align[3]:right_align[3]+flanking_region_size])
