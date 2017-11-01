@@ -349,31 +349,73 @@ def plot_gc_content_violin_plot():
     plt.savefig('gc_coverage_violinplot_simulated.png')
 
 
-def plot_frequency_of_repeats_in_population():
+def plot_frequency_of_repeats_in_population(MAOA=False):
+    from matplotlib import rc, rcParams
     import numpy as np
     import matplotlib.pyplot as plt
-    R5_array = (45, 51, 56)
-    R4_array = (33, 10, 20)
-    R2_array = (22, 18, 12)
-    R3_array = (0, 21, 12)
-    R5 = np.array(R5_array)
-    R4 = np.array(R4_array)
-    R2 = np.array(R2_array)
-    R3 = np.array(R3_array)
-    ind = (0, 1, 2)
-    width = 0.35
-    p5 = plt.bar(ind, R5, width)
-    p4 = plt.bar(ind, R4, width, bottom=R5)
-    p2 = plt.bar(ind, R2, width, bottom=R5+R4)
-    p3 = plt.bar(ind, R3, width, bottom=R5+R4+R2)
-    plt.plot([-0.5, 3], [45, 45], color='k', linestyle='--', linewidth=0.5)
-    plt.plot([-0.5, 3], [56, 56], color='k', linestyle='--', linewidth=0.5)
-    plt.ylabel('Frequency')
-    plt.title('Allele Frequency for VNTR in GP1BA')
-    plt.xticks(ind, ('African', 'East Asian', 'European'))
-    plt.yticks(np.arange(0, 150, 10))
-    plt.legend((p5[0], p4[0], p2[0], p3[0]), ('3 Repeats', '4 Repeats', '1 Repeats', '2 Repeats'))
-    plt.savefig('GP1BA.png', dpi=300)
+    plt.style.use('ggplot')
+    plt.rcParams['axes.facecolor'] = '#FFFFFF'
+    rc('text', usetex=True)
+    rcParams['text.latex.preamble'] = [r'\usepackage{sfmath} \boldmath']
+    plt.title('Read Recruitment Comparison')
+    plt.gca().spines['bottom'].set_color('black')
+    plt.gca().spines['left'].set_color('black')
+
+    ax = list([])
+    x_label_font = 12
+    y_label_font = 12
+
+    plt.ylabel(r'\emph{RU Count Frequency}', fontsize=y_label_font, labelpad=12)
+    plt.xlabel(r'\emph{Population}', fontsize=x_label_font, labelpad=10)
+
+    # Turn off axis lines and ticks of the big subplot
+    for i in range(0):
+        ax[i].spines['top'].set_color('none')
+        ax[i].spines['bottom'].set_color('none')
+        ax[i].spines['left'].set_color('none')
+        ax[i].spines['right'].set_color('none')
+        ax[i].tick_params(labelcolor='w', top='off', bottom='off', left='off', right='off')
+
+    if not MAOA:
+        R5_array = (45, 51, 56)
+        R4_array = (33, 10, 20)
+        R2_array = (22, 18, 12)
+        R3_array = (0, 21, 12)
+        R5 = np.array(R5_array)
+        R4 = np.array(R4_array)
+        R2 = np.array(R2_array)
+        R3 = np.array(R3_array)
+        ind = (0, 1, 2)
+        width = 0.35
+        p5 = plt.bar(ind, R5, width)
+        p4 = plt.bar(ind, R4, width, bottom=R5)
+        p2 = plt.bar(ind, R2, width, bottom=R5+R4, color='orange')
+        p3 = plt.bar(ind, R3, width, bottom=R5+R4+R2, color='green')
+        plt.title('RU Count Frequency for GP1BA VNTR', y=1.08)
+        plt.xticks((0, 1, 2), ('African', 'East Asian', 'European'))
+
+        plt.legend((p5[0], p4[0], p2[0], p3[0]), ('3 Repeats', '4 Repeats', '1 Repeats', '2 Repeats'))
+        plt.savefig('Population_RU_Count_GP1BA.png', dpi=600)
+    else:
+        R5_array = (49, 53, 58)
+        R4_array = (42, 42, 36)
+        R2_array = (7, 3, 4)
+        R3_array = (2, 2, 2)
+        R5 = np.array(R5_array)
+        R4 = np.array(R4_array)
+        R2 = np.array(R2_array)
+        R3 = np.array(R3_array)
+        ind = (0, 1, 2)
+        width = 0.35
+        p5 = plt.bar(ind, R5, width)
+        p4 = plt.bar(ind, R4, width, bottom=R5)
+        p2 = plt.bar(ind, R2, width, bottom=R5 + R4, color='orange')
+        p3 = plt.bar(ind, R3, width, bottom=R5 + R4 + R2, color='green')
+        plt.title('RU Count Frequency for MAOA VNTR', y=1.08)
+        plt.xticks((0, 1, 2), ('African', 'East Asian', 'European'))
+
+        plt.legend((p5[0], p4[0], p2[0], p3[0]), ('5 Repeats', '4 Repeats', '2 Repeats', '3 Repeats'))
+        plt.savefig('Population_RU_Count_MAOA.png', dpi=100)
 
 
 def get_diabetes_pattern_interavls():
