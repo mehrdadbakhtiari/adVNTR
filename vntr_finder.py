@@ -341,6 +341,26 @@ class VNTRFinder:
         self.check_if_flanking_regions_align_to_str(reverse_complement_str, length_distribution, spanning_reads)
         sema.release()
 
+    def check_if_pacbio_mapped_read_spans_vntr(self, sema, read, length_distribution, spanning_reads):
+        flanking_region_size = 100
+        region_start = self.reference_vntr.start_point - flanking_region_size
+        region_end = self.reference_vntr.start_point + self.reference_vntr.get_length() + flanking_region_size
+        if read.get_reference_positions()[0] < region_start and read.get_reference_positions()[-1] > region_end:
+            read_region_start = None
+            read_region_end = None
+            for read_pos, ref_pos in enumerate(read.get_reference_positions):
+                if ref_pos >= region_start:
+                    read_region_start = read_pos
+                if ref_pos >= region_end:
+                    read_region_end = read_pos
+            if read_region_start is not None and read_region_end is not None:
+                result = read.seq[read_region_start:read_region_end]
+                if read.is_reverse:
+                    result = str(Seq(result).reverse_complement())
+                spanning_reads.append(result)
+                length_distribution.append(0)
+        sema.release()
+
     @time_usage
     def get_spanning_reads_of_unaligned_pacbio_reads(self, unmapped_filtered_reads):
         sema = Semaphore(settings.CORES)
@@ -364,7 +384,7 @@ class VNTRFinder:
     def get_spanning_reads_of_aligned_pacbio_reads(self, alignment_file):
         sema = Semaphore(settings.CORES)
         manager = Manager()
-        shared_length_distribution = manager.list()
+        length_distribution = manager.list()
         mapped_spanning_reads = manager.list()
 
         vntr_start = self.reference_vntr.start_point
@@ -378,15 +398,15 @@ class VNTRFinder:
         process_list = []
         for read in samfile.fetch(chromosome, region_start, region_end):
             sema.acquire()
-            p = Process(target=self.check_if_pacbio_read_spans_vntr, args=(sema, read, shared_length_distribution,
-                                                                           mapped_spanning_reads))
+            p = Process(target=self.check_if_pacbio_mapped_read_spans_vntr, args=(sema, read, length_distribution,
+                                                                                  mapped_spanning_reads))
             process_list.append(p)
             p.start()
 
         for p in process_list:
             p.join()
 
-        logging.info('length_distribution of mapped spanning reads: %s' % list(shared_length_distribution))
+        logging.info('length_distribution of mapped spanning reads: %s' % list(length_distribution))
         return list(mapped_spanning_reads)
 
     @time_usage
