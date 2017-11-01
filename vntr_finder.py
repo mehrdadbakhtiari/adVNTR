@@ -135,7 +135,6 @@ class VNTRFinder:
 
     def is_true_read(self, read):
         read_start = read.reference_start
-        read_end = read.reference_end if read.reference_end else read_start + len(read.seq)
         reference_name = read.reference_name
         if not reference_name.startswith('chr'):
             reference_name = 'chr' + reference_name
@@ -548,9 +547,9 @@ class VNTRFinder:
             if len(result) >= 2:
                 break
             if len(result) > 0 and repeat < result[0]:
-                result.add(result[0])
+                result.append(result[0])
                 break
-            result.add(repeat)
+            result.append(repeat)
 
         return list(result)
         # TODO: separate methods

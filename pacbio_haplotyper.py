@@ -30,9 +30,6 @@ class PacBioHaplotyper:
             if len(cluster) == smaller_cluster_size and homozygous:
                 logging.info('Both haplotypes are similar (homozygous copy number)')
                 continue
-            #Temporary for haploid simulation
-            if len(cluster) != larger_cluster_size:
-                continue
             if len(cluster) < 2:
                 logging.debug('Cluster has only one sequence. Skipping multiple alignment')
                 haplotypes.append(cluster[0])
