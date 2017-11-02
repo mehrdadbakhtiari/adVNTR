@@ -402,8 +402,8 @@ class VNTRFinder:
         process_list = []
         for read in samfile.fetch(chromosome, region_start, region_end):
             sema.acquire()
-            p = Process(target=self.check_if_pacbio_mapped_read_spans_vntr, args=(sema, read, length_distribution,
-                                                                                  mapped_spanning_reads))
+            p = Process(target=self.check_if_pacbio_read_spans_vntr, args=(sema, read, length_distribution,
+                                                                           mapped_spanning_reads))
             process_list.append(p)
             p.start()
 
@@ -421,12 +421,12 @@ class VNTRFinder:
         max_length = 0
         import numpy
         median = numpy.median([len(l) for l in spanning_reads])
-        spanning_reads = [r for r in spanning_reads if len(r) < median * 2]
+        # spanning_reads = [r for r in spanning_reads if len(r) < median * 2]
         for read in spanning_reads:
             if len(read) - 100 > max_length:
                 max_length = len(read) - 100
         max_copies = int(round(max_length / float(len(self.reference_vntr.pattern))))
-        # max_copies = min(max_copies, 2 * len(self.reference_vntr.get_repeat_segments()))
+        max_copies = min(max_copies, 2 * len(self.reference_vntr.get_repeat_segments()))
         vntr_matcher = self.build_vntr_matcher_hmm(max_copies)
         haplotyper = PacBioHaplotyper(spanning_reads)
         haplotypes = haplotyper.get_error_corrected_haplotypes()
