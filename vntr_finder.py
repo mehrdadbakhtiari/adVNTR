@@ -348,21 +348,21 @@ class VNTRFinder:
     def check_if_pacbio_mapped_read_spans_vntr(self, sema, read, length_distribution, spanning_reads):
         flanking_region_size = 100
         region_start = self.reference_vntr.start_point - flanking_region_size
-        region_end = self.reference_vntr.start_point + self.reference_vntr.get_length() + flanking_region_size
+        region_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
         if read.get_reference_positions()[0] < region_start and read.get_reference_positions()[-1] > region_end:
             read_region_start = None
             read_region_end = None
-            for read_pos, ref_pos in enumerate(read.get_reference_positions):
-                if ref_pos >= region_start:
+            for read_pos, ref_pos in enumerate(read.get_reference_positions()):
+                if ref_pos >= region_start and read_region_start is None:
                     read_region_start = read_pos
-                if ref_pos >= region_end:
+                if ref_pos >= region_end and read_region_end is None:
                     read_region_end = read_pos
             if read_region_start is not None and read_region_end is not None:
-                result = read.seq[read_region_start:read_region_end]
+                result = read.seq[read_region_start:read_region_end+flanking_region_size]
                 if read.is_reverse:
                     result = str(Seq(result).reverse_complement())
                 spanning_reads.append(result)
-                length_distribution.append(0)
+                length_distribution.append(len(result) - flanking_region_size * 2)
         sema.release()
 
     @time_usage
