@@ -44,7 +44,7 @@ def create_cel_frameshifts(cel_vntr):
             SeqIO.write([record], output_handle, 'fasta')
 
 
-def create_reference_region_with_specific_repeats(reference_vntr, desired_repeats, output_name, flanks=30000):
+def create_reference_region_with_specific_repeats(reference_vntr, desired_repeats_count, output_name, flanks=30000, repeat_patterns=None):
     record = SeqRecord.SeqRecord('')
     sequence = get_chromosome_reference_sequence(reference_vntr.chromosome)
     vntr_end = reference_vntr.start_point + reference_vntr.get_length()
@@ -55,14 +55,34 @@ def create_reference_region_with_specific_repeats(reference_vntr, desired_repeat
         region_start = reference_vntr.start_point - flanks
         region_end = vntr_end + flanks
     new_sequence = sequence[region_start:reference_vntr.start_point]
-    repeats = reference_vntr.get_repeat_segments()
-    for i in range(desired_repeats):
+    if repeat_patterns is None:
+        repeats = reference_vntr.get_repeat_segments()
+    else:
+        repeats = repeat_patterns
+    for i in range(desired_repeats_count):
         new_sequence += repeats[i % len(repeats)]
     new_sequence += sequence[vntr_end:region_end]
 
     record.seq = Seq.Seq(new_sequence)
     with open(output_name, 'w') as output_handle:
         SeqIO.write([record], output_handle, 'fasta')
+
+
+def create_illumina_genotyping_references(illumina_read_dir='../Genotyping/'):
+    from reference_vntr import load_unique_vntrs_data
+    reference_vntrs = load_unique_vntrs_data()
+    id_to_gene = {1220: 'GP1BA', 1221: 'CSTB', 1214: 'MAOA'}
+    repeats = {'GP1BA': range(1, 5), 'CSTB': range(1, 16), 'MAOA': range(1, 6)}
+    repeats_patterns = {'GP1BA': ['AGCCCGACCACCCCAGAGCCCACCTCAGAGCCCGCCCCC', 'AGCCCGACCACCCCGGAGCCCACCTCAGAGCCCGCCCCC', 'AGCCCGACCACCCCGGAGCCCACCCCAATCCCGACCATCGCCA'],
+                        'CSTB': ['CGCGGGGCGGGG', 'CGCGGGGCGGGG', 'CGCGGGGCGGGG', 'CGGCGGGCGGGG'],
+                        'MAOA': ['ACCGGCACCGGCACCAGTACCCGCACCAGT', 'ACCGGCACCGGCACCGAGCGCAAGGCGGAG', 'ACCGGCACCGGCACCAGTACCCGCACCAGT']}
+
+    for vntr_id in id_to_gene.keys():
+        # if vntr_id != 1221:
+        #     continue
+        for repeat in repeats[id_to_gene[vntr_id]]:
+            outfile = illumina_read_dir + id_to_gene[vntr_id] + '/' + str(repeat) + '.pacfa'
+            create_reference_region_with_specific_repeats(reference_vntrs[vntr_id], repeat, outfile, 3000, repeats_patterns[id_to_gene[vntr_id]])
 
 
 def create_illumina_copy_number_variation_references(illumina_read_dir='../Illumina_copy_number/'):
@@ -78,14 +98,18 @@ def create_illumina_copy_number_variation_references(illumina_read_dir='../Illum
             create_reference_region_with_specific_repeats(reference_vntrs[vntr_id], repeat, outfile, 149)
 
 
-def create_pacbio_copy_number_variation_references(pacbio_read_dir='../Pacbio_copy_number/'):
+def create_pacbio_copy_number_variation_references(pacbio_read_dir='../pacbio_recruitment/set1/'):
     from reference_vntr import load_unique_vntrs_data
     reference_vntrs = load_unique_vntrs_data()
     id_to_gene = {1221: 'CSTB', 1216: 'HIC1', 1215: 'INS'}
-    repeats = {'CSTB': range(1, 110), 'HIC1': range(2, 20), 'INS': range(10, 171)}
+    repeats = {'CSTB': range(1, 69), 'HIC1': range(2, 36), 'INS': range(10, 171)}
 
     for vntr_id in id_to_gene.keys():
         for repeat in repeats[id_to_gene[vntr_id]]:
+            if id_to_gene[vntr_id] == 'INS' and repeat % 5 != 0:
+                continue
+            if id_to_gene[vntr_id] == 'CSTB' and repeat % 2 != 0:
+                continue
             outfile = pacbio_read_dir + id_to_gene[vntr_id] + '/' + str(repeat) + '.fa'
             create_reference_region_with_specific_repeats(reference_vntrs[vntr_id], repeat, outfile, 1000)
 
