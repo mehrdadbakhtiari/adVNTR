@@ -69,7 +69,7 @@ for i in range(len(reference_vntrs)):
         continue
     target_vntrs.append(i)
 
-if args.vntr_id:
+if args.vntr_id is not None:
     target_vntrs = [args.vntr_id]
 genome_analyzier = GenomeAnalyzer(reference_vntrs, target_vntrs, working_directory)
 if args.pacbio:
