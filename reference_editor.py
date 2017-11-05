@@ -136,25 +136,35 @@ def create_pacbio_ru_length_data_for_all_vntrs(pacbio_read_dir='../pacbio_ru_dat
     from reference_vntr import load_unique_vntrs_data
     reference_vntrs = load_unique_vntrs_data()
 
+    with open('vntr_complex.txt') as infile:
+        lines = infile.readlines()
+        complex_vntrs = [int(r.strip().split()[0]) for r in lines] + [0]
+
     repeat_units = {}
     for vntr_id in range(len(reference_vntrs)):
-        ru = len(reference_vntrs[vntr_id].pattern)
-        if ru % 2 == 1:
+        if vntr_id in complex_vntrs:
             continue
+        ru = len(reference_vntrs[vntr_id].pattern)
         if ru not in repeat_units.keys():
             repeat_units[ru] = []
-        if len(repeat_units[ru]) >= 3:
+        if len(repeat_units[ru]) >= 4:
             continue
         repeat_units[ru].append(vntr_id)
 
     import os
     for ru in repeat_units.keys():
-        if len(repeat_units[ru]) < 3:
+        if len(repeat_units[ru]) < 2:
             continue
         for vntr_id in repeat_units[ru]:
             original_repeats = len(reference_vntrs[vntr_id].get_repeat_segments())
-            for repeat in range(original_repeats-1, original_repeats + 10):
+            start = max(3, original_repeats - 10)
+            for repeat in range(start, start + 21):
+                if repeat % 5 != 0:
+                    continue
                 outfile = pacbio_read_dir + str(ru) + '/vntr_id_' + str(vntr_id) + '_' + str(repeat) + '.fa'
                 if not os.path.exists(os.path.dirname(outfile)):
                     os.makedirs(os.path.dirname(outfile))
                 create_reference_region_with_specific_repeats(reference_vntrs[vntr_id], repeat, outfile, 1000)
+
+if __name__ == '__main__':
+    create_pacbio_ru_length_data_for_all_vntrs()
