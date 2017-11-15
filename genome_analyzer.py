@@ -47,8 +47,6 @@ class GenomeAnalyzer:
             copy_numbers = self.vntr_finder[id].find_repeat_count_from_pacbio_reads(vntr_reads[id], naive)
             print(id)
             print(copy_numbers)
-            # if copy_numbers is not None:
-                # print(sum(copy_numbers) / len(copy_numbers))
 
     def find_frameshift_from_alignment_file(self, alignment_file):
         for id in self.target_vntr_ids:
