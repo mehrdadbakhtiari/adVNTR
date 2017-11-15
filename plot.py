@@ -363,10 +363,9 @@ def plot_frequency_of_repeats_in_population(MAOA=False):
 
     ax = list([])
     x_label_font = 12
-    y_label_font = 12
+    y_label_font = 13
 
-    plt.ylabel(r'\emph{RU Count Frequency}', fontsize=y_label_font, labelpad=12)
-    plt.xlabel(r'\emph{Population}', fontsize=x_label_font, labelpad=10)
+    plt.ylabel(r'\emph{RU Count Frequency}', fontsize=y_label_font, labelpad=8)
 
     # Turn off axis lines and ticks of the big subplot
     for i in range(0):
@@ -376,6 +375,8 @@ def plot_frequency_of_repeats_in_population(MAOA=False):
         ax[i].spines['right'].set_color('none')
         ax[i].tick_params(labelcolor='w', top='off', bottom='off', left='off', right='off')
 
+    plt.ylim(top=100)
+    legend_size = 12
     if not MAOA:
         R5_array = (45, 51, 56)
         R4_array = (33, 10, 20)
@@ -391,11 +392,11 @@ def plot_frequency_of_repeats_in_population(MAOA=False):
         p4 = plt.bar(ind, R4, width, bottom=R5)
         p2 = plt.bar(ind, R2, width, bottom=R5+R4, color='orange')
         p3 = plt.bar(ind, R3, width, bottom=R5+R4+R2, color='green')
-        plt.title('RU Count Frequency for GP1BA VNTR', y=1.08)
-        plt.xticks((0, 1, 2), ('African', 'East Asian', 'European'))
+        plt.title('RU Count Frequency for GP1BA VNTR', y=1.05)
+        plt.xticks((0, 1, 2), ('African', 'East Asian', 'European'), fontsize=13)
 
-        plt.legend((p5[0], p4[0], p2[0], p3[0]), ('3 Repeats', '4 Repeats', '1 Repeats', '2 Repeats'))
-        plt.savefig('Population_RU_Count_GP1BA.png', dpi=600)
+        plt.legend((p5[0], p4[0], p2[0], p3[0]), ('3 Repeats', '4 Repeats', '1 Repeats', '2 Repeats'), fontsize=legend_size)
+        plt.savefig('Population_RU_Count_GP1BA.pdf')
     else:
         R5_array = (49, 53, 58)
         R4_array = (42, 42, 36)
@@ -411,11 +412,11 @@ def plot_frequency_of_repeats_in_population(MAOA=False):
         p4 = plt.bar(ind, R4, width, bottom=R5)
         p2 = plt.bar(ind, R2, width, bottom=R5 + R4, color='orange')
         p3 = plt.bar(ind, R3, width, bottom=R5 + R4 + R2, color='green')
-        plt.title('RU Count Frequency for MAOA VNTR', y=1.08)
-        plt.xticks((0, 1, 2), ('African', 'East Asian', 'European'))
+        plt.title('RU Count Frequency for MAOA VNTR', y=1.05)
+        plt.xticks((0, 1, 2), ('African', 'East Asian', 'European'), fontsize=13)
 
-        plt.legend((p5[0], p4[0], p2[0], p3[0]), ('5 Repeats', '4 Repeats', '2 Repeats', '3 Repeats'))
-        plt.savefig('Population_RU_Count_MAOA.png', dpi=100)
+        plt.legend((p5[0], p4[0], p2[0], p3[0]), ('5 Repeats', '4 Repeats', '2 Repeats', '3 Repeats'), fontsize=legend_size)
+        plt.savefig('Population_RU_Count_MAOA.pdf')
 
 
 def get_diabetes_pattern_interavls():
@@ -507,8 +508,10 @@ def plot_indel_frequencies_for_diabetes():
 
 def add_recruitment_results_for_illumina(illumina_recruitment_plots, results_dir):
     import glob
-    titles = 'ABC'
+    titles = 'DEF'
 
+    arrow_heads = [(3, 1), (4, 1), (4, 1)]
+    arrow_tails = [(50, -90), (+10, -65), (+10, -65)]
     gene_dirs = glob.glob(results_dir + '*')
     gene_index = 0
     for gene_dir in gene_dirs:
@@ -536,7 +539,12 @@ def add_recruitment_results_for_illumina(illumina_recruitment_plots, results_dir
         illumina_recruitment_plots[gene_index].plot(copies, bowtie_result, '.-', markersize=4,  label='Bowtie2', color='orange')
         illumina_recruitment_plots[gene_index].spines['bottom'].set_color('black')
         illumina_recruitment_plots[gene_index].spines['left'].set_color('black')
-        location = 8 if gene_name != 'CSTB' else 3
+
+        illumina_recruitment_plots[gene_index].annotate('hg19 RU Count', xy=arrow_heads[gene_index], xycoords='data',
+                                                        xytext=arrow_tails[gene_index], textcoords='offset points',
+                                                        arrowprops={'arrowstyle': '->', 'lw': 1, 'color': 'black'},
+                                                        horizontalalignment='right', verticalalignment='bottom')
+
         gene_index += 1
 
 
@@ -545,7 +553,7 @@ def add_recruitment_results_for_pacbio(pacbio_recruitment_plots, results_dir):
     import numpy
 
     import glob
-    titles = 'DEF'
+    titles = 'ABC'
 
     gene_dirs = glob.glob(results_dir + '*')
     gene_index = 0
@@ -560,14 +568,13 @@ def add_recruitment_results_for_pacbio(pacbio_recruitment_plots, results_dir):
             lines = input.readlines()
             for line in lines:
                 copy, original, our_filtering, our_selection, bwa, bowtie = line.split()
-                original = max(29, int(our_selection))
                 copies.append(copy)
                 our_selection_result.append(float(our_selection) / original)
                 bwa_result.append(float(bwa) / original)
                 bowtie_result.append(float(bowtie) / original)
         pacbio_recruitment_plots[gene_index].title.set_text(titles[gene_index] + ') %s' % gene_name)
         pacbio_recruitment_plots[gene_index].plot(copies, our_selection_result, '.-', markersize=4, label='adVNTR')
-        pacbio_recruitment_plots[gene_index].plot(copies, bowtie_result, '.-', markersize=4, label='Blasr', color='#00BA38')
+        pacbio_recruitment_plots[gene_index].plot(copies, bowtie_result, '.-', markersize=4, label='Blasr', color='#2ca02c')
         pacbio_recruitment_plots[gene_index].spines['bottom'].set_color('black')
         pacbio_recruitment_plots[gene_index].spines['left'].set_color('black')
         # pacbio_recruitment_plots[gene_index].yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
@@ -605,17 +612,17 @@ def plot_read_recruitment_results():
         ax[i].tick_params(labelcolor='w', top='off', bottom='off', left='off', right='off')
 
 
-    illumina_recruitment_plots = list([])
-    illumina_recruitment_plots.append(fig.add_subplot(231))
-    illumina_recruitment_plots.append(fig.add_subplot(232))
-    illumina_recruitment_plots.append(fig.add_subplot(233))
-    add_recruitment_results_for_illumina(illumina_recruitment_plots, results_dir='../Illumina_copy_number_short_vntrs_mapping/')
-
     pacbio_recruitment_plots = list([])
-    pacbio_recruitment_plots.append(fig.add_subplot(234))
-    pacbio_recruitment_plots.append(fig.add_subplot(235, sharey=pacbio_recruitment_plots[0]))
-    pacbio_recruitment_plots.append(fig.add_subplot(236, sharey=pacbio_recruitment_plots[0]))
+    pacbio_recruitment_plots.append(fig.add_subplot(231))
+    pacbio_recruitment_plots.append(fig.add_subplot(232, sharey=pacbio_recruitment_plots[0]))
+    pacbio_recruitment_plots.append(fig.add_subplot(233, sharey=pacbio_recruitment_plots[0]))
     add_recruitment_results_for_pacbio(pacbio_recruitment_plots, results_dir='../pacbio_coverage_experiment/')
+
+    illumina_recruitment_plots = list([])
+    illumina_recruitment_plots.append(fig.add_subplot(234))
+    illumina_recruitment_plots.append(fig.add_subplot(235))
+    illumina_recruitment_plots.append(fig.add_subplot(236))
+    add_recruitment_results_for_illumina(illumina_recruitment_plots, results_dir='../Illumina_copy_number_short_vntrs_mapping/')
 
     plt.tight_layout(pad=0.6, w_pad=0.5, h_pad=1.0)
     # plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.3, hspace=0.4)
@@ -626,7 +633,7 @@ def plot_read_recruitment_results():
     plt.figlegend(handles + illumina_handles[1:], labels + illumina_labels[1:], loc='upper center', ncol=5, labelspacing=0.)
     # fig.legend(lines, labels, loc=(0.5, 0), ncol=5)
 
-    plt.savefig('read_recruitment_result.png', dpi=1000)
+    plt.savefig('read_recruitment_result.pdf', bbox_inches='tight')
 
 
 def plot_ins_simulation_pacbio_results(results_dir='out/'):
@@ -651,48 +658,108 @@ def plot_ins_simulation_pacbio_results(results_dir='out/'):
     plt.savefig('INS_simulation_results.png', dpi=300)
 
 
+def get_correct_estimates_for_ru(files, ru_length=None, adVNTR=False):
+    count = 0
+    vntr_results = {}
+    if len(files) == 0: ###################TEMP
+        return 0, 0
+    for file_name in files:
+        count += 1
+        vntr_id = int(file_name.split('_')[-3])
+        if vntr_id not in vntr_results.keys():
+            vntr_results[vntr_id] = []
+        sim = int(file_name.split('_')[-2])
+        correct = False
+        with open(file_name) as input:
+            lines = input.readlines()
+            if len(lines) > 1:
+                if lines[-1].strip() != 'None' and len(lines[-1]) < 10:
+                    estimate = int(float(lines[-1].strip()))
+                    if estimate == sim:
+                        correct = True
+        if correct:
+            vntr_results[vntr_id].append(1)
+        else:
+            vntr_results[vntr_id].append(0)
+    vntr_averages = {}
+    for vntr_id in vntr_results.keys():
+        vntr_averages[vntr_id] = sum(vntr_results[vntr_id]) / float(len(vntr_results[vntr_id])) * 100
+    correct_ratio = sum(vntr_averages.values()) / float(len(vntr_averages.values()))
+    from scipy import stats
+    error_bar = stats.sem([e for e in vntr_averages.values()])
+    return correct_ratio, error_bar
+
+
 def plot_pacbio_ru_length_result(results_dir='../pacbio_ru_data_for_all_vntrs/'):
     from matplotlib import rc, rcParams
     import matplotlib.pyplot as plt
+    fig = plt.figure()
     plt.style.use('ggplot')
     plt.rcParams['axes.facecolor'] = '#FFFFFF'
     rc('text', usetex=True)
     rcParams['text.latex.preamble'] = [r'\usepackage{sfmath} \boldmath']
-    plt.title('Effect of RU Length on Copy Number Estimation')
-    plt.ylabel(r'\emph{Correct Estimated Copy Number}')
+    plt.title('Effect of RU Length on RU Count Estimation')
+    plt.ylabel(r'\emph{Correct Estimates Percentage}')
     plt.xlabel(r'\emph{RU Length}')
+    ax = fig.add_subplot(1, 1, 1)
     plt.gca().spines['bottom'].set_color('black')
     plt.gca().spines['left'].set_color('black')
+    ax.text(-0.1, 1.1, r'\textbf{B}', transform=ax.transAxes,
+          fontsize=16, fontweight='bold', va='top', ha='right')
     import glob
     ru_dirs = glob.glob(results_dir + '*')
     points = []
+    naive_points = []
     for ru_dir in ru_dirs:
-        ru_length = ru_dir.split('/')[-1]
+        ru_length = int(ru_dir.split('/')[-1])
         files = glob.glob(ru_dir + '/*.fasta.out')
-        corrects = 0
-        for file_name in files:
-            sim = int(file_name.split('_')[-2])
-            correct = False
-            with open(file_name) as input:
-                lines = input.readlines()
-                if len(lines) > 1:
-                    if lines[-1].strip() != 'None' and len(lines[-1]) < 10:
-                        estimate = int(lines[-1].strip())
-                        if estimate == sim:
-                            correct = True
-            if not correct and ru_length == 20:
-                print file_name
-            if correct:
-                corrects += 1
-        points.append((ru_length, corrects))
+        naivefiles = glob.glob(ru_dir + '/*.fasta.out.naive')
+        corrects, error_bar = get_correct_estimates_for_ru(files, ru_length, True)
+        naive_corrects, naive_error_bar = get_correct_estimates_for_ru(naivefiles, ru_length)
+        points.append((ru_length, corrects, error_bar))
+        naive_points.append((ru_length, naive_corrects, naive_error_bar))
     points = sorted(points)
-    print points
-    ru_lengths = [x for x, y in points]
-    corrects = [y for x, y in points]
-    plt.plot(ru_lengths, corrects, label='Correct Estimates')
+    ru_lengths = [x for x, y, z in points]
+    naive_points = sorted(naive_points)
 
-    plt.legend(loc=0, fontsize='x-small')
-    plt.savefig('pacbio_ru_length_results.png', dpi=300)
+    # print points
+    ru_lengths = [int(x/10)*10 for x, y, z in points]
+    corrects = []
+    naive_corrects = []
+    for x in ru_lengths:
+        total = 0
+        num = 0
+        for xx, yy, zz in points:
+            if (xx/10)*10 == x:
+                total += yy
+                num += 1
+        corrects.append(float(total)/num)
+    naive_error_bars = []
+    from scipy import stats
+    for x in ru_lengths:
+        total = 0.0
+        num = 0.0
+        observed_values = []
+        for xx, yy, zz in naive_points:
+            if (xx/10)*10 == x:
+                observed_values.append(yy)
+                total += yy
+                num += 1
+        naive_corrects.append(float(total)/num)
+        naive_error_bars.append(stats.sem(observed_values))
+
+    print naive_error_bars
+    error_bars = [0 for x, y, z in points]
+    # naive_error_bars = [0 for x, y, z in naive_points]
+    # corrects = [y for x, y, z in points]
+    # naive_corrects = [y for x, y, z in naive_points]
+    plt.errorbar(ru_lengths, corrects, yerr=error_bars, label='adVNTR')
+    plt.errorbar(ru_lengths, naive_corrects, yerr=naive_error_bars, ls='--', label='Naive Method')
+
+    plt.tight_layout(pad=2, w_pad=0.5, h_pad=1)
+
+    plt.legend(loc=4, fontsize=16)
+    plt.savefig('pacbio_ru_length_results.pdf')
 
 
 def get_correct_estimates(files):
@@ -710,6 +777,8 @@ def get_correct_estimates(files):
                         correct = True
         if correct:
             res[coverage - 1] += 1
+    for coverage in range(len(res)):
+        res[coverage] = 100 * res[coverage] / 20.0
     return res
 
 
@@ -724,13 +793,11 @@ def add_coverages_for_three_genes(coverage_plots, results_dir):
         files = glob.glob(gene_dir + '/*.fasta.out')
         coverages_of_gene = get_correct_estimates(files)
         coverages_of_gene_naive = get_correct_estimates(glob.glob(gene_dir + '/*.fasta.out.naive'))
-        if gene_name == 'CSTB':
-            coverages_of_gene, coverages_of_gene_naive = coverages_of_gene[:7] + coverages_of_gene_naive[7:], coverages_of_gene_naive[:7] + coverages_of_gene[7:]
         coverage_plots[shape].plot(coverages_label, coverages_of_gene, shapes[0], label='adVNTR')
         coverage_plots[shape].plot(coverages_label, coverages_of_gene_naive, shapes[1], label='Naive Method')
         coverage_plots[shape].spines['bottom'].set_color('black')
         coverage_plots[shape].spines['left'].set_color('black')
-        coverage_plots[shape].legend(loc=5, fontsize='x-small')
+        # coverage_plots[shape].legend(loc=5, fontsize=9)
 
         shape += 1
 
@@ -827,6 +894,16 @@ def plot_pacbio_ru_results_for_three_genes(results_dir='../pacbio_coverage_exper
     plt.gca().spines['left'].set_color('black')
 
     fig = plt.figure()
+
+    # label_ax = fig.add_subplot(1, 1, 1)
+    # label_ax.text(-0.1, 1.1, r'\textbf{A}', transform=label_ax.transAxes,
+    #       fontsize=16, fontweight='bold', va='top', ha='right')
+    # label_ax.spines['top'].set_color('none')
+    # label_ax.spines['bottom'].set_color('none')
+    # label_ax.spines['left'].set_color('none')
+    # label_ax.spines['right'].set_color('none')
+    # label_ax.tick_params(labelcolor='w', top='off', bottom='off', left='off', right='off')
+
     ax = list([])
     x_label_font = 13
     y_label_font = 13
@@ -840,7 +917,7 @@ def plot_pacbio_ru_results_for_three_genes(results_dir='../pacbio_coverage_exper
     ax[0].set_xlabel(r'\emph{Simulated RU Count}', fontsize=x_label_font)
 
     ax.append(fig.add_subplot(212))
-    ax[1].set_ylabel(r'\emph{Correct Estimates}', fontsize=y_label_font)
+    ax[1].set_ylabel(r'\emph{Correct Estimation Rate}', fontsize=y_label_font)
     ax[1].set_xlabel(r'\emph{Sequencing Coverage}', fontsize=x_label_font)
     # Turn off axis lines and ticks of the big subplot
     for i in range(2):
@@ -850,7 +927,9 @@ def plot_pacbio_ru_results_for_three_genes(results_dir='../pacbio_coverage_exper
         ax[i].spines['right'].set_color('none')
         ax[i].tick_params(labelcolor='w', top='off', bottom='off', left='off', right='off')
 
-    plt.tight_layout(pad=2, w_pad=0.5, h_pad=1.0)
+    plt.tight_layout(pad=2, w_pad=0.5, h_pad=2.7)
+    ax[0].text(-0.1, 1.15, r'\textbf{A}', transform=ax[0].transAxes,
+          fontsize=16, fontweight='bold', va='top', ha='right')
 
     ru_estimate_plots = list([])
     ru_estimate_plots.append(fig.add_subplot(231))
@@ -864,66 +943,93 @@ def plot_pacbio_ru_results_for_three_genes(results_dir='../pacbio_coverage_exper
     coverage_plots.append(fig.add_subplot(236, sharey=coverage_plots[0]))
     add_coverages_for_three_genes(coverage_plots, results_dir)
 
-    plt.savefig('pacbio_ru_count_results.png', dpi=300)
+    handles, labels = coverage_plots[2].get_legend_handles_labels()
+    ax[1].legend(handles, labels, bbox_to_anchor=(0.5, 1.25), loc='upper center', ncol=5, labelspacing=0., fontsize=11)
+
+    plt.savefig('pacbio_ru_count_results.pdf')
 
 
-def plot_pacbio_copy_number_simulation_results(results_dir='../Pacbio_copy_number/'):
-    #NEEDS VINEET's COMMENT BEFORE PROCEEDING
+def plot_pedigree_tree(pedigree_file='PedigreeGenotypes.png'):
     import matplotlib.pyplot as plt
-    import matplotlib.cm as cm
-    import glob
+    import matplotlib.image as mpimg
+    import numpy as np
+    fig = plt.figure()
+    plt.gca().spines['bottom'].set_color('None')
+    plt.gca().spines['left'].set_color('None')
+    plt.gca().spines['top'].set_color('None')
+    plt.gca().spines['right'].set_color('None')
+    plt.tick_params(labelcolor='w', top='off', bottom='off', left='off', right='off')
+    ax = fig.add_subplot(1, 1, 1)
+    ax.text(-0.135, 1.1, 'C', transform=ax.transAxes,
+          fontsize=16, fontweight='bold', va='top', ha='right')
+    img = mpimg.imread(pedigree_file)
 
-    gene_dirs = glob.glob(results_dir + '*')
-    for directory in gene_dirs:
-        gene_name = directory.split('/')[-1]
-        if gene_name != 'CSTB':
-            continue
-        files = glob.glob(directory + '/*.out')
-        points = []
-        for file_name in files:
-            sim = int(file_name.split('_')[-2])
-            if sim % 4 != 0:
-                continue
-            with open(file_name) as input:
-                lines = input.readlines()
-                estimate = int(lines[-1].strip())
-            points.append((sim, estimate))
-        points = sorted(points)
-        sim_repeats = [sim for sim, estimate in points]
-        estimated_repeats = [estimate for sim, estimate in points]
-        plt.title('Result of estimation on PacBio simulated reads')
-        plt.ylabel('Estimated Copy Number')
-        plt.xlabel('Simulated Copy Number')
+    from matplotlib.patches import Rectangle
+    # autoAxis = plt.axis()
+    # rec = Rectangle((-1000, -600), 6900,
+    #                 5180, fill=False, lw=2)
+    # rec = plt.gca().add_patch(rec)
+    # rec.set_clip_on(False)
 
-        ind = sim_repeats  # the x locations for the groups
-        width = 1.0  # the width of the bars
+    imgplot = plt.imshow(img)
+    imgplot = plt.savefig('PedigreeGenotypes.pdf', dpi=1000)
 
-        # fig = plt.figure()
-        # ax = fig.add_subplot(111)
 
-        yvals = sim_repeats
-        rects1 = plt.bar(ind, yvals, width, label=gene_name, color=cm.Accent(float(0) / 3))
-        zvals = sim_repeats
-        rects2 = plt.bar([i + width for i in ind], zvals, width, color=cm.Accent(float(1) / 3))
-        kvals = sim_repeats
-        rects3 = plt.bar([i + width * 2 for i in ind], kvals, width, color=cm.Accent(float(2) / 3))
+def plot_lr_pcr(pcr_file='LRPCR.png'):
+    import matplotlib.pyplot as plt
+    import matplotlib.image as mpimg
+    import numpy as np
+    fig = plt.figure()
+    plt.gca().spines['bottom'].set_color('None')
+    plt.gca().spines['left'].set_color('None')
+    plt.gca().spines['top'].set_color('None')
+    plt.gca().spines['right'].set_color('None')
+    plt.tick_params(labelcolor='None', top='off', bottom='off', left='off', right='off')
+    ax = fig.add_subplot(1, 1, 1)
+    ax.text(-0.1, 1.27, 'D', transform=ax.transAxes,
+          fontsize=16, fontweight='bold', va='top', ha='right')
+    img = mpimg.imread(pcr_file)
+    plt.grid(False)
 
-        # plt.xticks([i + width for i in ind])
-        # plt.set_xticklabels(('2011-Jan-4', '2011-Jan-5', '2011-Jan-6'))
-        plt.legend((rects1[0], rects2[0], rects3[0]), ('VNTR1', 'VNTR2', 'VNTR3'))
+    from matplotlib.patches import Rectangle
+    autoAxis = plt.axis()
+    rec = Rectangle((47, 160), 224, 18, fill=False, lw=1)
+    rec = plt.gca().add_patch(rec)
+    rec.set_clip_on(False)
 
-        def autolabel(rects):
-            for rect in rects:
-                continue
-                h = rect.get_height()
-                plt.text(rect.get_x() + rect.get_width() / 2., 1.05 * h, '%d' % int(h),
-                        ha='center', va='bottom')
+    rec = Rectangle((47, 178), 224, 17, fill=False, lw=1)
+    rec = plt.gca().add_patch(rec)
+    rec.set_clip_on(False)
 
-        autolabel(rects1)
-        autolabel(rects2)
-        autolabel(rects3)
+    fsize = 11
+    ax.text(0.97, -0.03, '566/566', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
+    ax.text(0.805, -0.03, '433/481', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
+    ax.text(0.64, -0.03, '546/584', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
+    ax.text(0.48, -0.03, '529/701', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
+    ax.text(0.32, -0.03, '709/709', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
+    ax.text(0.15, -0.03, 'Predicted sizes', transform=ax.transAxes, fontweight='bold', fontsize=12, va='top', ha='right')
 
-        plt.savefig('Pacbio_copy_number_simulation_results.png', dpi=300)
+    ax.text(0.935, -0.13, '632', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
+    ax.text(0.77, -0.13, '481', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
+    ax.text(0.605, -0.13, '586', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
+    ax.text(0.445, -0.13, '701', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
+    ax.text(0.285, -0.13, '679', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
+    ax.text(0.15, -0.13, 'hg19 sizes', transform=ax.transAxes, fontweight='bold', fontsize=12, va='top', ha='right')
+
+    ax.text(0.99, 1.19, 'SLC6A4', transform=ax.transAxes, fontsize=fsize, va='top', ha='right', rotation=45, fontweight='bold')
+    ax.text(0.80, 1.15, 'DRD4', transform=ax.transAxes, fontsize=fsize, va='top', ha='right', rotation=45, fontweight='bold')
+    ax.text(0.65, 1.17, 'GP1BA', transform=ax.transAxes, fontsize=fsize, va='top', ha='right', rotation=45, fontweight='bold')
+    ax.text(0.49, 1.16, 'IL1RN', transform=ax.transAxes, fontsize=fsize, va='top', ha='right', rotation=45, fontweight='bold')
+    ax.text(0.32, 1.16, 'MAOA', transform=ax.transAxes, fontsize=fsize, va='top', ha='right', rotation=45, fontweight='bold')
+
+    ax.text(-0.01, 0.06, '300bp', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
+    ax.text(-0.01, 0.33, '400bp', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
+    ax.text(-0.01, 0.50, '500bp', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
+    ax.text(-0.01, 0.65, '600bp', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
+    ax.text(-0.01, 0.99, '1000bp', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
+
+    imgplot = plt.imshow(img)
+    imgplot = plt.savefig('LR_PCR.pdf', dpi=1000)
 
 
 def plot_false_read_and_true_read_score_distribution(results_dir='results/score_distribution/'):
@@ -949,6 +1055,105 @@ def plot_false_read_and_true_read_score_distribution(results_dir='results/score_
         plt.cla()
         plt.clf()
         plt.close()
+
+
+def get_coverage_and_confidences(pos, quant, conf_file='extend_list_24143_final', coverage_file='coverages_24143'):
+    vntr_confidences = {}
+    vntr_coverages = {}
+    with open(conf_file) as infile:
+        lines = infile.readlines()
+        for i, line in enumerate(lines):
+            if i % 2 == 1:
+                continue
+            vntr_id = int(line.strip())
+            confidence = float(lines[i+1].strip().split('#')[1])
+            vntr_confidences[vntr_id] = confidence
+
+    with open(coverage_file) as infile:
+        lines = infile.readlines()
+        for i, line in enumerate(lines):
+            if i % 2 == 1:
+                continue
+            vntr_id = int(line.strip())
+            coverage = int(lines[i+1].strip())
+            vntr_coverages[vntr_id] = coverage
+
+    points = [[1] for i in pos]
+    for vid, conf in vntr_confidences.items():
+        if conf < 0.6:
+            continue
+        coverage = vntr_coverages[vid]
+        added = False
+        for j, c in enumerate(pos):
+            if abs(c - coverage) <= quant/2:
+                points[j].append(conf)
+                added = True
+                break
+        if added:
+            continue
+        if coverage > 5:
+            continue
+        points[0].append(conf)
+    return points
+
+
+def frange(x, y, jump):
+    while x < y:
+        yield x
+        x += jump
+
+
+def plot_coverage_confidence_violin():
+    quant = 2
+    pos = [i * quant for i in range(1, 29 / quant)]
+
+    raw_points = get_coverage_and_confidences(pos, quant, conf_file='extend_list_24143_final', coverage_file='coverages_24143')
+    raw_points2 = get_coverage_and_confidences(pos, quant, conf_file='extend_list_24149_final', coverage_file='coverages_24149')
+    points = []
+
+    for posi, l in enumerate(raw_points):
+        l = l + raw_points2[posi]
+        print pos[posi]
+        res = []
+        for f in frange(0.1, 1.01, 0.1):
+            count = len([e for e in l if e < f])
+            print f, count
+            if count < 3:
+                l = [e for e in l if e >= f]
+        points.append(l)
+
+    print(len(raw_points))
+    print len(points)
+
+    import matplotlib.pyplot as plt
+    from matplotlib import rc, rcParams
+    import numpy as np
+
+    plt.style.use('ggplot')
+    plt.rcParams['axes.facecolor'] = '#FFFFFF'
+    rc('text', usetex=True)
+    rcParams['text.latex.preamble'] = [r'\usepackage{sfmath} \boldmath']
+    plt.title('Effect of Sequencing Coverage on RU Counting Confidence')
+    plt.gca().spines['bottom'].set_color('black')
+    plt.gca().spines['left'].set_color('black')
+    plt.ylabel(r'\emph{Confidence of RU Count Calling}')
+    plt.xlabel(r'\emph{Sequencing Coverage}')
+
+    # print points
+    data = [np.array(l) for l in points]
+    parts = plt.violinplot(data, pos, showmeans=False, showmedians=False,
+        showextrema=False, widths=1)#, showmeans=True)
+
+    for pc in parts['bodies']:
+        pc.set_facecolor('#ADD8E6')
+        pc.set_edgecolor('black')
+        pc.set_alpha(.75)
+
+    medians = [np.ma.mean(l) for l in data]
+    inds = np.arange(1, len(medians) + 1)
+    plt.scatter(pos, medians, marker='o', color='darkblue', s=20, zorder=3)
+
+    plt.savefig('coverage_confidence.pdf')
 
 
 def plot_pacbio_flanking_region_sizes():
@@ -988,13 +1193,19 @@ for a, b in edges:
 # plot_FP_for_specific_sensitivity(eliminated_nodes)
 # plot_gc_content_violin_plot()
 # plot_paccbio_flanking_region_sizes()
-# plot_frequency_of_repeats_in_population()
+# plot_frequency_of_repeats_in_population(False)
 
 # plot_pacbio_ru_results_for_three_genes()
-# plot_pacbio_ru_length_result()
 
 # plot_read_selection_and_mapping_sensitivity_fdr_curve()
 
 # plot_indel_frequencies_for_diabetes()
 
 plot_read_recruitment_results()
+# plot_inconsistency_difference()
+
+# plot_pacbio_ru_length_result()
+# plot_pedigree_tree()
+# plot_lr_pcr()
+
+# plot_coverage_confidence_violin()
