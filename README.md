@@ -33,11 +33,11 @@ python main.py --alignment_file aligned_illumina_reads.bam --working_directory .
 With ```--pacbio```, adVNTR assumes the alignment file contains PacBio sequencing data:
 ```sh
 python main.py --alignment_file aligned_pacbio_reads.bam --working_directory ./log_dir/ --pacbio
-```sh
+```
 
 Demo 2: input in [BAM] format (aligned reads), finding frameshift in VNTR
 ===========
 With ```--frameshift```, adVNTR searches for frameshift in VNTR instead of finding RU count:
 ```sh
 python main.py --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/ --frameshift
-```sh
+```
