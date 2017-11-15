@@ -4,6 +4,7 @@ Software Requirements
     -   ```python-pip```
     -   ```python-tk```
     -   ```libz-dev```
+
 You can install these requirement in linux by running ```sudo apt-get install python-pip python-tk libz-dev```
 
 2. ```Python2.7``` and the following packages are required:
