@@ -19,6 +19,12 @@ You can install python required packages by running ```pip install -r requiremen
 
 3. ```ncbi-blast``` version 2.2.29 or above is required
 
+
+Data Requirements
+===========
+* To run adVNTR on trained VNTR models:
+    - Download [vntr_data.zip](https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data.zip) and extract it inside the project directory.
+
 Execution:
 ===========
 Use following command to see the help for running the tool.
@@ -43,7 +49,7 @@ python main.py --alignment_file aligned_illumina_reads.bam --working_directory .
 
 Demo 2: input in [fasta] format
 ===========
-* Use the following command To genotype the RU count using fasta file:
+* Use the following command to genotype the RU count using fasta file:
 ```sh
 python main.py --fasta unaligned_illumina_reads.fasta --working_directory ./log_dir/
 ```

@@ -93,7 +93,7 @@ def load_unprocessed_vntrseek_data(vntrseek_output, chromosome=None):
     return vntrs
 
 
-def find_non_overlapping_vntrs(vntrseek_output='repeats_length_patterns_chromosomes_starts.txt'):
+def find_non_overlapping_vntrs(vntrseek_output='vntr_data/repeats_length_patterns_chromosomes_starts.txt'):
     vntrs = load_unprocessed_vntrseek_data(vntrseek_output)
     skipped_vntrs = []
     for i in range(len(vntrs)):
@@ -114,7 +114,7 @@ def find_non_overlapping_vntrs(vntrseek_output='repeats_length_patterns_chromoso
     return vntrs
 
 
-def process_vntrseek_data(processed_vntrs_file='repeats_and_segments.txt'):
+def process_vntrseek_data(processed_vntrs_file='vntr_data/repeats_and_segments.txt'):
     vntrs = find_non_overlapping_vntrs()
     for vntr in vntrs:
         comma_separated_segments = ','.join(vntr.get_repeat_segments())
@@ -134,11 +134,11 @@ def identify_homologous_vntrs(vntrs, chromosome=None):
     return vntrs
 
 
-def load_unique_vntrs_data(vntrseek_output='repeats_length_patterns_chromosomes_starts.txt'):
+def load_unique_vntrs_data(vntrseek_output='vntr_data/repeats_length_patterns_chromosomes_starts.txt'):
     vntrs = []
     with open(vntrseek_output) as input_file:
         vntrseek_data = [line.strip() for line in input_file.readlines() if line.strip() != '']
-    with open('repeats_and_segments.txt') as input_file:
+    with open('vntr_data/repeats_and_segments.txt') as input_file:
         segments_lines = input_file.readlines()
     for vntr_id in range(len(vntrseek_data)):
         _id, non_overlapping, left_flanking_region, right_flanking_region, segments = segments_lines[vntr_id].split()
@@ -218,7 +218,7 @@ def identify_similar_regions_for_vntrs_using_blat():
             out.write('%s\n' % vntr_id)
 
 
-def extend_flanking_regions_in_processed_vntrs(flanking_size=500, output_file='repeats_and_segments2.txt'):
+def extend_flanking_regions_in_processed_vntrs(flanking_size=500, output_file='vntr_data/repeats_and_segments2.txt'):
     vntrs = load_unique_vntrs_data()
     reference_genomes = {}
     for vntr in vntrs:
