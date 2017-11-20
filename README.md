@@ -42,7 +42,7 @@ python main.py --alignment_file aligned_illumina_reads.bam --working_directory .
 ```sh
 python main.py --alignment_file aligned_pacbio_reads.bam --working_directory ./log_dir/ --pacbio
 ```
-* Use ```--frameshift``` to find the frameshift in VNTR:
+* Use ```--frameshift``` to find the possible frameshifts in VNTR:
 ```sh
 python main.py --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/ --frameshift
 ```
