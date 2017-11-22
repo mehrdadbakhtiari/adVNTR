@@ -15,7 +15,7 @@ You can install these requirement in linux by running ```sudo apt-get install py
     -   ```scipy```
     -   ```joblib```
 
-You can install python required packages by running ```pip install -r requirements.txt```
+You can install required python libraries by running ```pip install -r requirements.txt```
 
 3. ```ncbi-blast``` version 2.2.29 or above is required
 
@@ -31,6 +31,7 @@ Use following command to see the help for running the tool.
 ```sh
 python main.py --help
 ```
+The program outputs the RU count genotypes for all VNTRs in ```vntr_data``` directory. To specify a single VNTR by its ID use ```--vntr_id <id>``` option. 
 
 Demo 1: input in [BAM] format
 ===========
