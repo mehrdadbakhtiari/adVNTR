@@ -438,7 +438,6 @@ class VNTRFinder:
             priors = 1.0 / (len(ru_counts.keys()) * (len(ru_counts.keys())-1) / 2)
         import operator
         ru_counts = sorted(ru_counts.items(), key=operator.itemgetter(1), reverse=True)
-        zero = 1e-20
         r = 0.03
         r_e = r / (2 + r)
         prs = {}
@@ -500,9 +499,6 @@ class VNTRFinder:
             logging.info('There is no spanning read')
             return None
         max_length = 0
-        import numpy
-        median = numpy.median([len(l) for l in spanning_reads])
-        # spanning_reads = [r for r in spanning_reads if len(r) < median * 2]
         for read in spanning_reads:
             if len(read) - 100 > max_length:
                 max_length = len(read) - 100
@@ -538,7 +534,8 @@ class VNTRFinder:
         spanning_reads, length_dist = self.get_spanning_reads_of_unaligned_pacbio_reads(unmapped_filtered_reads)
         if naive:
             if len(length_dist):
-                copy_numbers = [round(sum(length_dist) / float(len(length_dist)) / len(self.reference_vntr.pattern))] * 2
+                average_length = sum(length_dist) / float(len(length_dist))
+                copy_numbers = [round(average_length / len(self.reference_vntr.pattern))] * 2
             else:
                 copy_numbers = None
         else:
@@ -651,9 +648,8 @@ class VNTRFinder:
             logging.debug('right flanking size: %s' % get_right_flanking_region_size_in_vpath(selected_read.vpath))
             logging.debug(selected_read.sequence)
             visited_states = [state.name for idx, state in selected_read.vpath[1:-1]]
-            # logging.debug('%s' % visited_states)
             if self.read_flanks_repeats_with_confidence(selected_read.vpath):
-                logging.debug('spanning read visited states :%s' % [state.name for idx, state in selected_read.vpath[1:-1]])
+                logging.debug('spanning read visited states :%s' % visited_states)
                 logging.debug('repeats: %s' % repeats)
                 covered_repeats.append(repeats)
             observed_repeats.append(repeats)
@@ -672,8 +668,8 @@ class VNTRFinder:
 
         observed_copy_number = pattern_occurrences / coverage_corrector.get_sequencing_mean_coverage()
         scaled_copy_number = coverage_corrector.get_scaled_coverage(self.reference_vntr, observed_copy_number)
-        print('scaled copy number and observed copy number: ', scaled_copy_number, observed_copy_number)
-        return scaled_copy_number
+        logging.info('scaled copy number and observed copy number: %s, %s' % (scaled_copy_number, observed_copy_number))
+        return [scaled_copy_number]
 
     def find_repeat_count_from_short_reads(self, short_read_files, working_directory='./'):
         """
