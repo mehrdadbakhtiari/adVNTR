@@ -313,7 +313,7 @@ class VNTRFinder:
             max_left = max(max_left, aln[3])
         if max_left - min_left > 30:
             with open('vntr_complex.txt', 'a') as out:
-                out.write('%s %s\n' %(self.reference_vntr.id, max_left - min_left))
+                out.write('%s %s\n' % (self.reference_vntr.id, max_left - min_left))
         left_align = left_alignments[0]
         if left_align[2] < len(left_flanking) * (1 - settings.MAX_ERROR_RATE):
             return
@@ -329,7 +329,7 @@ class VNTRFinder:
             max_right = max(max_right, aln[3])
         if max_right - min_right > 30:
             with open('vntr_complex.txt', 'a') as out:
-                out.write('%s %s\n' %(self.reference_vntr.id, max_right - min_right))
+                out.write('%s %s\n' % (self.reference_vntr.id, max_right - min_right))
         right_align = right_alignments[0]
         if right_align[2] < len(right_flanking) * (1 - settings.MAX_ERROR_RATE):
             return
@@ -416,7 +416,7 @@ class VNTRFinder:
     def get_conditional_likelihood(self, ck, ci, cj, ru_counts, r, r_e):
         if ck == ci == cj:
             return 1-r
-        if cj == 0: # CHECK LATER
+        if cj == 0:  # CHECK LATER
             return 0.5 * (1-r)
         if ck == ci:
             return 0.5 * ((1-r) + r_e ** abs(ck-cj))
@@ -456,9 +456,9 @@ class VNTRFinder:
                     prs[(ci, cj)].append(self.get_conditional_likelihood(ck, ci, cj, ru_counts, r, r_e) ** occ)
 
         posteriors = {}
-        import numpy as np
+        import numpy
         for key in prs.keys():
-            prs[key] = np.prod(np.array(prs[key]))
+            prs[key] = numpy.prod(numpy.array(prs[key]))
             posteriors[key] = prs[key] * priors
 
         sum_of_probs = sum(posteriors.values())
@@ -640,51 +640,39 @@ class VNTRFinder:
 
         selected_reads = self.select_illumina_reads(alignment_file, unmapped_filtered_reads)
 
-        flanked_repeats = []
+        covered_repeats = []
         observed_repeats = []
+        total_counted_vntr_bp = 0
         for selected_read in selected_reads:
             repeats = get_number_of_repeats_in_vpath(selected_read.vpath)
+            total_counted_vntr_bp += get_number_of_repeat_bp_matches_in_vpath(selected_read.vpath)
             logging.debug('logp of read: %s' % str(selected_read.logp))
             logging.debug('left flankign size: %s' % get_left_flanking_region_size_in_vpath(selected_read.vpath))
             logging.debug('right flanking size: %s' % get_right_flanking_region_size_in_vpath(selected_read.vpath))
-            logging.debug('repeating bp: %s' % get_number_of_repeat_bp_matches_in_vpath(selected_read.vpath))
             logging.debug(selected_read.sequence)
             visited_states = [state.name for idx, state in selected_read.vpath[1:-1]]
             # logging.debug('%s' % visited_states)
             if self.read_flanks_repeats_with_confidence(selected_read.vpath):
-                logging.debug('spanning read: %s ' % selected_read.sequence)
-                logging.debug('visited states :%s' % [state.name for idx, state in selected_read.vpath[1:-1]])
+                logging.debug('spanning read visited states :%s' % [state.name for idx, state in selected_read.vpath[1:-1]])
                 logging.debug('repeats: %s' % repeats)
-                flanked_repeats.append(repeats)
+                covered_repeats.append(repeats)
             observed_repeats.append(repeats)
-        print('flanked repeats:', flanked_repeats)
-        print('observed repeats:', sorted(observed_repeats))
         observed_repeats = reversed(sorted(observed_repeats))
-        result = set([])
-        for repeat in flanked_repeats:
-            result.add(repeat)
-        result = list(result)
-        for repeat in observed_repeats:
-            if len(result) >= 2:
-                break
-            if len(result) > 0 and repeat < result[0]:
-                result.append(result[0])
-                break
-            result.append(repeat)
+        logging.info('flanked repeats: %s' % covered_repeats)
+        logging.info('observed repeats: %s' % sorted(observed_repeats))
 
-        return list(result)
-        # TODO: separate methods
+        if self.reference_vntr.id not in settings.LONG_VNTRS:
+            genotype = self.find_genotype_based_on_observed_repeats(covered_repeats)
+            return genotype
 
-        total_counted_vntr_bp = vntr_bp_in_unmapped_reads.value + vntr_bp_in_mapped_reads
         pattern_occurrences = total_counted_vntr_bp / float(len(self.reference_vntr.pattern))
+        reference = get_reference_genome_of_alignment_file(alignment_file)
         bias_detector = CoverageBiasDetector(alignment_file, self.reference_vntr.chromosome, reference)
         coverage_corrector = CoverageCorrector(bias_detector.get_gc_content_coverage_map())
 
         observed_copy_number = pattern_occurrences / coverage_corrector.get_sequencing_mean_coverage()
         scaled_copy_number = coverage_corrector.get_scaled_coverage(self.reference_vntr, observed_copy_number)
         print('scaled copy number and observed copy number: ', scaled_copy_number, observed_copy_number)
-        print('unmapped reads influence: ', scaled_copy_number * vntr_bp_in_unmapped_reads.value /
-              (vntr_bp_in_mapped_reads + vntr_bp_in_unmapped_reads.value))
         return scaled_copy_number
 
     def find_repeat_count_from_short_reads(self, short_read_files, working_directory='./'):
