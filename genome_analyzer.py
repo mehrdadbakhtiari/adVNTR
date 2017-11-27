@@ -19,10 +19,10 @@ class GenomeAnalyzer:
     def get_vntr_filtered_reads_map(self, read_file, illumina=True):
         vntr_reads = {}
         vntr_read_ids = {}
-        for id in self.target_vntr_ids:
-            vntr_reads[id] = []
-            read_ids = self.vntr_finder[id].filter_reads_with_keyword_matching(self.working_dir, read_file, illumina)
-            vntr_read_ids[id] = read_ids
+        for vid in self.target_vntr_ids:
+            vntr_reads[vid] = []
+            read_ids = self.vntr_finder[vid].filter_reads_with_keyword_matching(self.working_dir, read_file, illumina)
+            vntr_read_ids[vid] = read_ids
 
         unmapped_reads = SeqIO.parse(read_file, 'fasta')
         for read in unmapped_reads:
@@ -35,36 +35,36 @@ class GenomeAnalyzer:
         unmapped_reads_file = extract_unmapped_reads_to_fasta_file(alignment_file, self.working_dir)
         vntr_reads = self.get_vntr_filtered_reads_map(unmapped_reads_file, False)
 
-        for id in self.target_vntr_ids:
-            reads = vntr_reads[id]
-            copy_numbers = self.vntr_finder[id].find_repeat_count_from_pacbio_alignment_file(alignment_file, reads)
-            print(id)
+        for vid in self.target_vntr_ids:
+            reads = vntr_reads[vid]
+            copy_numbers = self.vntr_finder[vid].find_repeat_count_from_pacbio_alignment_file(alignment_file, reads)
+            print(vid)
             print(copy_numbers)
 
     def find_repeat_counts_from_pacbio_reads(self, read_file, naive=False):
         vntr_reads = self.get_vntr_filtered_reads_map(read_file, False)
-        for id in self.target_vntr_ids:
-            copy_numbers = self.vntr_finder[id].find_repeat_count_from_pacbio_reads(vntr_reads[id], naive)
-            print(id)
+        for vid in self.target_vntr_ids:
+            copy_numbers = self.vntr_finder[vid].find_repeat_count_from_pacbio_reads(vntr_reads[vid], naive)
+            print(vid)
             print(copy_numbers)
 
     def find_frameshift_from_alignment_file(self, alignment_file):
-        for id in self.target_vntr_ids:
-            result = self.vntr_finder[id].find_frameshift_from_alignment_file(alignment_file, [])
-            print(id)
+        for vid in self.target_vntr_ids:
+            result = self.vntr_finder[vid].find_frameshift_from_alignment_file(alignment_file, [])
+            print(vid)
             print(result)
 
     def find_repeat_counts_from_alignment_file(self, alignment_file):
         unmapped_reads_file = extract_unmapped_reads_to_fasta_file(alignment_file, self.working_dir)
         vntr_reads = self.get_vntr_filtered_reads_map(unmapped_reads_file)
-        for id in self.target_vntr_ids:
-            unmapped_reads = vntr_reads[id]
-            copy_number = self.vntr_finder[id].find_repeat_count_from_alignment_file(alignment_file, unmapped_reads)
-            print(id)
+        for vid in self.target_vntr_ids:
+            unmapped_reads = vntr_reads[vid]
+            copy_number = self.vntr_finder[vid].find_repeat_count_from_alignment_file(alignment_file, unmapped_reads)
+            print(vid)
             print(copy_number)
 
     def find_repeat_counts_from_short_reads(self, read_file):
-        for id in self.target_vntr_ids:
-            copy_number = self.vntr_finder[id].find_repeat_count_from_short_reads(read_file)
-            print(id)
+        for vid in self.target_vntr_ids:
+            copy_number = self.vntr_finder[vid].find_repeat_count_from_short_reads(read_file)
+            print(vid)
             print(copy_number)

@@ -119,8 +119,4 @@ class CoverageCorrector:
         gc_content = get_gc_content(''.join(reference_vntr.get_repeat_segments()))
         scale_ratio = self.get_sequencing_mean_coverage() / self.get_mean_coverage_of_gc_content(gc_content)
         scaled_coverage = observed_coverage * scale_ratio
-
-        coverage_error = self.get_mean_coverage_error_bar_of_gc_content(gc_content)
-        coverage_with_error = self.get_mean_coverage_of_gc_content(gc_content) - coverage_error
-        max_error = self.get_sequencing_mean_coverage() / coverage_with_error - scaled_coverage
         return scaled_coverage
