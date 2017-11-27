@@ -425,26 +425,9 @@ class VNTRFinder:
         if ck != ci and ck != cj:
             return 0.5 * (r_e ** abs(ck-ci) + r_e ** abs(ck-cj))
 
-    def get_dominant_copy_numbers_from_spanning_reads(self, spanning_reads):
-        if len(spanning_reads) < 1:
-            logging.info('There is no spanning read')
-            return None
-        max_length = 0
-        for read in spanning_reads:
-            if len(read) - 100 > max_length:
-                max_length = len(read) - 100
-        max_copies = int(round(max_length / float(len(self.reference_vntr.pattern))))
-        # max_copies = min(max_copies, 2 * len(self.reference_vntr.get_repeat_segments()))
-        vntr_matcher = self.build_vntr_matcher_hmm(max_copies)
-        copy_numbers = []
-        for haplotype in spanning_reads:
-            logp, vpath = vntr_matcher.viterbi(haplotype)
-            rev_logp, rev_vpath = vntr_matcher.viterbi(str(Seq(haplotype).reverse_complement()))
-            if logp < rev_logp:
-                vpath = rev_vpath
-            copy_numbers.append(get_number_of_repeats_in_vpath(vpath))
+    def find_genotype_based_on_observed_repeats(self, observed_copy_numbers):
         ru_counts = {}
-        for cn in copy_numbers:
+        for cn in observed_copy_numbers:
             if cn not in ru_counts.keys():
                 ru_counts[cn] = 0
             ru_counts[cn] += 1
@@ -489,6 +472,27 @@ class VNTRFinder:
 
         logging.info('Maximum probability for genotyping: %s' % max_prob)
         return result
+
+    def get_dominant_copy_numbers_from_spanning_reads(self, spanning_reads):
+        if len(spanning_reads) < 1:
+            logging.info('There is no spanning read')
+            return None
+        max_length = 0
+        for read in spanning_reads:
+            if len(read) - 100 > max_length:
+                max_length = len(read) - 100
+        max_copies = int(round(max_length / float(len(self.reference_vntr.pattern))))
+        # max_copies = min(max_copies, 2 * len(self.reference_vntr.get_repeat_segments()))
+        vntr_matcher = self.build_vntr_matcher_hmm(max_copies)
+        observed_copy_numbers = []
+        for haplotype in spanning_reads:
+            logp, vpath = vntr_matcher.viterbi(haplotype)
+            rev_logp, rev_vpath = vntr_matcher.viterbi(str(Seq(haplotype).reverse_complement()))
+            if logp < rev_logp:
+                vpath = rev_vpath
+            observed_copy_numbers.append(get_number_of_repeats_in_vpath(vpath))
+
+        return self.find_genotype_based_on_observed_repeats(observed_copy_numbers)
 
     @time_usage
     def get_haplotype_copy_numbers_from_spanning_reads(self, spanning_reads):
