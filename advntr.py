@@ -4,7 +4,7 @@ import os
 import sys
 
 from genome_analyzer import GenomeAnalyzer
-from reference_vntr import identify_homologous_vntrs, load_unique_vntrs_data
+from reference_vntr import load_unique_vntrs_data
 import settings
 # from vntr_graph import plot_graph_components, get_nodes_and_edges_of_vntr_graph
 
@@ -35,7 +35,7 @@ if args.alignment_file is None and args.fasta is None:
 if args.nanopore:
     settings.MAX_ERROR_RATE = 0.3
 elif args.pacbio:
-    settings.MAX_ERROR_RATE = 0.2
+    settings.MAX_ERROR_RATE = 0.3
 else:
     settings.MAX_ERROR_RATE = 0.05
 
@@ -51,26 +51,19 @@ LOGFILE = working_directory + 'log_%s.log' % os.path.basename(input_file)
 logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', filename=LOGFILE, level=logging.DEBUG, filemode='w')
 
 reference_vntrs = load_unique_vntrs_data()
-
 # reference_vntrs = identify_homologous_vntrs(reference_vntrs, 'chr15')
-accurate_vntr_list = [7, 69, 119, 970, 1123, 1213, 1214, 1215, 1216, 1217, 1218, 1219, 1220, 809, 377, 378]
-accurate_vntr_list += [7, 119, 1214, 1218, 1220, 1221, 377, 378, 809] # short VNTRs
-accurate_vntr_list += [1123, 1214, 1220, 1221, 1222] # grant
-#accurate_vntr_list = [377, 378, 809, 69, 1123] # frameshift
-#accurate_vntr_list = [69, 1123]
-accurate_vntr_list += [1215] # INS
-accurate_vntr_list += [970, 1213, 1215, 1216, 1217, 1219, 1222]
+illumina_targets = [1214, 1215, 1220, 1221, 1222, 1223, 1224]
 
 target_vntrs = []
 for i in range(len(reference_vntrs)):
     if not reference_vntrs[i].is_non_overlapping() or reference_vntrs[i].has_homologous_vntr():
         continue
-    if reference_vntrs[i].id in accurate_vntr_list:
-        continue
     target_vntrs.append(i)
 
 if args.vntr_id is not None:
     target_vntrs = [args.vntr_id]
+else:
+    target_vntrs = illumina_targets
 genome_analyzier = GenomeAnalyzer(reference_vntrs, target_vntrs, working_directory)
 if args.pacbio:
     if input_is_alignment_file:
@@ -79,12 +72,8 @@ if args.pacbio:
         copy_number = genome_analyzier.find_repeat_counts_from_pacbio_reads(input_file, args.naive)
 else:
     if args.frameshift:
-        genome_analyzier.find_frameshift_from_alignment_file(input_file)
+        frameshift = genome_analyzier.find_frameshift_from_alignment_file(input_file)
     elif input_is_alignment_file:
         copy_number = genome_analyzier.find_repeat_counts_from_alignment_file(input_file)
     else:
         copy_number = genome_analyzier.find_repeat_counts_from_short_reads(input_file)
-
-# print(len(reference_vntrs))
-# nodes, edges = get_nodes_and_edges_of_vntr_graph(reference_vntrs)
-# plot_graph_components(nodes, edges)
