@@ -662,7 +662,9 @@ class VNTRFinder:
             return genotype
 
         pattern_occurrences = total_counted_vntr_bp / float(len(self.reference_vntr.pattern))
-        reference = get_reference_genome_of_alignment_file(alignment_file)
+        read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
+        samfile = pysam.AlignmentFile(alignment_file, read_mode)
+        reference = get_reference_genome_of_alignment_file(samfile)
         bias_detector = CoverageBiasDetector(alignment_file, self.reference_vntr.chromosome, reference)
         coverage_corrector = CoverageCorrector(bias_detector.get_gc_content_coverage_map())
 
