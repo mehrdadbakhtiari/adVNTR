@@ -336,7 +336,7 @@ class VNTRFinder:
 
         if right_align[3] < left_align[3]:
             return
-        spanning_reads.append(read_str[left_align[3]:right_align[3]+flanking_region_size])
+        spanning_reads.append(read_str[left_align[3]:right_align[3]+flanking_region_size].upper())
         length_distribution.append(right_align[3] - (left_align[3] + flanking_region_size))
 
     def check_if_pacbio_read_spans_vntr(self, sema, read, length_distribution, spanning_reads):
@@ -413,6 +413,83 @@ class VNTRFinder:
         logging.info('length_distribution of mapped spanning reads: %s' % list(length_distribution))
         return list(mapped_spanning_reads)
 
+    def get_conditional_likelihood(self, ck, ci, cj, ru_counts, r, r_e):
+        if ck == ci == cj:
+            return 1-r
+        if cj == 0: # CHECK LATER
+            return 0.5 * (1-r)
+        if ck == ci:
+            return 0.5 * ((1-r) + r_e ** abs(ck-cj))
+        if ck == cj:
+            return 0.5 * ((1-r) + r_e ** abs(ck-ci))
+        if ck != ci and ck != cj:
+            return 0.5 * (r_e ** abs(ck-ci) + r_e ** abs(ck-cj))
+
+    def get_dominant_copy_numbers_from_spanning_reads(self, spanning_reads):
+        if len(spanning_reads) < 1:
+            logging.info('There is no spanning read')
+            return None
+        max_length = 0
+        for read in spanning_reads:
+            if len(read) - 100 > max_length:
+                max_length = len(read) - 100
+        max_copies = int(round(max_length / float(len(self.reference_vntr.pattern))))
+        # max_copies = min(max_copies, 2 * len(self.reference_vntr.get_repeat_segments()))
+        vntr_matcher = self.build_vntr_matcher_hmm(max_copies)
+        copy_numbers = []
+        for haplotype in spanning_reads:
+            logp, vpath = vntr_matcher.viterbi(haplotype)
+            rev_logp, rev_vpath = vntr_matcher.viterbi(str(Seq(haplotype).reverse_complement()))
+            if logp < rev_logp:
+                vpath = rev_vpath
+            copy_numbers.append(get_number_of_repeats_in_vpath(vpath))
+        ru_counts = {}
+        for cn in copy_numbers:
+            if cn not in ru_counts.keys():
+                ru_counts[cn] = 0
+            ru_counts[cn] += 1
+        if len(ru_counts.keys()) < 2:
+            priors = 0.5
+            ru_counts[0] = 1
+        else:
+            priors = 1.0 / (len(ru_counts.keys()) * (len(ru_counts.keys())-1) / 2)
+        import operator
+        ru_counts = sorted(ru_counts.items(), key=operator.itemgetter(1), reverse=True)
+        zero = 1e-20
+        r = 0.03
+        r_e = r / (2 + r)
+        prs = {}
+        for ck, occ in ru_counts:
+            if ck == 0:
+                continue
+            for i in range(len(ru_counts)):
+                ci = ru_counts[i][0]
+                for j in range(len(ru_counts)):
+                    if j < i:
+                        continue
+                    cj = ru_counts[j][0]
+                    if (ci, cj) not in prs.keys():
+                        prs[(ci, cj)] = []
+                    prs[(ci, cj)].append(self.get_conditional_likelihood(ck, ci, cj, ru_counts, r, r_e) ** occ)
+
+        posteriors = {}
+        import numpy as np
+        for key in prs.keys():
+            prs[key] = np.prod(np.array(prs[key]))
+            posteriors[key] = prs[key] * priors
+
+        sum_of_probs = sum(posteriors.values())
+
+        max_prob = 1e-20
+        result = None
+        for key, value in posteriors.items():
+            if value / sum_of_probs > max_prob:
+                max_prob = value / sum_of_probs
+                result = key
+
+        logging.info('Maximum probability for genotyping: %s' % max_prob)
+        return result
+
     @time_usage
     def get_haplotype_copy_numbers_from_spanning_reads(self, spanning_reads):
         if len(spanning_reads) < 1:
@@ -448,7 +525,7 @@ class VNTRFinder:
         mapped_spanning_reads = self.get_spanning_reads_of_aligned_pacbio_reads(alignment_file)
 
         spanning_reads = mapped_spanning_reads + unaligned_spanning_reads
-        copy_numbers = self.get_haplotype_copy_numbers_from_spanning_reads(spanning_reads)
+        copy_numbers = self.get_dominant_copy_numbers_from_spanning_reads(spanning_reads)
         return copy_numbers
 
     @time_usage
@@ -461,7 +538,7 @@ class VNTRFinder:
             else:
                 copy_numbers = None
         else:
-            copy_numbers = self.get_haplotype_copy_numbers_from_spanning_reads(spanning_reads)
+            copy_numbers = self.get_dominant_copy_numbers_from_spanning_reads(spanning_reads)
         return copy_numbers
 
     @time_usage
