@@ -29,7 +29,7 @@ Execution:
 ===========
 Use following command to see the help for running the tool.
 ```sh
-python main.py --help
+python advntr.py --help
 ```
 The program outputs the RU count genotypes for all VNTRs in ```vntr_data``` directory. To specify a single VNTR by its ID use ```--vntr_id <id>``` option. 
 
@@ -37,20 +37,20 @@ Demo 1: input in [BAM] format
 ===========
 * ```--alignment_file``` specifies the alignment file containing mapped and unmapped reads:
 ```sh
-python main.py --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/
+python advntr.py --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/
 ```
 * With ```--pacbio```, adVNTR assumes the alignment file contains PacBio sequencing data:
 ```sh
-python main.py --alignment_file aligned_pacbio_reads.bam --working_directory ./log_dir/ --pacbio
+python advntr.py --alignment_file aligned_pacbio_reads.bam --working_directory ./log_dir/ --pacbio
 ```
 * Use ```--frameshift``` to find the possible frameshifts in VNTR:
 ```sh
-python main.py --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/ --frameshift
+python advntr.py --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/ --frameshift
 ```
 
 Demo 2: input in [fasta] format
 ===========
 * Use the following command to genotype the RU count using fasta file:
 ```sh
-python main.py --fasta unaligned_illumina_reads.fasta --working_directory ./log_dir/
+python advntr.py --fasta unaligned_illumina_reads.fasta --working_directory ./log_dir/
 ```
