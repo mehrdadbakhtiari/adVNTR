@@ -1,3 +1,4 @@
+import logging
 import sys
 
 from settings import *
@@ -119,4 +120,5 @@ class CoverageCorrector:
         gc_content = get_gc_content(''.join(reference_vntr.get_repeat_segments()))
         scale_ratio = self.get_sequencing_mean_coverage() / self.get_mean_coverage_of_gc_content(gc_content)
         scaled_coverage = observed_coverage * scale_ratio
+        logging.debug('GC content and scale ratio: %s %s' % (gc_content, scale_ratio))
         return scaled_coverage

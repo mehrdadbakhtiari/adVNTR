@@ -668,6 +668,7 @@ class VNTRFinder:
         bias_detector = CoverageBiasDetector(alignment_file, self.reference_vntr.chromosome, reference)
         coverage_corrector = CoverageCorrector(bias_detector.get_gc_content_coverage_map())
 
+        logging.info('Sequencing mean coverage: %s' % coverage_corrector.get_sequencing_mean_coverage())
         observed_copy_number = pattern_occurrences / coverage_corrector.get_sequencing_mean_coverage()
         scaled_copy_number = coverage_corrector.get_scaled_coverage(self.reference_vntr, observed_copy_number)
         logging.info('scaled copy number and observed copy number: %s, %s' % (scaled_copy_number, observed_copy_number))

@@ -33,3 +33,4 @@ else:
 LONG_VNTRS = [1215]
 
 MUSCLE_DIR = 'tools/muscle3.8.31_i86linux64'
+SEQTK_DIR = 'tools/seqtk/seqtk'
