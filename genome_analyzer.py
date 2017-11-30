@@ -19,16 +19,20 @@ class GenomeAnalyzer:
     def get_vntr_filtered_reads_map(self, read_file, illumina=True):
         vntr_reads = {}
         vntr_read_ids = {}
+        empty_set = True
         for vid in self.target_vntr_ids:
             vntr_reads[vid] = []
             read_ids = self.vntr_finder[vid].filter_reads_with_keyword_matching(self.working_dir, read_file, illumina)
             vntr_read_ids[vid] = read_ids
+            if len(read_ids) > 0:
+                empty_set = False
 
-        unmapped_reads = SeqIO.parse(read_file, 'fasta')
-        for read in unmapped_reads:
-            for vntr_id in vntr_read_ids.keys():
-                if read.id in vntr_read_ids[vntr_id]:
-                    vntr_reads[vntr_id].append(read)
+        if not empty_set:
+            unmapped_reads = SeqIO.parse(read_file, 'fasta')
+            for read in unmapped_reads:
+                for vntr_id in vntr_read_ids.keys():
+                    if read.id in vntr_read_ids[vntr_id]:
+                        vntr_reads[vntr_id].append(read)
         return vntr_reads
 
     def find_repeat_counts_from_pacbio_alignment_file(self, alignment_file):
