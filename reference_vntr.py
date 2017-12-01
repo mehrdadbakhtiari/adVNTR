@@ -1,8 +1,7 @@
 import os
 
-from Bio import SearchIO
 from Bio import pairwise2
-from Bio import Seq, SeqRecord, SeqIO
+from Bio import Seq, SeqRecord
 
 from hmm_utils import build_reference_repeat_finder_hmm, get_repeat_segments_from_visited_states_and_region
 from utils import *
@@ -165,6 +164,7 @@ def is_false_vntr_hit(qresult, ref_vntr, position, threshold):
 
 
 def find_similar_region_for_vntr(sema, reference_vntr, vntr_id, result_list):
+    from Bio import SearchIO
     vntr_len = reference_vntr.get_length()
     searches = list([])
     searches.append((reference_vntr.pattern, reference_vntr.start_point, vntr_len + 30))
