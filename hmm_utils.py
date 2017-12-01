@@ -137,7 +137,7 @@ def get_prefix_matcher_hmm(pattern):
         insert_states.append(State(insert_distribution, name='I%s_%s' % (i, hmm_name)))
 
     for i in range(len(pattern)):
-        distribution_map = {'A': 0.01, 'C': 0.01, 'G': 0.01, 'T': 0.01}
+        distribution_map = dict({'A': 0.01, 'C': 0.01, 'G': 0.01, 'T': 0.01})
         distribution_map[pattern[i]] = 0.97
         match_states.append(State(DiscreteDistribution(distribution_map), name='M%s_%s' % (str(i + 1), hmm_name)))
 
@@ -202,7 +202,7 @@ def get_suffix_matcher_hmm(pattern):
         insert_states.append(State(insert_distribution, name='I%s_%s' % (i, hmm_name)))
 
     for i in range(len(pattern)):
-        distribution_map = {'A': 0.01, 'C': 0.01, 'G': 0.01, 'T': 0.01}
+        distribution_map = dict({'A': 0.01, 'C': 0.01, 'G': 0.01, 'T': 0.01})
         distribution_map[pattern[i]] = 0.97
         match_states.append(State(DiscreteDistribution(distribution_map), name='M%s_%s' % (str(i + 1), hmm_name)))
 
@@ -252,70 +252,6 @@ def get_suffix_matcher_hmm(pattern):
 
     model.bake(merge=None)
 
-    return model
-
-
-def get_trained_model_for_one_mixed_repeat(patterns):
-    pattern = patterns[0]
-    model = Model(name="Transition Finder HMM")
-    insert_distribution = DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
-    insert_states = []
-    match_states = []
-    delete_states = []
-    for i in range(len(pattern) + 1):
-        insert_states.append(State(insert_distribution, name='I%s' % i))
-
-    for i in range(len(pattern)):
-        distribution_map = {'A': 0.01, 'C': 0.01, 'G': 0.01, 'T': 0.01}
-        distribution_map[pattern[i]] = 0.97
-        match_states.append(State(DiscreteDistribution(distribution_map), name='M%s' % str(i)))
-
-    for i in range(len(pattern)):
-        delete_states.append(State(None, name='D%s' % str(i)))
-
-    unit_start = State(None, name='unit_start')
-    unit_end = State(None, name='unit_end')
-    model.add_states(insert_states + match_states + delete_states + [unit_start, unit_end])
-    last = len(delete_states)-1
-
-    model.add_transition(model.start, unit_start, 1)
-    model.add_transition(unit_end, model.end, 1)
-
-    model.add_transition(unit_start, match_states[0], 0.98)
-    model.add_transition(unit_start, delete_states[0], 0.01)
-    model.add_transition(unit_start, insert_states[0], 0.01)
-
-    model.add_transition(insert_states[0], insert_states[0], 0.01)
-    model.add_transition(insert_states[0], delete_states[0], 0.01)
-    model.add_transition(insert_states[0], match_states[0], 0.98)
-
-    model.add_transition(delete_states[last], unit_end, 0.99)
-    model.add_transition(delete_states[last], insert_states[last+1], 0.01)
-
-    model.add_transition(match_states[last], unit_end, 0.99)
-    model.add_transition(match_states[last], insert_states[last+1], 0.01)
-
-    model.add_transition(insert_states[last+1], insert_states[last+1], 0.01)
-    model.add_transition(insert_states[last+1], unit_end, 0.99)
-
-    for i in range(0, len(pattern)):
-        model.add_transition(match_states[i], insert_states[i+1], 0.01)
-        model.add_transition(delete_states[i], insert_states[i+1], 0.01)
-        model.add_transition(insert_states[i+1], insert_states[i+1], 0.01)
-        if i < len(pattern) - 1:
-            model.add_transition(insert_states[i+1], match_states[i+1], 0.98)
-            model.add_transition(insert_states[i+1], delete_states[i+1], 0.01)
-
-            model.add_transition(match_states[i], match_states[i+1], 0.98)
-            model.add_transition(match_states[i], delete_states[i+1], 0.01)
-
-            model.add_transition(delete_states[i], delete_states[i+1], 0.01)
-            model.add_transition(delete_states[i], match_states[i+1], 0.98)
-
-    model.bake(merge=None)
-    if len(patterns) > 1:
-        model.fit(patterns, algorithm='viterbi', transition_pseudocount=1, use_pseudocount=True, verbose=False,
-                  n_jobs=settings.CORES)
     return model
 
 
@@ -414,6 +350,7 @@ def get_variable_number_of_repeats_matcher_hmm(patterns, copies=1):
         if state.name.startswith('unit_end'):
             unit_ends.append(i)
 
+    first_unit_start = None
     for i in range(len(mat[model.start_index])):
         if mat[model.start_index][i] != 0:
             first_unit_start = i
@@ -422,6 +359,7 @@ def get_variable_number_of_repeats_matcher_hmm(patterns, copies=1):
     mat[start_repeats_ind][first_unit_start] = 1
 
     for unit_end in unit_ends:
+        next_state = None
         for j in range(len(mat[unit_end])):
             if mat[unit_end][j] != 0:
                 next_state = j
@@ -436,7 +374,8 @@ def get_variable_number_of_repeats_matcher_hmm(patterns, copies=1):
     ends[model.end_index] = 1.0
     state_names = [state.name for state in states]
     distributions = [state.distribution for state in states]
-    new_model = Model.from_matrix(mat, distributions, starts, ends, name='Repeat Matcher HMM Model', state_names=state_names, merge=None)
+    name = 'Repeat Matcher HMM Model'
+    new_model = Model.from_matrix(mat, distributions, starts, ends, name=name, state_names=state_names, merge=None)
     new_model.bake(merge=None)
     return new_model
 
@@ -444,8 +383,8 @@ def get_variable_number_of_repeats_matcher_hmm(patterns, copies=1):
 @time_usage
 def get_read_matcher_model(left_flanking_region, right_flanking_region, patterns, copies=1):
     model = get_suffix_matcher_hmm(left_flanking_region)
-    right_flanking_matcher = get_prefix_matcher_hmm(right_flanking_region)
     repeats_matcher = get_variable_number_of_repeats_matcher_hmm(patterns, copies)
+    right_flanking_matcher = get_prefix_matcher_hmm(right_flanking_region)
     model.concatenate(repeats_matcher)
     model.concatenate(right_flanking_matcher)
     model.bake(merge=None)
@@ -470,9 +409,9 @@ def get_read_matcher_model(left_flanking_region, right_flanking_region, patterns
     for match_state in repeat_match_states:
         to_end = 0.7 / len(repeat_match_states)
         total = 1 + to_end
-        for next in range(len(mat[match_state])):
-            if mat[match_state][next] != 0:
-                mat[match_state][next] /= total
+        for next_state in range(len(mat[match_state])):
+            if mat[match_state][next_state] != 0:
+                mat[match_state][next_state] /= total
         mat[match_state][model.end_index] = to_end
 
     starts = np.zeros(len(model.states))
@@ -481,7 +420,8 @@ def get_read_matcher_model(left_flanking_region, right_flanking_region, patterns
     ends[model.end_index] = 1.0
     state_names = [state.name for state in model.states]
     distributions = [state.distribution for state in model.states]
-    new_model = Model.from_matrix(mat, distributions, starts, ends, name='Read Matcher', state_names=state_names, merge=None)
+    name = 'Read Matcher'
+    new_model = Model.from_matrix(mat, distributions, starts, ends, name=name, state_names=state_names, merge=None)
     return new_model
 
 
@@ -502,7 +442,7 @@ def build_reference_repeat_finder_hmm(patterns, copies=1):
             insert_states.append(State(insert_distribution, name='I%s_%s' % (i, repeat)))
 
         for i in range(len(pattern)):
-            distribution_map = {'A': 0.01, 'C': 0.01, 'G': 0.01, 'T': 0.01}
+            distribution_map = dict({'A': 0.01, 'C': 0.01, 'G': 0.01, 'T': 0.01})
             distribution_map[pattern[i]] = 0.97
             match_states.append(State(DiscreteDistribution(distribution_map), name='M%s_%s' % (str(i + 1), repeat)))
 
