@@ -6,7 +6,6 @@ blast_tmp/*
 !blast_tmp/PLACE_HOLDER
 hg19_chromosomes/*
 !hg19_chromosomes/PLACE_HOLDER
-trained_HMMs/*
-!trained_HMMs/PLACE_HOLDER
+vntr_data/*
 results/
 
