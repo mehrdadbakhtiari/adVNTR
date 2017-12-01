@@ -56,13 +56,13 @@ class VNTRFinder:
         right_flanking_region = self.reference_vntr.right_flanking_region[:flanking_region_size]
 
         vntr_matcher = get_read_matcher_model(left_flanking_region, right_flanking_region, patterns, copies)
-        vntr_matcher.bake(merge=None)
         return vntr_matcher
 
     def get_vntr_matcher_hmm(self, read_length):
         """Try to load trained HMM for this VNTR
         If there was no trained HMM, it will build one and store it for later usage
         """
+        logging.info('Using read length %s' % read_length)
         copies = int(round(float(read_length) / len(self.reference_vntr.pattern) + 0.5))
 
         base_name = str(self.reference_vntr.id) + '_' + str(read_length) + '.json'
@@ -72,7 +72,7 @@ class VNTRFinder:
             model = model.from_json(stored_hmm_file)
             return model
 
-        flanking_region_size = read_length - 10
+        flanking_region_size = read_length
         vntr_matcher = self.build_vntr_matcher_hmm(copies, flanking_region_size)
 
         json_str = vntr_matcher.to_json()
@@ -102,7 +102,7 @@ class VNTRFinder:
         if len(self.reference_vntr.pattern) < 10:
             min_copies = int(10 / len(self.reference_vntr.pattern))
             queries = [self.reference_vntr.pattern * min_copies]
-        identity_cutoff = '40'
+        identity_cutoff = '0'
         if not short_reads:
             queries = [self.reference_vntr.left_flanking_region[-80:], self.reference_vntr.right_flanking_region[:80]]
             word_size = str('10')

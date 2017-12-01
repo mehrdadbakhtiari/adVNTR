@@ -422,6 +422,7 @@ def get_read_matcher_model(left_flanking_region, right_flanking_region, patterns
     distributions = [state.distribution for state in model.states]
     name = 'Read Matcher'
     new_model = Model.from_matrix(mat, distributions, starts, ends, name=name, state_names=state_names, merge=None)
+    new_model.bake(merge=None)
     return new_model
 
 
