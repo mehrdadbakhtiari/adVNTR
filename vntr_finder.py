@@ -638,7 +638,7 @@ class VNTRFinder:
         selected_reads = self.select_illumina_reads(alignment_file, unmapped_filtered_reads)
 
         covered_repeats = []
-        observed_repeats = []
+        flanking_repeats = []
         total_counted_vntr_bp = 0
         for selected_read in selected_reads:
             repeats = get_number_of_repeats_in_vpath(selected_read.vpath)
@@ -652,13 +652,17 @@ class VNTRFinder:
                 logging.debug('spanning read visited states :%s' % visited_states)
                 logging.debug('repeats: %s' % repeats)
                 covered_repeats.append(repeats)
-            observed_repeats.append(repeats)
-        observed_repeats = reversed(sorted(observed_repeats))
+            else:
+                flanking_repeats.append(repeats)
+        flanking_repeats = reversed(sorted(flanking_repeats))
         logging.info('flanked repeats: %s' % covered_repeats)
-        logging.info('observed repeats: %s' % sorted(observed_repeats))
+        logging.info('observed repeats: %s' % sorted(flanking_repeats))
+        max_flanking_repeat = [r for r in flanking_repeats if r == max(flanking_repeats)]
+        if (max_flanking_repeat) < 5:
+            max_flanking_repeat = []
 
         if self.reference_vntr.id not in settings.LONG_VNTRS:
-            genotype = self.find_genotype_based_on_observed_repeats(covered_repeats)
+            genotype = self.find_genotype_based_on_observed_repeats(covered_repeats + max_flanking_repeat)
             return genotype
 
         pattern_occurrences = total_counted_vntr_bp / float(len(self.reference_vntr.pattern))
