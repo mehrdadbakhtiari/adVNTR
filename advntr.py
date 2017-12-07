@@ -52,7 +52,7 @@ logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', filename=LOG
 
 reference_vntrs = load_unique_vntrs_data()
 # reference_vntrs = identify_homologous_vntrs(reference_vntrs, 'chr15')
-illumina_targets = [1214, 1215, 1220, 1221, 1222, 1223, 1224]
+illumina_targets = [1214, 1220, 1221, 1222, 1223, 1224, 377, 378, 809]
 
 target_vntrs = []
 for i in range(len(reference_vntrs)):
