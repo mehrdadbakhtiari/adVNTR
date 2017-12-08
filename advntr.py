@@ -22,7 +22,7 @@ def run_advntr():
     parser.add_argument('-f', '--fasta', type=str, help='Fasta file containing raw reads', metavar='FILE')
     parser.add_argument('-fs', '--frameshift', action='store_true',
                         help='Set this flag to search for frameshifts in VNTR instead of copy number.'
-                             '\n    * Supported VNTR IDs: 69, 1123')
+                             '\n    * Supported VNTR IDs: %s' % settings.FRAMESHIFT_VNTRS)
     parser.add_argument('-p', '--pacbio', action='store_true',
                         help='Set this flag if input file contains PacBio reads instead of Illumina reads')
     parser.add_argument('-n', '--nanopore', action='store_true',
@@ -85,7 +85,7 @@ def run_advntr():
             if valid_vntr_for_frameshift(target_vntrs):
                 genome_analyzier.find_frameshift_from_alignment_file(input_file)
             else:
-                parser.error('')
+                parser.error('--frameshift is only available for these IDs: %s' % settings.FRAMESHIFT_VNTRS)
         elif input_is_alignment_file:
             genome_analyzier.find_repeat_counts_from_alignment_file(input_file)
         else:
