@@ -1,14 +1,15 @@
 Software Requirements
 ==========
-1. Following libraries are reguired
+1. Following libraries are required
+    -   ```python2.7```
     -   ```python-pip```
     -   ```python-tk```
     -   ```libz-dev```
     -   ```samtools```
 
-You can install these requirement in linux by running ```sudo apt-get install python-pip python-tk libz-dev samtools```
+You can install these requirement in Ubuntu Linux by running ```sudo apt-get install python2.7 python-pip python-tk libz-dev samtools```
 
-2. ```Python2.7``` and the following packages are required:
+2. Following python2.7 packages are required:
     -   ```biopython```
     -   ```pysam``` version 0.9.1.4 or above
     -   ```cython```
