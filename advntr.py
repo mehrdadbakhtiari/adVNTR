@@ -54,7 +54,7 @@ def run_advntr():
 
     input_file = args.alignment_file if args.alignment_file else args.fasta
     input_is_alignment_file = input_file.endswith('bam') or input_file.endswith('sam')
-    working_directory = args.working_directory if args.working_directory else os.path.dirname(input_file) + '/'
+    working_directory = args.working_directory + '/' if args.working_directory else os.path.dirname(input_file) + '/'
 
     log_file = working_directory + 'log_%s.log' % os.path.basename(input_file)
     log_format = '%(asctime)s %(levelname)s:%(message)s'
