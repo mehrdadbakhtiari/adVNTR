@@ -208,8 +208,10 @@ class VNTRFinder:
             with open(stored_scores_file, 'r') as infile:
                 lines = [line.split() for line in infile.readlines() if line.strip() != '']
                 for stored_length, fraction, score in lines:
-                    if stored_length == read_length and settings.SCORE_FINDING_READS_FRACTION == float(fraction):
+                    if int(stored_length) == read_length and settings.SCORE_FINDING_READS_FRACTION == float(fraction):
                         return float(score)
+                    elif settings.SCALE_SCORES and settings.SCORE_FINDING_READS_FRACTION == float(fraction):
+                        return float(score) * (read_length / int(stored_length))
 
         logging.debug('Minimum score is not precomputed for vntr id: %s' % self.reference_vntr.id)
         score = self.calculate_min_score_to_select_a_read(hmm, alignment_file)
