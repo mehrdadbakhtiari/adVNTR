@@ -202,20 +202,20 @@ class VNTRFinder:
 
         If the score is not stored, it will compute the score and write it for this VNTR in precomputed data.
         """
-        base_name = str(self.reference_vntr.id) + '_' + str(read_length) + '.scores'
+        base_name = str(self.reference_vntr.id) + '.scores'
         stored_scores_file = settings.TRAINED_HMMS_DIR + base_name
         if settings.USE_TRAINED_HMMS and os.path.isfile(stored_scores_file):
             with open(stored_scores_file, 'r') as infile:
-                frac_score = [(line.split()[0], line.split()[1]) for line in infile.readlines() if line.strip() != '']
-                fraction_score_map = {float(reads_fraction): float(score) for reads_fraction, score in frac_score}
-            if settings.SCORE_FINDING_READS_FRACTION in fraction_score_map.keys():
-                return fraction_score_map[settings.SCORE_FINDING_READS_FRACTION]
+                lines = [line.split() for line in infile.readlines() if line.strip() != '']
+                for stored_length, fraction, score in lines:
+                    if stored_length == read_length and settings.SCORE_FINDING_READS_FRACTION == float(fraction):
+                        return float(score)
 
         logging.debug('Minimum score is not precomputed for vntr id: %s' % self.reference_vntr.id)
         score = self.calculate_min_score_to_select_a_read(hmm, alignment_file)
         logging.debug('computed score: %s' % score)
         with open(stored_scores_file, 'a') as outfile:
-            outfile.write('%s %s\n' % (settings.SCORE_FINDING_READS_FRACTION, score))
+            outfile.write('%s %s %s\n' % (read_length, settings.SCORE_FINDING_READS_FRACTION, score))
 
         return score
 
