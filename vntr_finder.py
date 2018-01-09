@@ -658,7 +658,7 @@ class VNTRFinder:
         logging.info('flanked repeats: %s' % covered_repeats)
         logging.info('observed repeats: %s' % sorted(flanking_repeats))
         max_flanking_repeat = [r for r in flanking_repeats if r == max(flanking_repeats)]
-        if (max_flanking_repeat) < 5:
+        if len(max_flanking_repeat) < 5:
             max_flanking_repeat = []
 
         if self.reference_vntr.id not in settings.LONG_VNTRS:

@@ -17,7 +17,10 @@ class GenomeAnalyzer:
 
     @staticmethod
     def print_genotype(copy_numbers):
-        print('/'.join([str(cn) for cn in sorted(copy_numbers)]))
+        if copy_numbers is not None:
+            print('/'.join([str(cn) for cn in sorted(copy_numbers)]))
+        else:
+            print('None')
 
     @time_usage
     def get_vntr_filtered_reads_map(self, read_file, illumina=True):
