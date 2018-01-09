@@ -659,7 +659,8 @@ class VNTRFinder:
         flanking_repeats = reversed(sorted(flanking_repeats))
         logging.info('flanked repeats: %s' % covered_repeats)
         logging.info('observed repeats: %s' % sorted(flanking_repeats))
-        max_flanking_repeat = [r for r in flanking_repeats if r == max(flanking_repeats)]
+        min_valid_flanked = max(covered_repeats) if len(covered_repeats) > 0 else 0
+        max_flanking_repeat = [r for r in flanking_repeats if r == max(flanking_repeats) and r >= min_valid_flanked]
         if len(max_flanking_repeat) < 5:
             max_flanking_repeat = []
 
