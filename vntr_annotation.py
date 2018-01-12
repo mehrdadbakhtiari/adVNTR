@@ -61,16 +61,30 @@ def get_gene_name_and_annotation_of_vntr(vntr_chromosome, vntr_start, vntr_end):
     return gene_name, annotation
 
 
-def is_vntr_close_to_gene(vntr_chromosome, vntr_start, vntr_end):
+def is_vntr_close_to_gene(genes_info, vntr_chromosome, vntr_start, vntr_end):
+    for start, end in genes_info[vntr_chromosome]:
+        if intersect(start, end, vntr_start, vntr_end):
+            return True
+        if start > vntr_end:
+            return False
+    return False
+
+
+def get_genes_info():
+    genes_info = {}
     with open(GENES) as infile:
-        lines = infile.readlines()
-        for line in lines:
+        genes_lines = infile.readlines()
+        for line in genes_lines:
             line = line.strip().split()[:4]
             chromosome, start, end, ucsc_id = line
             start = int(start)
             end = int(end)
             start -= PROMOTER_RANGE
             end += PROMOTER_RANGE
-            if chromosome == vntr_chromosome and intersect(start, end, vntr_start, vntr_end):
-                return True
-    return False
+            if chromosome not in genes_info.keys():
+                genes_info[chromosome] = []
+            genes_info[chromosome].append((start, end))
+    results = {}
+    for chromosome, coordinates in genes_info.items():
+        results[chromosome] = sorted(coordinates)
+    return results

@@ -5,7 +5,7 @@ from Bio import Seq, SeqRecord
 
 from hmm_utils import build_reference_repeat_finder_hmm, get_repeat_segments_from_visited_states_and_region
 from utils import *
-from vntr_annotation import get_gene_name_and_annotation_of_vntr, is_vntr_close_to_gene
+from vntr_annotation import get_gene_name_and_annotation_of_vntr, is_vntr_close_to_gene, get_genes_info
 import settings
 
 
@@ -84,6 +84,7 @@ class ReferenceVNTR:
 
 def load_unprocessed_vntrseek_data(vntrseek_output, chromosome=None):
     vntrs = []
+    genes_info = get_genes_info()
     with open(vntrseek_output) as input_file:
         input_lines = [line.strip() for line in input_file.readlines() if line.strip() != '']
         for vntr_id, line in enumerate(input_lines):
@@ -93,9 +94,10 @@ def load_unprocessed_vntrseek_data(vntrseek_output, chromosome=None):
             if chromosome and chromosome_number != chromosome:
                 continue
             estimated_end = estimated_repeats * len(pattern) + start
-            if not is_vntr_close_to_gene(chromosome, start, estimated_end):
+            if not is_vntr_close_to_gene(genes_info, chromosome_number, start, estimated_end):
                 continue
-            vntrs.append(ReferenceVNTR(vntr_id, pattern, start, chromosome, None, None, estimated_repeats))
+            vntrs.append(ReferenceVNTR(vntr_id, pattern, start, chromosome_number, None, None, estimated_repeats))
+    print('%s VNTRs are close to a gene' % len(vntrs))
     return vntrs
 
 
@@ -103,6 +105,7 @@ def find_non_overlapping_vntrs(vntrseek_output='vntr_data/SortedVNTRs.txt'):
     vntrs = load_unprocessed_vntrseek_data(vntrseek_output)
     skipped_vntrs = []
     for i in range(len(vntrs)):
+        print(i)
         estimated_end = len(vntrs[i].pattern) * vntrs[i].estimated_repeats + vntrs[i].start_point
         if i < len(vntrs)-1 and vntrs[i].chromosome == vntrs[i+1].chromosome and estimated_end > vntrs[i+1].start_point:
             vntrs[i].estimated_repeats += vntrs[i+1].estimated_repeats
