@@ -493,6 +493,7 @@ class VNTRFinder:
                 vpath = rev_vpath
             observed_copy_numbers.append(get_number_of_repeats_in_vpath(vpath))
 
+        logging.info('flanked repeats: %s' % observed_copy_numbers)
         return self.find_genotype_based_on_observed_repeats(observed_copy_numbers)
 
     @time_usage
