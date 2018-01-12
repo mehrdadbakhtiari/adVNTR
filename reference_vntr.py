@@ -5,6 +5,7 @@ from Bio import Seq, SeqRecord
 
 from hmm_utils import build_reference_repeat_finder_hmm, get_repeat_segments_from_visited_states_and_region
 from utils import *
+from vntr_annotation import get_gene_name_and_annotation_of_vntr
 import settings
 
 
@@ -92,11 +93,10 @@ def load_unprocessed_vntrseek_data(vntrseek_output, chromosome=None):
     return vntrs
 
 
-def find_non_overlapping_vntrs(vntrseek_output='vntr_data/repeats_length_patterns_chromosomes_starts.txt'):
+def find_non_overlapping_vntrs(vntrseek_output='vntr_data/SortedVNTRs.txt'):
     vntrs = load_unprocessed_vntrseek_data(vntrseek_output)
     skipped_vntrs = []
     for i in range(len(vntrs)):
-        print(i)
         estimated_end = len(vntrs[i].pattern) * vntrs[i].estimated_repeats + vntrs[i].start_point
         if i < len(vntrs)-1 and vntrs[i].chromosome == vntrs[i+1].chromosome and estimated_end > vntrs[i+1].start_point:
             vntrs[i].estimated_repeats += vntrs[i+1].estimated_repeats
@@ -113,13 +113,22 @@ def find_non_overlapping_vntrs(vntrseek_output='vntr_data/repeats_length_pattern
     return vntrs
 
 
-def process_vntrseek_data(processed_vntrs_file='vntr_data/repeats_and_segments.txt'):
-    vntrs = find_non_overlapping_vntrs()
+def process_vntrseek_data(processed_vntrs_file='vntr_data/VNTRs.txt', unprocessed_vntrs='vntr_data/SortedVNTRs.txt'):
+    vntrs = find_non_overlapping_vntrs(unprocessed_vntrs)
     for vntr in vntrs:
-        comma_separated_segments = ','.join(vntr.get_repeat_segments())
+        if not vntr.is_non_overlapping():
+            continue
+        print(vntr.id)
+        print(vntr.get_repeat_segments())
+        repeat_segments = ','.join(vntr.get_repeat_segments())
         with open(processed_vntrs_file, 'a') as out:
-            out.write('%s %s %s %s %s\n' % (vntr.id, vntr.is_non_overlapping(), vntr.left_flanking_region,
-                                            vntr.right_flanking_region, comma_separated_segments))
+            end_point = vntr.start_point + vntr.get_length()
+            gene_name, annotation = get_gene_name_and_annotation_of_vntr(vntr.chromosome, vntr.start_point, end_point)
+            print(gene_name, annotation)
+            out.write('%s %s %s %s %s %s %s %s %s %s\n' % (vntr.id, vntr.is_non_overlapping(), vntr.chromosome,
+                                                           vntr.start_point, gene_name, annotation, vntr.pattern,
+                                                           vntr.left_flanking_region, vntr.right_flanking_region,
+                                                           repeat_segments,))
 
 
 def identify_homologous_vntrs(vntrs, chromosome=None):
@@ -133,19 +142,16 @@ def identify_homologous_vntrs(vntrs, chromosome=None):
     return vntrs
 
 
-def load_unique_vntrs_data(vntrseek_output='vntr_data/repeats_length_patterns_chromosomes_starts.txt'):
+def load_unique_vntrs_data(processed_vntrs='vntr_data/VNTRs.txt'):
     vntrs = []
-    with open(vntrseek_output) as input_file:
-        vntrseek_data = [line.strip() for line in input_file.readlines() if line.strip() != '']
-    with open('vntr_data/repeats_and_segments.txt') as input_file:
-        segments_lines = input_file.readlines()
-    for vntr_id in range(len(vntrseek_data)):
-        _id, non_overlapping, left_flanking_region, right_flanking_region, segments = segments_lines[vntr_id].split()
+    with open(processed_vntrs) as input_file:
+        lines = input_file.readlines()
+    for line in lines:
+        vntr_id, overlap, chromosome, start, gene, annotation, pattern, left_flank, right_flank, segments = line.split()
         repeat_segments = segments.split(',')
-        vntrseek_repeat, _, pattern, chromosome, start = vntrseek_data[vntr_id].split()
-        vntr = ReferenceVNTR(vntr_id, pattern, int(start)-1, chromosome, vntrseek_repeat)
-        vntr.init_from_xml(repeat_segments, left_flanking_region, right_flanking_region)
-        vntr.non_overlapping = True if non_overlapping == 'True' else False
+        vntr = ReferenceVNTR(int(vntr_id), pattern, int(start), chromosome, len(repeat_segments))
+        vntr.init_from_xml(repeat_segments, left_flank, right_flank)
+        vntr.non_overlapping = True if overlap == 'True' else False
         vntrs.append(vntr)
     return vntrs
 
