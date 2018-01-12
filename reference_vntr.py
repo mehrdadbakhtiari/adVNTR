@@ -5,18 +5,20 @@ from Bio import Seq, SeqRecord
 
 from hmm_utils import build_reference_repeat_finder_hmm, get_repeat_segments_from_visited_states_and_region
 from utils import *
-from vntr_annotation import get_gene_name_and_annotation_of_vntr
+from vntr_annotation import get_gene_name_and_annotation_of_vntr, is_vntr_close_to_gene
 import settings
 
 
 class ReferenceVNTR:
-    def __init__(self, vntr_id, pattern, start_point, chromosome, estimated_repeats=None):
+    def __init__(self, vntr_id, pattern, start_point, chromosome, gene_name, annotation, estimated_repeats=None):
         self.non_overlapping = True
         self.has_homologous = False
         self.id = vntr_id
         self.pattern = pattern
         self.start_point = start_point
         self.chromosome = chromosome
+        self.gene_name = gene_name
+        self.annotation = annotation
         self.estimated_repeats = estimated_repeats
         self.repeat_segments = None
         self.left_flanking_region = None
@@ -86,10 +88,14 @@ def load_unprocessed_vntrseek_data(vntrseek_output, chromosome=None):
         input_lines = [line.strip() for line in input_file.readlines() if line.strip() != '']
         for vntr_id, line in enumerate(input_lines):
             vntrseek_repeat, _, pattern, chromosome_number, start = line.split()
+            start = int(start) - 1
             estimated_repeats = int(float(vntrseek_repeat) + 5)
             if chromosome and chromosome_number != chromosome:
                 continue
-            vntrs.append(ReferenceVNTR(vntr_id, pattern, int(start)-1, chromosome_number, estimated_repeats))
+            estimated_end = estimated_repeats * len(pattern) + start
+            if not is_vntr_close_to_gene(chromosome, start, estimated_end):
+                continue
+            vntrs.append(ReferenceVNTR(vntr_id, pattern, start, chromosome, None, None, estimated_repeats))
     return vntrs
 
 
@@ -124,7 +130,6 @@ def process_vntrseek_data(processed_vntrs_file='vntr_data/VNTRs.txt', unprocesse
         with open(processed_vntrs_file, 'a') as out:
             end_point = vntr.start_point + vntr.get_length()
             gene_name, annotation = get_gene_name_and_annotation_of_vntr(vntr.chromosome, vntr.start_point, end_point)
-            print(gene_name, annotation)
             out.write('%s %s %s %s %s %s %s %s %s %s\n' % (vntr.id, vntr.is_non_overlapping(), vntr.chromosome,
                                                            vntr.start_point, gene_name, annotation, vntr.pattern,
                                                            vntr.left_flanking_region, vntr.right_flanking_region,
@@ -149,7 +154,7 @@ def load_unique_vntrs_data(processed_vntrs='vntr_data/VNTRs.txt'):
     for line in lines:
         vntr_id, overlap, chromosome, start, gene, annotation, pattern, left_flank, right_flank, segments = line.split()
         repeat_segments = segments.split(',')
-        vntr = ReferenceVNTR(int(vntr_id), pattern, int(start), chromosome, len(repeat_segments))
+        vntr = ReferenceVNTR(int(vntr_id), pattern, int(start), chromosome, gene, annotation, len(repeat_segments))
         vntr.init_from_xml(repeat_segments, left_flank, right_flank)
         vntr.non_overlapping = True if overlap == 'True' else False
         vntrs.append(vntr)
@@ -241,5 +246,5 @@ def extend_flanking_regions_in_processed_vntrs(flanking_size=500, output_file='v
 
 
 if __name__ == "__main__":
-    # process_vntrseek_data()
-    identify_similar_regions_for_vntrs_using_blat()
+    process_vntrseek_data()
+    # identify_similar_regions_for_vntrs_using_blat()

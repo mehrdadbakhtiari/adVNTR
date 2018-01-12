@@ -4,7 +4,7 @@ EXONS = ANNOTATION_DIR + 'ucsc_gene_exons.bed'
 GENES = ANNOTATION_DIR + 'ucsc_genes.bed'
 ENSEMBL_TO_GENE = ANNOTATION_DIR + 'ensemblToGeneName.txt'
 UCSC_TO_ENSMBL = ANNOTATION_DIR + 'knownToEnsembl.txt'
-PROMOTER_RANGE = 300
+PROMOTER_RANGE = 500
 
 
 def intersect(s1, e1, s2, e2):
@@ -59,3 +59,18 @@ def get_gene_name_and_annotation_of_vntr(vntr_chromosome, vntr_start, vntr_end):
                     annotation = 'Noncoding'
                     break
     return gene_name, annotation
+
+
+def is_vntr_close_to_gene(vntr_chromosome, vntr_start, vntr_end):
+    with open(GENES) as infile:
+        lines = infile.readlines()
+        for line in lines:
+            line = line.strip().split()[:4]
+            chromosome, start, end, ucsc_id = line
+            start = int(start)
+            end = int(end)
+            start -= PROMOTER_RANGE
+            end += PROMOTER_RANGE
+            if chromosome == vntr_chromosome and intersect(start, end, vntr_start, vntr_end):
+                return True
+    return False
