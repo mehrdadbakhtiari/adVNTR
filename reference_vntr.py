@@ -72,6 +72,9 @@ class ReferenceVNTR:
         ref_sequence = self.__get_chromosome_reference_sequence()
         estimated_length = len(self.pattern) * self.estimated_repeats
         corresponding_region_in_ref = ref_sequence[self.start_point:self.start_point + estimated_length].upper()
+        while corresponding_region_in_ref.find('N') != -1:
+            n_index = corresponding_region_in_ref.find('N')
+            corresponding_region_in_ref = corresponding_region_in_ref[:n_index]
         return corresponding_region_in_ref
 
     def get_flanking_regions(self, flanking_region_size=140):
@@ -89,6 +92,8 @@ def load_unprocessed_vntrseek_data(vntrseek_output, chromosome=None):
         input_lines = [line.strip() for line in input_file.readlines() if line.strip() != '']
         for vntr_id, line in enumerate(input_lines):
             vntrseek_repeat, _, pattern, chromosome_number, start = line.split()
+            if len(pattern) > 100:
+                continue
             start = int(start) - 1
             estimated_repeats = int(float(vntrseek_repeat) + 5)
             if chromosome and chromosome_number != chromosome:
