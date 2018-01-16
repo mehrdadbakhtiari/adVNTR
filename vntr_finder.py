@@ -437,7 +437,7 @@ class VNTRFinder:
             priors = 0.5
             ru_counts[0] = 1
         else:
-            priors = 1.0 / (len(ru_counts.keys()) * (len(ru_counts.keys())-1) / 2)
+            priors = 1.0 / (len(ru_counts.keys()) * (len(ru_counts.keys()) - 1) / 2)
         import operator
         ru_counts = sorted(ru_counts.items(), key=operator.itemgetter(1), reverse=True)
         r = 0.03
@@ -457,21 +457,24 @@ class VNTRFinder:
                     prs[(ci, cj)].append(self.get_conditional_likelihood(ck, ci, cj, ru_counts, r, r_e) ** occ)
 
         posteriors = {}
-        import numpy
+        from math import log
+        import sys
         for key in prs.keys():
-            prs[key] = numpy.prod(numpy.array(prs[key]))
-            posteriors[key] = prs[key] * priors
+            log_list = []
+            for element in prs[key]:
+                if element == 0:
+                    log_list.append(log(sys.float_info.min))
+                else:
+                    log_list.append(log(element))
+            posteriors[key] = sum(log_list) + log(priors)
 
-        sum_of_probs = sum(posteriors.values())
-
-        max_prob = 1e-20
+        max_prob = -sys.float_info.max
         result = None
         for key, value in posteriors.items():
-            if value / sum_of_probs > max_prob:
-                max_prob = value / sum_of_probs
+            if value > max_prob:
+                max_prob = value
                 result = key
 
-        logging.info('Maximum probability for genotyping: %s' % max_prob)
         return result
 
     def get_dominant_copy_numbers_from_spanning_reads(self, spanning_reads):
