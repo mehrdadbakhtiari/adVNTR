@@ -106,12 +106,14 @@ def load_unprocessed_vntrseek_data(vntrseek_output, chromosome=None):
     return vntrs
 
 
-def find_non_overlapping_vntrs(vntrseek_output='vntr_data/SortedVNTRs.txt'):
+def find_non_overlapping_vntrs(vntrseek_output):
     vntrs = load_unprocessed_vntrseek_data(vntrseek_output)
     skipped_vntrs = []
     for i in range(len(vntrs)):
-        print(i)
+        if vntrs[i].chromosome != 'chr22':
+            continue
         estimated_end = len(vntrs[i].pattern) * vntrs[i].estimated_repeats + vntrs[i].start_point
+        print(i, estimated_end - vntrs[i].start_point)
         if i < len(vntrs)-1 and vntrs[i].chromosome == vntrs[i+1].chromosome and estimated_end > vntrs[i+1].start_point:
             vntrs[i].estimated_repeats += vntrs[i+1].estimated_repeats
         vntrs[i].init_from_vntrseek_data()
@@ -127,15 +129,15 @@ def find_non_overlapping_vntrs(vntrseek_output='vntr_data/SortedVNTRs.txt'):
     return vntrs
 
 
-def process_vntrseek_data(processed_vntrs_file='vntr_data/VNTRs.txt', unprocessed_vntrs='vntr_data/SortedVNTRs.txt'):
+def process_vntrseek_data(processed_vntrs='vntr_data/VNTRs.txt', unprocessed_vntrs='vntr_data/SortedVNTRs.txt'):
     vntrs = find_non_overlapping_vntrs(unprocessed_vntrs)
     for vntr in vntrs:
         if not vntr.is_non_overlapping():
             continue
-        print(vntr.id)
-        print(vntr.get_repeat_segments())
+        if vntrs.chromosome != 'chr22':
+            continue
         repeat_segments = ','.join(vntr.get_repeat_segments())
-        with open(processed_vntrs_file, 'a') as out:
+        with open(processed_vntrs, 'a') as out:
             end_point = vntr.start_point + vntr.get_length()
             gene_name, annotation = get_gene_name_and_annotation_of_vntr(vntr.chromosome, vntr.start_point, end_point)
             out.write('%s %s %s %s %s %s %s %s %s %s\n' % (vntr.id, vntr.is_non_overlapping(), vntr.chromosome,
