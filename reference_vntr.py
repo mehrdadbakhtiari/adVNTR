@@ -134,7 +134,7 @@ def process_vntrseek_data(processed_vntrs='vntr_data/VNTRs.txt', unprocessed_vnt
     for vntr in vntrs:
         if not vntr.is_non_overlapping():
             continue
-        if vntrs.chromosome != 'chr22':
+        if vntr.chromosome != 'chr22':
             continue
         repeat_segments = ','.join(vntr.get_repeat_segments())
         with open(processed_vntrs, 'a') as out:
