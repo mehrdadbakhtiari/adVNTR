@@ -2,6 +2,7 @@ import os
 
 from Bio import pairwise2
 from Bio import Seq, SeqRecord
+from multiprocessing import Process, Semaphore
 
 from hmm_utils import build_reference_repeat_finder_hmm, get_repeat_segments_from_visited_states_and_region
 from utils import *
@@ -106,11 +107,11 @@ def load_unprocessed_vntrseek_data(vntrseek_output, chromosome=None):
     return vntrs
 
 
-def find_non_overlapping_vntrs(vntrseek_output):
+def find_non_overlapping_vntrs(vntrseek_output, chrom=None):
     vntrs = load_unprocessed_vntrseek_data(vntrseek_output)
     skipped_vntrs = []
     for i in range(len(vntrs)):
-        if vntrs[i].chromosome != 'chr22':
+        if chrom is not None and vntrs[i].chromosome != chrom:
             continue
         estimated_end = len(vntrs[i].pattern) * vntrs[i].estimated_repeats + vntrs[i].start_point
         print(i, estimated_end - vntrs[i].start_point)
@@ -129,21 +130,23 @@ def find_non_overlapping_vntrs(vntrseek_output):
     return vntrs
 
 
-def process_vntrseek_data(processed_vntrs='vntr_data/VNTRs.txt', unprocessed_vntrs='vntr_data/SortedVNTRs.txt'):
-    vntrs = find_non_overlapping_vntrs(unprocessed_vntrs)
+def process_vntrseek_data(unprocessed_vntrs_file, output_file='vntr_data/VNTRs.txt', chrom=None, sema=None):
+    vntrs = find_non_overlapping_vntrs(unprocessed_vntrs_file, chrom)
     for vntr in vntrs:
         if not vntr.is_non_overlapping():
             continue
-        if vntr.chromosome != 'chr22':
+        if chrom is not None and vntr.chromosome != chrom:
             continue
         repeat_segments = ','.join(vntr.get_repeat_segments())
-        with open(processed_vntrs, 'a') as out:
+        with open(output_file, 'a') as out:
             end_point = vntr.start_point + vntr.get_length()
             gene_name, annotation = get_gene_name_and_annotation_of_vntr(vntr.chromosome, vntr.start_point, end_point)
             out.write('%s %s %s %s %s %s %s %s %s %s\n' % (vntr.id, vntr.is_non_overlapping(), vntr.chromosome,
                                                            vntr.start_point, gene_name, annotation, vntr.pattern,
                                                            vntr.left_flanking_region, vntr.right_flanking_region,
                                                            repeat_segments,))
+    if sema is not None:
+        sema.release()
 
 
 def identify_homologous_vntrs(vntrs, chromosome=None):
@@ -256,5 +259,15 @@ def extend_flanking_regions_in_processed_vntrs(flanking_size=500, output_file='v
 
 
 if __name__ == "__main__":
-    process_vntrseek_data()
+    process_list = []
+    sema = Semaphore(settings.CORES)
+    for chrom in settings.CHROMOSOMES:
+        processed_vntrs = 'vntr_data/VNTRs_%s.txt' % chrom
+        vntrseek_output = 'vntr_data/SortedVNTRs.txt'
+        sema.acquire()
+        p = Process(target=process_vntrseek_data, args=(vntrseek_output, processed_vntrs, chrom, sema))
+        process_list.append(p)
+        p.start()
+    for p in process_list:
+        p.join()
     # identify_similar_regions_for_vntrs_using_blat()
