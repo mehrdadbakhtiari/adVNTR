@@ -569,12 +569,12 @@ def add_recruitment_results_for_pacbio(pacbio_recruitment_plots, results_dir):
             for line in lines:
                 copy, original, our_filtering, our_selection, bwa, bowtie = line.split()
                 copies.append(copy)
-                our_selection_result.append(float(our_selection) / original)
-                bwa_result.append(float(bwa) / original)
-                bowtie_result.append(float(bowtie) / original)
+                our_selection_result.append(float(our_selection) / float(original))
+                bwa_result.append(float(bwa) / float(original))
+                bowtie_result.append(float(bowtie) / float(original))
         pacbio_recruitment_plots[gene_index].title.set_text(titles[gene_index] + ') %s' % gene_name)
         pacbio_recruitment_plots[gene_index].plot(copies, our_selection_result, '.-', markersize=4, label='adVNTR')
-        pacbio_recruitment_plots[gene_index].plot(copies, bowtie_result, '.-', markersize=4, label='Blasr', color='#2ca02c')
+        pacbio_recruitment_plots[gene_index].plot(copies, bowtie_result, '.-', markersize=4, label='Blasr', color=(0.0, 0.6196078431372549, 0.45098039215686275))
         pacbio_recruitment_plots[gene_index].spines['bottom'].set_color('black')
         pacbio_recruitment_plots[gene_index].spines['left'].set_color('black')
         # pacbio_recruitment_plots[gene_index].yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
@@ -1063,9 +1063,11 @@ def get_coverage_and_confidences(pos, quant, conf_file='extend_list_24143_final'
     with open(conf_file) as infile:
         lines = infile.readlines()
         for i, line in enumerate(lines):
-            if i % 2 == 1:
+            if '#' in lines[i]:
                 continue
             vntr_id = int(line.strip())
+            if '#' not in lines[i+1]:
+                continue
             confidence = float(lines[i+1].strip().split('#')[1])
             vntr_confidences[vntr_id] = confidence
 
@@ -1113,11 +1115,9 @@ def plot_coverage_confidence_violin():
 
     for posi, l in enumerate(raw_points):
         l = l + raw_points2[posi]
-        print pos[posi]
         res = []
         for f in frange(0.1, 1.01, 0.1):
             count = len([e for e in l if e < f])
-            print f, count
             if count < 3:
                 l = [e for e in l if e >= f]
         points.append(l)
@@ -1133,10 +1133,10 @@ def plot_coverage_confidence_violin():
     plt.rcParams['axes.facecolor'] = '#FFFFFF'
     rc('text', usetex=True)
     rcParams['text.latex.preamble'] = [r'\usepackage{sfmath} \boldmath']
-    plt.title('Effect of Sequencing Coverage on RU Counting Confidence')
+    plt.title('Effect of Sequencing Coverage on RU Calling Confidence')
     plt.gca().spines['bottom'].set_color('black')
     plt.gca().spines['left'].set_color('black')
-    plt.ylabel(r'\emph{Confidence of RU Count Calling}')
+    plt.ylabel(r'\emph{Posterior Probability of Estimated Genotype}')
     plt.xlabel(r'\emph{Sequencing Coverage}')
 
     # print points
@@ -1201,7 +1201,7 @@ for a, b in edges:
 
 # plot_indel_frequencies_for_diabetes()
 
-plot_read_recruitment_results()
+# plot_read_recruitment_results()
 # plot_inconsistency_difference()
 
 # plot_pacbio_ru_length_result()
