@@ -3,9 +3,9 @@ import logging
 import os
 import sys
 
-from genome_analyzer import GenomeAnalyzer
-from reference_vntr import load_unique_vntrs_data
-import settings
+from src.genome_analyzer import GenomeAnalyzer
+from src.reference_vntr import load_unique_vntrs_data
+from src import settings
 
 
 def valid_vntr_for_frameshift(target_vntrs):
@@ -16,7 +16,7 @@ def valid_vntr_for_frameshift(target_vntrs):
 
 
 def run_advntr():
-    parser = argparse.ArgumentParser(description='adVNTR 1.0.0')
+    parser = argparse.ArgumentParser(description='adVNTR 1.0.0', usage='%(prog)s <command> [options]')
     parser.add_argument('-a', '--alignment_file', type=str, help='Alignment file in BAM format or SAM format',
                         metavar='FILE')
     parser.add_argument('-f', '--fasta', type=str, help='Fasta file containing raw reads', metavar='FILE')
