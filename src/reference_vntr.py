@@ -21,7 +21,7 @@ class ReferenceVNTR:
         self.gene_name = gene_name
         self.annotation = annotation
         self.estimated_repeats = estimated_repeats
-        self.repeat_segments = None
+        self.repeat_segments = []
         self.left_flanking_region = None
         self.right_flanking_region = None
 
