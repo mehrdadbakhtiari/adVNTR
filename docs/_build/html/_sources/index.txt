@@ -12,8 +12,8 @@ adVNTR
 from sequence data. It works with both NGS short reads (Illumina HiSeq) and SMRT reads (PacBio) and finds
 diploid repeating counts for VNTRs and identifies possible mutations in the VNTR sequences.
 
-Contents:
-
+Manuals
+-------
 .. toctree::
    :maxdepth: 2
    :glob:
@@ -24,11 +24,3 @@ Contents:
 Publication
 -----------
 Bakhtiari, M., Shleizer-Burko, S., Gymrek, M., Bansal, V. and Bafna, V., 2017. `Targeted Genotyping of Variable Number Tandem Repeats with adVNTR <https://doi.org/10.1101/221754/>`_. bioRxiv, p.221754.
-
-Indices and tables
-------------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
