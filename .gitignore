@@ -8,6 +8,6 @@ hg19_chromosomes/*
 !hg19_chromosomes/PLACE_HOLDER
 vntr_data/*
 results/
-docs/_build/doctrees/*
-docs/_build/html/*
+docs/_build/doctrees/
+docs/_build/html/
 

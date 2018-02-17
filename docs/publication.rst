@@ -1,0 +1,1 @@
+Bakhtiari, M., Shleizer-Burko, S., Gymrek, M., Bansal, V. and Bafna, V., 2017. `Targeted Genotyping of Variable Number Tandem Repeats with adVNTR <https://doi.org/10.1101/221754/>`_. bioRxiv, p.221754.
