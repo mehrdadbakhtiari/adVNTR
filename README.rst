@@ -1,3 +1,8 @@
+adVNTR - A tool for genotyping VNTRs
+------------------------------------
+.. include:: description.rst
+
+
 Software Requirements
 ---------------------
 1. Following libraries are required
@@ -65,3 +70,7 @@ Demo 2: input in fasta format
 .. code:: bash
     
     python advntr.py --fasta unaligned_illumina_reads.fasta --working_directory ./log_dir/
+
+Citation:
+---------
+.. include:: publication.rst
