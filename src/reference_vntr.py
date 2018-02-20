@@ -1,8 +1,8 @@
 import os
 
+from multiprocessing import Process, Semaphore, Manager
 from Bio import pairwise2
 from Bio import Seq, SeqRecord
-from multiprocessing import Process, Semaphore, Manager
 
 from hmm_utils import build_reference_repeat_finder_hmm, get_repeat_segments_from_visited_states_and_region
 from utils import *
@@ -179,18 +179,53 @@ def identify_homologous_vntrs(vntrs, chromosome=None):
     return vntrs
 
 
-def load_unique_vntrs_data(processed_vntrs='vntr_data/VNTRs.txt'):
+def load_unique_vntrs_data(db_file='vntr_data/hg19_VNTRs.db'):
+    import sqlite3
     vntrs = []
-    with open(processed_vntrs) as input_file:
-        lines = input_file.readlines()
-    for line in lines:
-        vntr_id, overlap, chromosome, start, gene, annotation, pattern, left_flank, right_flank, segments = line.split()
+    db = sqlite3.connect(db_file)
+    cursor = db.cursor()
+    cursor.execute('''SELECT id, nonoverlapping, chromosome, ref_start, gene_name, annotation, pattern, left_flanking,
+    right_flanking, repeats FROM vntrs''')
+
+    for row in cursor:
+        new_row = []
+        for element in row:
+            if type(element) == unicode:
+                new_row.append(str(element))
+            else:
+                new_row.append(element)
+        vntr_id, overlap, chromosome, start, gene, annotation, pattern, left_flank, right_flank, segments = new_row
         repeat_segments = segments.split(',')
         vntr = ReferenceVNTR(int(vntr_id), pattern, int(start), chromosome, gene, annotation, len(repeat_segments))
         vntr.init_from_xml(repeat_segments, left_flank, right_flank)
         vntr.non_overlapping = True if overlap == 'True' else False
         vntrs.append(vntr)
+
     return vntrs
+
+
+def save_vntrs_to_database(processed_vntrs, db_file):
+    import sqlite3
+    with open(processed_vntrs) as input_file:
+        lines = input_file.readlines()
+    db = sqlite3.connect(db_file)
+    cursor = db.cursor()
+    singles = 0
+    paired = 0
+    for line in lines:
+        line = line.strip()
+        vntr_id, overlap, chromosome, start, gene, annotation, pattern, left_flank, right_flank, segments = line.split()
+        cursor.execute('''INSERT INTO vntrs(id, nonoverlapping, chromosome, ref_start, gene_name, annotation, pattern,
+        left_flanking, right_flanking, repeats) VALUES(?,?,?,?,?,?,?,?,?,?)''', (vntr_id, overlap, chromosome, start,
+                                                                                 gene, annotation, pattern, left_flank,
+                                                                                 right_flank, segments))
+        if len(segments) < 145:
+            singles += 1
+        if len(segments) < 290:
+            paired += 1
+    db.commit()
+    db.close()
+    print('%s %s %s' % (processed_vntrs, singles, paired))
 
 
 def is_false_vntr_hit(qresult, ref_vntr, position, threshold):
@@ -277,9 +312,13 @@ def extend_flanking_regions_in_processed_vntrs(flanking_size=500, output_file='v
                                             right_flanking_region, comma_separated_segments))
 
 
-if __name__ == "__main__":
+def create_vntr_database():
     for chrom in settings.CHROMOSOMES:
         processed_vntrs = 'vntr_data/VNTRs_%s.txt' % chrom
-        vntrseek_output = 'vntr_data/SortedVNTRs.txt'
-        process_vntrseek_data(vntrseek_output, processed_vntrs, chrom)
+        database_file = 'vntr_data/hg19_VNTRs.db'
+        save_vntrs_to_database(processed_vntrs, database_file)
+
+if __name__ == "__main__":
+    pass
+    # process_vntrseek_data(sorted_vntrseek_output, processed_vntrs, chrom)
     # identify_similar_regions_for_vntrs_using_blat()

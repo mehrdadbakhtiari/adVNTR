@@ -14,10 +14,14 @@ def valid_vntr_for_frameshift(target_vntrs):
     return True
 
 
+def print_error(subparser, msg):
+    subparser.print_help()
+    sys.exit("\n%s" % msg)
+
+
 def genotype(args, genotype_parser):
     if args.alignment_file is None and args.fasta is None:
-        genotype_parser.print_help()
-        sys.exit("ERROR: No input specified. Please specify alignment file or fasta file")
+        print_error(genotype_parser, 'ERROR: No input specified. Please specify alignment file or fasta file')
 
     if args.nanopore:
         settings.MAX_ERROR_RATE = 0.3
@@ -27,7 +31,7 @@ def genotype(args, genotype_parser):
         settings.MAX_ERROR_RATE = 0.05
 
     if args.threads < 1:
-        genotype_parser.error('threads cannot be less than 1')
+        print_error(genotype_parser, 'ERROR: threads cannot be less than 1')
     settings.CORES = args.threads
 
     input_file = args.alignment_file if args.alignment_file else args.fasta
@@ -40,7 +44,8 @@ def genotype(args, genotype_parser):
 
     reference_vntrs = load_unique_vntrs_data()
     # reference_vntrs = identify_homologous_vntrs(reference_vntrs, 'chr15')
-    illumina_targets = [1214, 1220, 1221, 1222, 1223, 1224, 377, 378, 809]
+    # illumina_targets = [1214, 1220, 1221, 1222, 1223, 1224, 377, 378, 809]
+    illumina_targets = [532789, 188871, 301645, 600000]
 
     target_vntrs = []
     for i in range(len(reference_vntrs)):
@@ -49,7 +54,7 @@ def genotype(args, genotype_parser):
         target_vntrs.append(i)
 
     if args.vntr_id is not None:
-        target_vntrs = [args.vntr_id]
+        target_vntrs = [int(vid) for vid in args.vntr_id.split(',')]
     else:
         target_vntrs = illumina_targets
     genome_analyzier = GenomeAnalyzer(reference_vntrs, target_vntrs, working_directory)
@@ -70,5 +75,5 @@ def genotype(args, genotype_parser):
             genome_analyzier.find_repeat_counts_from_short_reads(input_file)
 
 
-def not_implemented_command(parser):
-    parser.error('Command has not been implemented yet. Sorry for inconvenience.')
+def not_implemented_command(parser, command):
+    parser.error('%s command has not been implemented yet. Sorry for inconvenience.' % command)

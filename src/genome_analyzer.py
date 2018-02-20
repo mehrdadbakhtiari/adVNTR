@@ -12,8 +12,9 @@ class GenomeAnalyzer:
         self.working_dir = working_directory
 
         self.vntr_finder = {}
-        for vntr_id in self.target_vntr_ids:
-            self.vntr_finder[vntr_id] = VNTRFinder(self.reference_vntrs[vntr_id])
+        for ref_vntr in self.reference_vntrs:
+            if ref_vntr.id in target_vntr_ids:
+                self.vntr_finder[ref_vntr.id] = VNTRFinder(ref_vntr)
 
     @staticmethod
     def print_genotype(copy_numbers):

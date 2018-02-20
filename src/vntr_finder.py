@@ -44,7 +44,7 @@ class VNTRFinder:
         self.min_repeat_bp_to_count_repeats = 2
 
         self.minimum_left_flanking_size = {}
-        self.minimum_right_flanking_size = {119: 19, 1214: 12, 1223: 10, 1224: 10}
+        self.minimum_right_flanking_size = {69212: 19, 532789: 12, 400825: 10, 468671: 10}
 
         self.vntr_start = self.reference_vntr.start_point
         self.vntr_end = self.vntr_start + self.reference_vntr.get_length()

@@ -35,8 +35,8 @@ def run_advntr():
                                  help='Working directory for creating temporary files needed for computation')
     genotype_parser.add_argument('-t', '--threads', type=int, metavar='<nthreads>', default=4,
                                  help='Run the tool on <nthreads> parallel threads which will run on separate processors/cores [%(default)s]')
-    genotype_parser.add_argument('-vid', '--vntr_id', type=int, metavar='<VNTR ID>', default=None,
-                                 help='ID of the VNTR')
+    genotype_parser.add_argument('-vid', '--vntr_id', type=str, metavar='<VNTR ID>', default=None,
+                                 help='Comma-separated list of VNTR IDs')
     genotype_parser.add_argument('-naive', '--naive', action='store_true', default=False,
                                  help='Use naive approach for PacBio reads')
 
@@ -48,11 +48,11 @@ def run_advntr():
     if args.command == 'genotype':
         genotype(args, genotype_parser)
     elif args.command == 'viewmodel':
-        not_implemented_command(viewmodel_parser)
+        not_implemented_command(parser, args.command)
     elif args.command == 'addmodel':
-        not_implemented_command(addmodel_parser)
+        not_implemented_command(parser, args.command)
     elif args.command == 'delmodel':
-        not_implemented_command(delmodel_parser)
+        not_implemented_command(parser, args.command)
 
 if __name__ == '__main__':
     run_advntr()
