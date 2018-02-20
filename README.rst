@@ -1,6 +1,6 @@
 adVNTR - A tool for genotyping VNTRs
 ------------------------------------
-.. include:: description.rst
+.. include:: docs/description.rst
 
 
 Software Requirements
@@ -73,4 +73,4 @@ Demo 2: input in fasta format
 
 Citation:
 ---------
-.. include:: publication.rst
+.. include:: docs/publication.rst
