@@ -1,6 +1,8 @@
 adVNTR - A tool for genotyping VNTRs
 ------------------------------------
-.. include:: docs/description.rst
+`adVNTR <https://github.com/mehrdadbakhtiari/adVNTR/>`_ is a tool for genotyping Variable Number Tandem Repeats (VNTR)
+from sequence data. It works with both NGS short reads (Illumina HiSeq) and SMRT reads (PacBio) and finds
+diploid repeating counts for VNTRs and identifies possible mutations in the VNTR sequences.
 
 
 Software Requirements
@@ -73,4 +75,4 @@ Demo 2: input in fasta format
 
 Citation:
 ---------
-.. include:: docs/publication.rst
+Bakhtiari, M., Shleizer-Burko, S., Gymrek, M., Bansal, V. and Bafna, V., 2017. `Targeted Genotyping of Variable Number Tandem Repeats with adVNTR <https://doi.org/10.1101/221754/>`_. bioRxiv, p.221754.
