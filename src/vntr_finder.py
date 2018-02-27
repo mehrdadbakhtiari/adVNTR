@@ -9,16 +9,15 @@ import pysam
 from Bio import pairwise2
 from Bio.Seq import Seq
 
-from blast_wrapper import get_blast_matched_ids, make_blast_database
-from coverage_bias import CoverageBiasDetector, CoverageCorrector
-from hmm_utils import *
-from pacbio_haplotyper import PacBioHaplotyper
-from pomegranate import HiddenMarkovModel as Model
-from profiler import time_usage
-from sam_utils import get_reference_genome_of_alignment_file
-from sam_utils import get_related_reads_and_read_count_in_samfile
-import settings
-from utils import is_low_quality_read
+from src.blast_wrapper import get_blast_matched_ids, make_blast_database
+from src.coverage_bias import CoverageBiasDetector, CoverageCorrector
+from src.hmm_utils import *
+from src.pacbio_haplotyper import PacBioHaplotyper
+from src.pomegranate import HiddenMarkovModel as Model
+from src.profiler import time_usage
+from src.sam_utils import get_reference_genome_of_alignment_file, get_related_reads_and_read_count_in_samfile
+from src import settings
+from src.utils import is_low_quality_read
 
 
 class SelectedRead:

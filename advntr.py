@@ -1,6 +1,6 @@
 import argparse
 
-from src.commands import genotype, not_implemented_command
+from src.advntr_commands import genotype, not_implemented_command
 from src import settings
 
 
@@ -53,6 +53,8 @@ def run_advntr():
         not_implemented_command(parser, args.command)
     elif args.command == 'delmodel':
         not_implemented_command(parser, args.command)
+    else:
+        parser.error('Please specify a valid command')
 
 if __name__ == '__main__':
     run_advntr()

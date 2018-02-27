@@ -1,6 +1,8 @@
-from settings import *
-from Bio import SeqIO
 import logging
+
+from Bio import SeqIO
+
+from src.settings import *
 
 
 def get_min_number_of_copies_to_span_read(pattern, read_length=150):

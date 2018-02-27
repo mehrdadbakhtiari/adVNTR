@@ -1,12 +1,15 @@
 import logging
-from StringIO import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 from Bio.Align.Applications import MuscleCommandline
 from Bio import AlignIO
 
-from distance import hamming
-from hierarchical_clustering import hierarchical_clustering
-from settings import *
+from src.distance import hamming
+from src.hierarchical_clustering import hierarchical_clustering
+from src.settings import *
 
 
 class PacBioHaplotyper:

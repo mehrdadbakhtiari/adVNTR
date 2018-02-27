@@ -2,9 +2,9 @@ import logging
 import os
 import sys
 
-from genome_analyzer import GenomeAnalyzer
-from reference_vntr import load_unique_vntrs_data
-import settings
+from src.genome_analyzer import GenomeAnalyzer
+from src.reference_vntr import load_unique_vntrs_data
+from src import settings
 
 
 def valid_vntr_for_frameshift(target_vntrs):

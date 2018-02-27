@@ -1,11 +1,12 @@
 import logging
+from math import sqrt
 import sys
 
-from settings import *
-from utils import get_chromosome_reference_sequence, get_gc_content
 import pysam
 import numpy
-from math import sqrt
+
+from src.settings import *
+from src.utils import get_chromosome_reference_sequence, get_gc_content
 
 
 class CoverageBiasDetector:

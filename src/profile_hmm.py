@@ -1,10 +1,13 @@
-from StringIO import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 from Bio.Align.Applications import MuscleCommandline
 from Bio import AlignIO
 
-from profiler import time_usage
-import settings
+from src.profiler import time_usage
+from src import settings
 
 
 @time_usage
@@ -153,69 +156,6 @@ def build_profile_hmm_pseudocounts_for_alignment(thresh, pseu, alphabet, alignme
             if key2 not in transition[key1].keys():
                 transition[key1][key2] = 0
     return transition, emission
-
-
-def print_emission_and_transition_matrices(emission, transition, alignment, alphabet, insert_index):
-    ##### PRINT transition table
-    index_list = ['unit_start', 'I0']
-    for i in xrange(1,len(alignment[0])-len(insert_index)+1):
-        index_list.extend(['M'+str(i), 'D'+str(i), 'I'+str(i)])
-    index_list.append('unit_end')
-    print ' ',
-    for i in index_list:
-        print i,
-    print
-    for i in index_list:
-        print i,
-        if i in transition:
-            for j in index_list:
-                if j in transition[i]:
-                    print round(transition[i][j],3),
-                else:
-                    print 0,
-            print
-        else:
-            for j in index_list:
-                print 0,
-            print
-
-    print '--------'
-
-    ##### print emission table
-    print ' ',
-    for i in alphabet:
-        print i,
-    print
-    print 'S',
-    for i in alphabet:
-        print round(emission['unit_start'][i],3),
-    print
-    print 'I0',
-    for j in alphabet:
-        print round(emission['I0'][j],3),
-    print
-
-    # print ' '.join([str(x) for x in dict(sorted(emission['I0'].items())).values()])
-    for i in xrange(1,len(alignment[0])-len(insert_index)+1):
-
-        print 'M'+str(i),
-        for j in alphabet:
-            print round(emission['M'+str(i)][j],3),
-        print
-
-        print 'D'+str(i),
-        for j in alphabet:
-            print round(emission['D'+str(i)][j],3),
-        print
-        print 'I'+str(i),
-        for j in alphabet:
-            print round(emission['I'+str(i)][j],3),
-        print
-
-    print 'E',
-    for j in alphabet:
-        print round(emission['unit_end'][j],3),
-    print
 
 
 @time_usage

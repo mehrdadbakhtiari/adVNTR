@@ -3,7 +3,8 @@ import shlex
 import os
 from Bio.Blast.Applications import NcbiblastnCommandline
 from Bio import Seq, SeqRecord, SeqIO
-import settings
+
+from src import settings
 
 
 def make_blast_database(fasta_file, db_name):
