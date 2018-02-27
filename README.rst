@@ -43,7 +43,8 @@ Use following command to see the help for running the tool.
     
     python advntr.py --help
 
-The program outputs the RU count genotypes for all VNTRs in ``vntr_data`` directory. To specify a single VNTR by its ID use ``--vntr_id <id>`` option. 
+The program outputs the RU count genotypes of VNTRs. To specify a single VNTR by its ID use ``--vntr_id <id>`` option.
+The list of some known VNTRs and their ID is available at `Disease-linked-VNTRs page <https://github.com/mehrdadbakhtiari/adVNTR/wiki/Disease-linked-VNTRs>`_ in wiki.
 
 Demo 1: input in BAM format
 ---------------------------
