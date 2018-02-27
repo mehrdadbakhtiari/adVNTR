@@ -190,7 +190,7 @@ def load_unique_vntrs_data(db_file='vntr_data/hg19_VNTRs.db'):
     for row in cursor:
         new_row = []
         for element in row:
-            if type(element) == unicode:
+            if type(element) != int:
                 new_row.append(str(element))
             else:
                 new_row.append(element)
