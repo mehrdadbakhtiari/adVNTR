@@ -32,7 +32,7 @@ You can install required python libraries by running ``pip install -r requiremen
 Data Requirements
 -----------------
 * To run adVNTR on trained VNTR models:
-    - Download `vntr_data.zip <https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data.zip/>`_ and extract it inside the project directory.
+    - Download `vntr_data.zip <https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data.zip>`_ and extract it inside the project directory.
 Alternatively, you can add model for custom VNTR. See :ref:`add-custom-vntr-label` for more information.
 
 Execution:
