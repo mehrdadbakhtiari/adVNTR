@@ -213,6 +213,8 @@ class VNTRFinder:
                         return float(score) * (read_length / int(stored_length))
 
         logging.debug('Minimum score is not precomputed for vntr id: %s' % self.reference_vntr.id)
+        return None
+        #TODO: Move this code to training method
         score = self.calculate_min_score_to_select_a_read(hmm, alignment_file)
         logging.debug('computed score: %s' % score)
         with open(stored_scores_file, 'a') as outfile:
@@ -220,8 +222,17 @@ class VNTRFinder:
 
         return score
 
-    def process_unmapped_read(self, sema, read_segment, hmm, min_score_to_count_read,
-                              vntr_bp_in_unmapped_reads, selected_reads, best_seq):
+    @staticmethod
+    def recruit_read(logp, vpath, min_score_to_count_read, read_length):
+        if min_score_to_count_read is not None and logp > min_score_to_count_read:
+            return True
+        matches = get_number_of_matches_in_vpath(vpath)
+        if min_score_to_count_read is None and matches >= 0.9 * read_length and logp > -read_length:
+            return True
+        return False
+
+    def process_unmapped_read(self, sema, read_segment, hmm, recruitment_score, vntr_bp_in_unmapped_reads,
+                              selected_reads, best_seq):
         if read_segment.seq.count('N') <= 0:
             sequence = str(read_segment.seq)
             logp, vpath = hmm.viterbi(sequence)
@@ -235,7 +246,7 @@ class VNTRFinder:
                 best_seq['seq'] = sequence
                 best_seq['vpath'] = vpath
             repeat_bps = get_number_of_repeat_bp_matches_in_vpath(vpath)
-            if logp > min_score_to_count_read:
+            if self.recruit_read(logp, vpath, recruitment_score, len(sequence)):
                 if repeat_bps > self.min_repeat_bp_to_count_repeats:
                     vntr_bp_in_unmapped_reads.value += repeat_bps
                 if repeat_bps > self.min_repeat_bp_to_add_read:
@@ -547,7 +558,7 @@ class VNTRFinder:
     @time_usage
     def select_illumina_reads(self, alignment_file, unmapped_filtered_reads):
         hmm = None
-        min_score_to_count_read = None
+        recruitment_score = None
         sema = Semaphore(settings.CORES)
         manager = Manager()
         selected_reads = manager.list()
@@ -569,13 +580,13 @@ class VNTRFinder:
             number_of_reads += 1
             if not hmm:
                 hmm = self.get_vntr_matcher_hmm(read_length=read_length)
-                min_score_to_count_read = self.get_min_score_to_select_a_read(hmm, alignment_file, read_length)
+                recruitment_score = self.get_min_score_to_select_a_read(hmm, alignment_file, read_length)
 
             if len(read_segment.seq) < read_length:
                 continue
 
             sema.acquire()
-            p = Process(target=self.process_unmapped_read, args=(sema, read_segment, hmm, min_score_to_count_read,
+            p = Process(target=self.process_unmapped_read, args=(sema, read_segment, hmm, recruitment_score,
                                                                  vntr_bp_in_unmapped_reads, selected_reads, best_seq))
             process_list.append(p)
             p.start()
@@ -598,7 +609,7 @@ class VNTRFinder:
             if not hmm:
                 read_length = len(read.seq)
                 hmm = self.get_vntr_matcher_hmm(read_length=read_length)
-                min_score_to_count_read = self.get_min_score_to_select_a_read(hmm, alignment_file, read_length)
+                recruitment_score = self.get_min_score_to_select_a_read(hmm, alignment_file, read_length)
 
             if read.is_unmapped:
                 continue
@@ -615,7 +626,8 @@ class VNTRFinder:
                         sequence = str(Seq(read.seq).reverse_complement())
                         logp = rev_logp
                         vpath = rev_vpath
-                    if is_low_quality_read(read) and logp < min_score_to_count_read:
+                    length = len(sequence)
+                    if is_low_quality_read(read) and not self.recruit_read(logp, vpath, recruitment_score, length):
                         logging.debug('Rejected Read: %s' % sequence)
                         continue
                     selected_reads.append(SelectedRead(sequence, logp, vpath, read.mapq, read.reference_start))

@@ -98,6 +98,15 @@ def get_number_of_repeats_in_vpath(vpath):
     return max(starts, ends) + delta
 
 
+def get_number_of_matches_in_vpath(vpath):
+    visited_states = [state.name for idx, state in vpath[1:-1]]
+    result = 0
+    for i in range(len(visited_states)):
+        if is_matching_state(visited_states[i]):
+            result += 1
+    return result
+
+
 def get_number_of_repeat_bp_matches_in_vpath(vpath):
     visited_states = [state.name for idx, state in vpath[1:-1]]
     result = 0
