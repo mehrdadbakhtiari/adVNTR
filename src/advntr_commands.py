@@ -38,6 +38,7 @@ def genotype(args, genotype_parser):
     input_is_alignment_file = input_file.endswith('bam') or input_file.endswith('sam')
     working_directory = args.working_directory + '/' if args.working_directory else os.path.dirname(input_file) + '/'
 
+    settings.BLAST_TMP_DIR = working_directory + settings.BLAST_TMP_RELATIVE_DIR
     log_file = working_directory + 'log_%s.log' % os.path.basename(input_file)
     log_format = '%(asctime)s %(levelname)s:%(message)s'
     logging.basicConfig(format=log_format, filename=log_file, level=logging.DEBUG, filemode='w')

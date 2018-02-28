@@ -2,8 +2,6 @@
 .idea/
 .DS_Store
 data/
-blast_tmp/*
-!blast_tmp/PLACE_HOLDER
 hg19_chromosomes/*
 !hg19_chromosomes/PLACE_HOLDER
 vntr_data/*
