@@ -164,7 +164,7 @@ def build_profile_hmm_for_repeats(repeats, error_rate):
     pseudocounts = (len(repeats) / 4.0) * (error_rate / 10)
     threshold = 0.5
 
-    muscle_cline = MuscleCommandline(settings.MUSCLE_DIR, clwstrict=True)
+    muscle_cline = MuscleCommandline('muscle', clwstrict=True)
     data = '\n'.join(['>%s\n' % str(i) + repeats[i] for i in range(len(repeats))])
     stdout, stderr = muscle_cline(stdin=data)
     alignment = AlignIO.read(StringIO(stdout), "clustal")

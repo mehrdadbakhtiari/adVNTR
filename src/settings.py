@@ -34,5 +34,3 @@ else:
 
 FRAMESHIFT_VNTRS = [25561, 519759]
 LONG_VNTRS = [70186]
-
-MUSCLE_DIR = 'tools/muscle3.8.31_i86linux64'

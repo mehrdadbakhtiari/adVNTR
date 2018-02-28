@@ -37,7 +37,7 @@ class PacBioHaplotyper:
                 logging.debug('Cluster has only one sequence. Skipping multiple alignment')
                 haplotypes.append(cluster[0])
                 continue
-            muscle_cline = MuscleCommandline(MUSCLE_DIR, clwstrict=True)
+            muscle_cline = MuscleCommandline('muscle', clwstrict=True)
             data = '\n'.join(['>%s\n' % str(i) + cluster[i] for i in range(len(cluster))])
             stdout, stderr = muscle_cline(stdin=data)
             alignment = AlignIO.read(StringIO(stdout), "clustal")
@@ -72,7 +72,7 @@ class PacBioHaplotyper:
 
     def get_read_clusters(self):
         """Cluster reads to two group based on informative base pairs to separate the reads of each haplotype"""
-        muscle_cline = MuscleCommandline(MUSCLE_DIR, clwstrict=True)
+        muscle_cline = MuscleCommandline('muscle', clwstrict=True)
         data = '\n'.join(['>%s\n' % str(i) + self.reads[i] for i in range(len(self.reads))])
         stdout, stderr = muscle_cline(stdin=data)
         alignment = AlignIO.read(StringIO(stdout), "clustal")
