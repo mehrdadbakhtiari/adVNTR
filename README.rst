@@ -53,27 +53,19 @@ Demo 1: input in BAM format
 
 .. code:: bash
     
-    python advntr.py --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/
+    python advntr.py genotype --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/
 
 * With ``--pacbio``, adVNTR assumes the alignment file contains PacBio sequencing data:
 
 .. code:: bash
     
-    python advntr.py --alignment_file aligned_pacbio_reads.bam --working_directory ./log_dir/ --pacbio
+    python advntr.py genotype --alignment_file aligned_pacbio_reads.bam --working_directory ./log_dir/ --pacbio
 
 * Use ``--frameshift`` to find the possible frameshifts in VNTR:
 
 .. code:: bash
     
-    python advntr.py --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/ --frameshift
-
-Demo 2: input in fasta format
------------------------------
-* Use the following command to genotype the RU count using fasta file:
-
-.. code:: bash
-    
-    python advntr.py --fasta unaligned_illumina_reads.fasta --working_directory ./log_dir/
+    python advntr.py genotype --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/ --frameshift
 
 Citation:
 ---------
