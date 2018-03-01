@@ -13,8 +13,9 @@ Software Requirements
     -   ``python-tk``
     -   ``libz-dev``
     -   ``samtools``
+    -   ``muscle``
 
-You can install these requirement in Ubuntu Linux by running ``sudo apt-get install python2.7 python-pip python-tk libz-dev samtools``
+You can install these requirement in Ubuntu Linux by running ``sudo apt-get install python2.7 python-pip python-tk libz-dev samtools muscle``
 
 2. Following python2.7 packages are required:
     -   ``biopython``
@@ -23,7 +24,6 @@ You can install these requirement in Ubuntu Linux by running ``sudo apt-get inst
     -   ``networkx`` version 1.11
     -   ``scipy``
     -   ``joblib``
-    -   ``muscle``
 
 You can install required python libraries by running ``pip install -r requirements.txt``
 
