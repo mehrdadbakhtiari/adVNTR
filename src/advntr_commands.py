@@ -45,7 +45,6 @@ def genotype(args, genotype_parser):
 
     reference_vntrs = load_unique_vntrs_data()
     # reference_vntrs = identify_homologous_vntrs(reference_vntrs, 'chr15')
-    # illumina_targets = [1214, 1220, 1221, 1222, 1223, 1224, 377, 378, 809]
     illumina_targets = [532789, 188871, 301645, 600000]
 
     target_vntrs = []
