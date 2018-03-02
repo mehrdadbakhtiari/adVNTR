@@ -76,5 +76,35 @@ def genotype(args, genotype_parser):
             genome_analyzier.find_repeat_counts_from_short_reads(input_file)
 
 
+def print_models(reference_vntrs):
+    print('VNTR ID\t| Chr\t| Gene\t| Start Position | Pattern')
+    print('--------------------------------------------------')
+    for ref_vntr in reference_vntrs:
+        gene_name = ref_vntr.gene_name
+        if len(gene_name) < 7:
+            gene_name += '\t'
+        print('%s\t| %s\t|%s| %s\t | %s' % (ref_vntr.id, ref_vntr.chromosome, gene_name,
+                                               ref_vntr.start_point, ref_vntr.pattern))
+
+
+def view_model(args, viewmodel_parser):
+    pattern = args.pattern.upper()
+    valid_characters = {'A', 'C', 'G', 'T'}
+    for element in set(pattern):
+        if element not in valid_characters:
+            print_error(viewmodel_parser, 'ERROR: Pattern should only contain A, C, G, T')
+
+    genes = [gene.upper() for gene in args.gene.split(',') if gene]
+    reference_vntrs = load_unique_vntrs_data()
+    results = []
+    for ref_vntr in reference_vntrs:
+        if len(genes) and ref_vntr.gene_name not in genes:
+            continue
+        if pattern and ref_vntr.pattern != pattern:
+            continue
+        results.append(ref_vntr)
+    print_models(results)
+
+
 def not_implemented_command(parser, command):
     parser.error('%s command has not been implemented yet. Sorry for inconvenience.' % command)

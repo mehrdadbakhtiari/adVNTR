@@ -1,6 +1,6 @@
 import argparse
 
-from src.advntr_commands import genotype, not_implemented_command
+from src.advntr_commands import genotype, view_model, not_implemented_command
 from src import settings
 
 
@@ -41,6 +41,10 @@ def run_advntr():
                                  help='Use naive approach for PacBio reads')
 
     viewmodel_parser = subparsers.add_parser('viewmodel', usage='python advntr.py viewmodel [options]')
+    viewmodel_parser.add_argument('-g', '--gene', type=str, default='', help='Comma-separated list of Gene Names')
+    viewmodel_parser.add_argument('-p', '--pattern', type=str, default=None,
+                                  help='Repeating pattern of VNTR in forward (5\' to 3\') direction')
+
     addmodel_parser = subparsers.add_parser('addmodel', usage='python advntr.py addmodel [options]')
     delmodel_parser = subparsers.add_parser('delmodel', usage='python advntr.py delmodel [options]')
 
@@ -48,7 +52,7 @@ def run_advntr():
     if args.command == 'genotype':
         genotype(args, genotype_parser)
     elif args.command == 'viewmodel':
-        not_implemented_command(parser, args.command)
+        view_model(args, viewmodel_parser)
     elif args.command == 'addmodel':
         not_implemented_command(parser, args.command)
     elif args.command == 'delmodel':
