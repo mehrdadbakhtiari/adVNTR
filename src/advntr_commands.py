@@ -88,11 +88,11 @@ def print_models(reference_vntrs):
 
 
 def view_model(args, viewmodel_parser):
-    pattern = args.pattern.upper()
     valid_characters = {'A', 'C', 'G', 'T'}
-    for element in set(pattern):
-        if element not in valid_characters:
-            print_error(viewmodel_parser, 'ERROR: Pattern should only contain A, C, G, T')
+    if args.pattern:
+        for element in set(args.pattern.upper()):
+            if element not in valid_characters:
+                print_error(viewmodel_parser, 'ERROR: Pattern should only contain A, C, G, T')
 
     genes = [gene.upper() for gene in args.gene.split(',') if gene]
     reference_vntrs = load_unique_vntrs_data()
@@ -100,7 +100,7 @@ def view_model(args, viewmodel_parser):
     for ref_vntr in reference_vntrs:
         if len(genes) and ref_vntr.gene_name not in genes:
             continue
-        if pattern and ref_vntr.pattern != pattern:
+        if args.pattern and ref_vntr.pattern != args.pattern.upper():
             continue
         results.append(ref_vntr)
     print_models(results)
