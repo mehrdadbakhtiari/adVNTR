@@ -636,28 +636,6 @@ def plot_read_recruitment_results():
     plt.savefig('read_recruitment_result.pdf', bbox_inches='tight')
 
 
-def plot_ins_simulation_pacbio_results(results_dir='out/'):
-    # Deprecated
-    import glob
-    files = glob.glob(results_dir + 'out_INS*')
-    points = []
-    for file_name in files:
-        sim = int(file_name.split('_')[2])
-        with open(file_name) as input:
-            lines = input.readlines()
-            estimate = int(lines[-1].strip())
-        points.append((sim, estimate))
-    points = sorted(points)
-    sim_repeats = [sim for sim, estimate in points]
-    estimated_repeats = [estimate for sim, estimate in points]
-    import matplotlib.pyplot as plt
-    plt.plot(sim_repeats, estimated_repeats, 'o')
-    plt.title('Result of estimation on PacBio simulated reads')
-    plt.ylabel('Estimated Copy Number')
-    plt.xlabel('Simulated Copy Number')
-    plt.savefig('INS_simulation_results.png', dpi=300)
-
-
 def get_correct_estimates_for_ru(files, ru_length=None, adVNTR=False):
     count = 0
     vntr_results = {}
@@ -1176,6 +1154,38 @@ def plot_pacbio_flanking_region_sizes():
     ax.legend(loc=0, fontsize = 'x-small')
 
     plt.show()
+
+
+def plot_vntr_length_distribution(max_len=1000):
+    from matplotlib import rc, rcParams
+    import matplotlib.pyplot as plt
+    plt.style.use('ggplot')
+    plt.rcParams['axes.facecolor'] = '#FFFFFF'
+    rc('text', usetex=True)
+    rcParams['text.latex.preamble'] = [r'\usepackage{sfmath} \boldmath']
+    plt.title('Length distribuion for VNTRs shorter than %sbp' % max_len)
+    plt.gca().spines['bottom'].set_color('black')
+    plt.gca().spines['left'].set_color('black')
+
+    from reference_vntr import load_unique_vntrs_data
+    vntrs = load_unique_vntrs_data()
+    lengths = []
+    for vntr in vntrs:
+        length = vntr.get_length()
+        if length < max_len:
+            lengths.append(length)
+    plt.xlabel('VNTR Length in HG19')
+    plt.ylabel('Number of VNTRs')
+
+    # plt.hist(lengths, 100)
+
+    import numpy as np
+    values, base = np.histogram(lengths, bins=80)
+    cumulative = np.cumsum(values)
+    plt.plot(base[:-1], cumulative, c='blue')
+
+    plt.show()
+
 
 edges = [(1, 8), (1, 16), (2, 17), (4, 18), (8, 16), (30, 32), (30, 33), (32, 33), (34, 40), (34, 47), (38, 57),
          (38, 59), (38, 67), (40, 47), (57, 59), (57, 67), (59, 67)] + [(5, 53), (47, 19), (71, 3), (31, 9)]
