@@ -646,7 +646,7 @@ class VNTRFinder:
         return self.find_frameshift_from_selected_reads(selected_reads)
 
     @time_usage
-    def find_repeat_count_from_alignment_file(self, alignment_file, unmapped_filtered_reads):
+    def find_repeat_count_from_alignment_file(self, alignment_file, unmapped_filtered_reads, average_coverage=None):
         logging.debug('finding repeat count from alignment file for %s' % self.reference_vntr.id)
 
         selected_reads = self.select_illumina_reads(alignment_file, unmapped_filtered_reads)
@@ -668,15 +668,15 @@ class VNTRFinder:
                 covered_repeats.append(repeats)
             else:
                 flanking_repeats.append(repeats)
-        flanking_repeats = reversed(sorted(flanking_repeats))
-        logging.info('flanked repeats: %s' % covered_repeats)
-        logging.info('observed repeats: %s' % sorted(flanking_repeats))
+        flanking_repeats = sorted(flanking_repeats)
+        logging.info('covered repeats: %s' % covered_repeats)
+        logging.info('flanking repeats: %s' % flanking_repeats)
         min_valid_flanked = max(covered_repeats) if len(covered_repeats) > 0 else 0
         max_flanking_repeat = [r for r in flanking_repeats if r == max(flanking_repeats) and r >= min_valid_flanked]
         if len(max_flanking_repeat) < 5:
             max_flanking_repeat = []
 
-        if self.reference_vntr.id not in settings.LONG_VNTRS:
+        if self.reference_vntr.id not in settings.LONG_VNTRS and not average_coverage:
             genotype = self.find_genotype_based_on_observed_repeats(covered_repeats + max_flanking_repeat)
             return genotype
 
