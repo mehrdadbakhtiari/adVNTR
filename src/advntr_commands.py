@@ -34,6 +34,10 @@ def genotype(args, genotype_parser):
         print_error(genotype_parser, 'ERROR: threads cannot be less than 1')
     settings.CORES = args.threads
 
+    if args.expansion and args.coverage is None:
+        print_error(genotype_parser, 'ERROR: Please specify the average coverage to identify the expansion')
+    average_coverage = args.coverage if args.expansion else None
+
     input_file = args.alignment_file if args.alignment_file else args.fasta
     input_is_alignment_file = input_file.endswith('bam') or input_file.endswith('sam')
     working_directory = args.working_directory + '/' if args.working_directory else os.path.dirname(input_file) + '/'
@@ -70,7 +74,7 @@ def genotype(args, genotype_parser):
             else:
                 genotype_parser.error('--frameshift is only available for these IDs: %s' % settings.FRAMESHIFT_VNTRS)
         elif input_is_alignment_file:
-            genome_analyzier.find_repeat_counts_from_alignment_file(input_file)
+            genome_analyzier.find_repeat_counts_from_alignment_file(input_file, average_coverage)
         else:
             genome_analyzier.find_repeat_counts_from_short_reads(input_file)
 

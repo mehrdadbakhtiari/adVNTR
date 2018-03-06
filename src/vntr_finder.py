@@ -646,6 +646,22 @@ class VNTRFinder:
         return self.find_frameshift_from_selected_reads(selected_reads)
 
     @time_usage
+    def get_ru_count_with_coverage_method(self, pattern_occurrences, total_counted_vntr_bp, average_coverage):
+        return [int(pattern_occurrences / (average_coverage * 2.0))] * 2
+        pattern_occurrences = total_counted_vntr_bp / float(len(self.reference_vntr.pattern))
+        read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
+        samfile = pysam.AlignmentFile(alignment_file, read_mode)
+        reference = get_reference_genome_of_alignment_file(samfile)
+        bias_detector = CoverageBiasDetector(alignment_file, self.reference_vntr.chromosome, reference)
+        coverage_corrector = CoverageCorrector(bias_detector.get_gc_content_coverage_map())
+
+        logging.info('Sequencing mean coverage: %s' % coverage_corrector.get_sequencing_mean_coverage())
+        observed_copy_number = pattern_occurrences / coverage_corrector.get_sequencing_mean_coverage()
+        scaled_copy_number = coverage_corrector.get_scaled_coverage(self.reference_vntr, observed_copy_number)
+        logging.info('scaled copy number and observed copy number: %s, %s' % (scaled_copy_number, observed_copy_number))
+        return [scaled_copy_number]
+
+    @time_usage
     def find_repeat_count_from_alignment_file(self, alignment_file, unmapped_filtered_reads, average_coverage=None):
         logging.debug('finding repeat count from alignment file for %s' % self.reference_vntr.id)
 
@@ -676,22 +692,17 @@ class VNTRFinder:
         if len(max_flanking_repeat) < 5:
             max_flanking_repeat = []
 
-        if self.reference_vntr.id not in settings.LONG_VNTRS and not average_coverage:
-            genotype = self.find_genotype_based_on_observed_repeats(covered_repeats + max_flanking_repeat)
-            return genotype
+        exact_genotype = self.find_genotype_based_on_observed_repeats(covered_repeats + max_flanking_repeat)
+        if exact_genotype is not None:
+            exact_genotype_log = '/'.join([str(cn) for cn in sorted(exact_genotype)])
+        else:
+            exact_genotype_log = 'None'
+        logging.info('RU count lower bounds: %s' % exact_genotype_log)
+        if self.reference_vntr.id not in settings.LONG_VNTRS and average_coverage is None:
+            return exact_genotype
 
-        pattern_occurrences = total_counted_vntr_bp / float(len(self.reference_vntr.pattern))
-        read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
-        samfile = pysam.AlignmentFile(alignment_file, read_mode)
-        reference = get_reference_genome_of_alignment_file(samfile)
-        bias_detector = CoverageBiasDetector(alignment_file, self.reference_vntr.chromosome, reference)
-        coverage_corrector = CoverageCorrector(bias_detector.get_gc_content_coverage_map())
-
-        logging.info('Sequencing mean coverage: %s' % coverage_corrector.get_sequencing_mean_coverage())
-        observed_copy_number = pattern_occurrences / coverage_corrector.get_sequencing_mean_coverage()
-        scaled_copy_number = coverage_corrector.get_scaled_coverage(self.reference_vntr, observed_copy_number)
-        logging.info('scaled copy number and observed copy number: %s, %s' % (scaled_copy_number, observed_copy_number))
-        return [scaled_copy_number]
+        pattern_occurrences = sum(flanking_repeats) + sum(covered_repeats)
+        return self.get_ru_count_with_coverage_method(pattern_occurrences, total_counted_vntr_bp, average_coverage)
 
     def find_repeat_count_from_short_reads(self, short_read_files, working_directory='./'):
         """

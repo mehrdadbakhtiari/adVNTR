@@ -66,12 +66,13 @@ class GenomeAnalyzer:
             print(vid)
             print(result)
 
-    def find_repeat_counts_from_alignment_file(self, alignment_file):
+    def find_repeat_counts_from_alignment_file(self, alignment_file, average_coverage):
         unmapped_reads_file = extract_unmapped_reads_to_fasta_file(alignment_file, self.working_dir)
         vntr_reads = self.get_vntr_filtered_reads_map(unmapped_reads_file)
         for vid in self.target_vntr_ids:
             unmapped_reads = vntr_reads[vid]
-            copy_number = self.vntr_finder[vid].find_repeat_count_from_alignment_file(alignment_file, unmapped_reads)
+            copy_number = self.vntr_finder[vid].find_repeat_count_from_alignment_file(alignment_file, unmapped_reads,
+                                                                                      average_coverage)
             print(vid)
             self.print_genotype(copy_number)
 

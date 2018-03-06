@@ -27,6 +27,10 @@ def run_advntr():
     genotype_parser.add_argument('-fs', '--frameshift', action='store_true',
                                  help='Set this flag to search for frameshifts in VNTR instead of copy number.'
                                  '\n    * Supported VNTR IDs: %s' % settings.FRAMESHIFT_VNTRS)
+    genotype_parser.add_argument('-e', '--expansion', action='store_true',
+                                 help='Set this flag to determine long expansion from PCR-free data')
+    genotype_parser.add_argument('-c', '--coverage', type=float,
+                                 help='Average sequencing coverage in PCR-free sequencing')
     genotype_parser.add_argument('-p', '--pacbio', action='store_true',
                                  help='Set this flag if input file contains PacBio reads instead of Illumina reads')
     genotype_parser.add_argument('-n', '--nanopore', action='store_true',
