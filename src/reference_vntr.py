@@ -179,9 +179,10 @@ def identify_homologous_vntrs(vntrs, chromosome=None):
     return vntrs
 
 
-def load_unique_vntrs_data(db_file='vntr_data/hg19_VNTRs.db'):
+def load_unique_vntrs_data():
     import sqlite3
     vntrs = []
+    db_file = TRAINED_MODELS_DB
     db = sqlite3.connect(db_file)
     cursor = db.cursor()
     cursor.execute('''SELECT id, nonoverlapping, chromosome, ref_start, gene_name, annotation, pattern, left_flanking,

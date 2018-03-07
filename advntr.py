@@ -37,6 +37,8 @@ def run_advntr():
                                  help='Set this flag if input file contains Nanopore MinION reads instead of Illumina')
     genotype_parser.add_argument('-wd', '--working_directory', type=str, metavar='<DIRECTORY>',
                                  help='Working directory for creating temporary files needed for computation')
+    genotype_parser.add_argument('-m', '--models', type=str, metavar='<FILE>', default='vntr_data/hg19_VNTRs.db',
+                                 help='File containing VNTRs information [%(default)s]')
     genotype_parser.add_argument('-t', '--threads', type=int, metavar='<nthreads>', default=4,
                                  help='Run the tool on <nthreads> parallel threads which will run on separate processors/cores [%(default)s]')
     genotype_parser.add_argument('-vid', '--vntr_id', type=str, metavar='<VNTR ID>', default=None,

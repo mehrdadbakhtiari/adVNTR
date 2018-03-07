@@ -47,6 +47,8 @@ def genotype(args, genotype_parser):
     log_format = '%(asctime)s %(levelname)s:%(message)s'
     logging.basicConfig(format=log_format, filename=log_file, level=logging.DEBUG, filemode='w')
 
+    settings.TRAINED_MODELS_DB = args.models
+    settings.TRAINED_HMMS_DIR = os.path.dirname(os.path.realpath(settings.TRAINED_MODELS_DB)) + '/'
     reference_vntrs = load_unique_vntrs_data()
     # reference_vntrs = identify_homologous_vntrs(reference_vntrs, 'chr15')
     illumina_targets = [532789, 188871, 301645, 600000]
