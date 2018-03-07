@@ -29,13 +29,13 @@ def run_advntr():
                                  '\n    * Supported VNTR IDs: %s' % settings.FRAMESHIFT_VNTRS)
     genotype_parser.add_argument('-e', '--expansion', action='store_true',
                                  help='Set this flag to determine long expansion from PCR-free data')
-    genotype_parser.add_argument('-c', '--coverage', type=float,
+    genotype_parser.add_argument('-c', '--coverage', type=float, metavar='<COVERAGE>',
                                  help='Average sequencing coverage in PCR-free sequencing')
     genotype_parser.add_argument('-p', '--pacbio', action='store_true',
                                  help='Set this flag if input file contains PacBio reads instead of Illumina reads')
     genotype_parser.add_argument('-n', '--nanopore', action='store_true',
                                  help='Set this flag if input file contains Nanopore MinION reads instead of Illumina')
-    genotype_parser.add_argument('-wd', '--working_directory', type=str, metavar='DIRECTORY',
+    genotype_parser.add_argument('-wd', '--working_directory', type=str, metavar='<DIRECTORY>',
                                  help='Working directory for creating temporary files needed for computation')
     genotype_parser.add_argument('-t', '--threads', type=int, metavar='<nthreads>', default=4,
                                  help='Run the tool on <nthreads> parallel threads which will run on separate processors/cores [%(default)s]')
