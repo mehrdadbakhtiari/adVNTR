@@ -10,7 +10,6 @@ from vntr_finder import VNTRFinder
 
 
 def count_reads(bam_file):
-    print bam_file
     alignment_file = pysam.AlignmentFile(bam_file, 'rb')
     return alignment_file.unmapped + alignment_file.mapped
 

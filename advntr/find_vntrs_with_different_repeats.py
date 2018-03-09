@@ -101,10 +101,6 @@ def check_trio_consistency(father_file, mother_file, child_file):
     for vid in vntr_ids:
         if not is_consistent(vid, father_genotypes, mother_genotypes, child_genotypes):
             inconsistents.append(len(reference_vntrs[vid].get_repeat_segments()))
-            # print (len(reference_vntrs[vid].pattern))
-            if 83 <= len(reference_vntrs[vid].pattern) < 85:
-                print reference_vntrs[vid].left_flanking_region[-50:]
-            # print('%s: %s %s %s' % (vid, father_genotypes[vid], mother_genotypes[vid], child_genotypes[vid]))
         else:
             consistents.append(len((reference_vntrs[vid].get_repeat_segments())))
 

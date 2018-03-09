@@ -473,7 +473,7 @@ def plot_indel_frequencies_for_diabetes():
     total_indes = list(set(total_indes))
     total_indel_sorted = []
     intervals = get_diabetes_pattern_interavls()
-    print intervals
+    print(intervals)
 
     width = 0.35
     case_array = []
@@ -487,7 +487,7 @@ def plot_indel_frequencies_for_diabetes():
         case_array += [case_count]
         control_array += [control_count]
         filtered_indels += [pos]
-        print case_count, control_count
+        print(case_count, control_count)
     case_array = np.array(case_array)
     control_array = np.array(control_array)
     print(case_array)
@@ -700,7 +700,6 @@ def plot_pacbio_ru_length_result(results_dir='../pacbio_ru_data_for_all_vntrs/')
     ru_lengths = [x for x, y, z in points]
     naive_points = sorted(naive_points)
 
-    # print points
     ru_lengths = [int(x/10)*10 for x, y, z in points]
     corrects = []
     naive_corrects = []
@@ -726,7 +725,7 @@ def plot_pacbio_ru_length_result(results_dir='../pacbio_ru_data_for_all_vntrs/')
         naive_corrects.append(float(total)/num)
         naive_error_bars.append(stats.sem(observed_values))
 
-    print naive_error_bars
+    print(naive_error_bars)
     error_bars = [0 for x, y, z in points]
     # naive_error_bars = [0 for x, y, z in naive_points]
     # corrects = [y for x, y, z in points]
@@ -823,7 +822,7 @@ def plot_estimates(ru_estimate_plot, files):
         total = 0
         for cov in range(len(data)):
             if data[cov][sim_rcout] == 0:
-                print cov+9, sim_rcout
+                print(cov+9, sim_rcout)
             total += data[cov][sim_rcout]
         averages.append(total / float(len(data)))
 
@@ -1101,7 +1100,7 @@ def plot_coverage_confidence_violin():
         points.append(l)
 
     print(len(raw_points))
-    print len(points)
+    print(len(points))
 
     import matplotlib.pyplot as plt
     from matplotlib import rc, rcParams
@@ -1117,7 +1116,6 @@ def plot_coverage_confidence_violin():
     plt.ylabel(r'\emph{Posterior Probability of Estimated Genotype}')
     plt.xlabel(r'\emph{Sequencing Coverage}')
 
-    # print points
     data = [np.array(l) for l in points]
     parts = plt.violinplot(data, pos, showmeans=False, showmedians=False,
         showextrema=False, widths=1)#, showmeans=True)
