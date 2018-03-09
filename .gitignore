@@ -8,4 +8,6 @@ vntr_data/*
 results/
 docs/_build/doctrees/
 docs/_build/html/
-
+build
+dist
+pomegranate/*.c
