@@ -2,7 +2,7 @@ import logging
 
 from Bio import SeqIO
 
-from src.settings import *
+from advntr.settings import *
 
 
 def get_min_number_of_copies_to_span_read(pattern, read_length=150):

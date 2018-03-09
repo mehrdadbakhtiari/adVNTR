@@ -4,10 +4,10 @@ from multiprocessing import Process, Semaphore, Manager
 from Bio import pairwise2
 from Bio import Seq, SeqRecord
 
-from src.hmm_utils import build_reference_repeat_finder_hmm, get_repeat_segments_from_visited_states_and_region
-from src.utils import *
-from src.vntr_annotation import get_gene_name_and_annotation_of_vntr, is_vntr_close_to_gene, get_genes_info
-from src import settings
+from advntr.hmm_utils import build_reference_repeat_finder_hmm, get_repeat_segments_from_visited_states_and_region
+from advntr.utils import *
+from advntr.vntr_annotation import get_gene_name_and_annotation_of_vntr, is_vntr_close_to_gene, get_genes_info
+from advntr import settings
 
 
 class ReferenceVNTR:

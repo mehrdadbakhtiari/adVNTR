@@ -4,7 +4,7 @@ import os
 from Bio.Blast.Applications import NcbiblastnCommandline
 from Bio import Seq, SeqRecord, SeqIO
 
-from src import settings
+from advntr import settings
 
 
 def make_blast_database(fasta_file, db_name):

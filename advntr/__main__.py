@@ -1,7 +1,12 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# from __future__ import absolute_import
+
 import argparse
 
-from src.advntr_commands import genotype, view_model, not_implemented_command
-from src import settings
+from advntr.advntr_commands import genotype, view_model, not_implemented_command
+from advntr import settings
 
 
 def run_advntr():

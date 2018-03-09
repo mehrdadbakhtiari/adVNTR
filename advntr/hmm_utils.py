@@ -1,10 +1,10 @@
 import numpy as np
 
-from src.pomegranate import DiscreteDistribution, State
-from src.pomegranate import HiddenMarkovModel as Model
-from src.profile_hmm import build_profile_hmm_for_repeats
-from src.profiler import time_usage
-from src import settings
+from pomegranate import DiscreteDistribution, State
+from pomegranate import HiddenMarkovModel as Model
+from advntr.profile_hmm import build_profile_hmm_for_repeats
+from advntr.profiler import time_usage
+from advntr import settings
 
 
 def path_to_alignment(x, y, path):

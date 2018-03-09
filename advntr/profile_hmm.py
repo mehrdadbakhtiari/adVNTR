@@ -6,8 +6,7 @@ except ImportError:
 from Bio.Align.Applications import MuscleCommandline
 from Bio import AlignIO
 
-from src.profiler import time_usage
-from src import settings
+from advntr.profiler import time_usage
 
 
 @time_usage

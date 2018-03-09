@@ -1,8 +1,8 @@
 import pysam
 import os
 
-from src.profiler import time_usage
-from src import settings
+from advntr.profiler import time_usage
+from advntr import settings
 
 
 @time_usage

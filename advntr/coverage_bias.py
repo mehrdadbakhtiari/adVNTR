@@ -5,8 +5,8 @@ import sys
 import pysam
 import numpy
 
-from src.settings import *
-from src.utils import get_chromosome_reference_sequence, get_gc_content
+from advntr.settings import *
+from advntr.utils import get_chromosome_reference_sequence, get_gc_content
 
 
 class CoverageBiasDetector:

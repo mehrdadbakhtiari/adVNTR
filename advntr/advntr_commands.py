@@ -2,9 +2,9 @@ import logging
 import os
 import sys
 
-from src.genome_analyzer import GenomeAnalyzer
-from src.reference_vntr import load_unique_vntrs_data
-from src import settings
+from advntr.genome_analyzer import GenomeAnalyzer
+from advntr.reference_vntr import load_unique_vntrs_data
+from advntr import settings
 
 
 def valid_vntr_for_frameshift(target_vntrs):
@@ -107,6 +107,8 @@ def view_model(args, viewmodel_parser):
             continue
         if args.pattern and ref_vntr.pattern != args.pattern.upper():
             continue
+        # if ref_vntr.get_length() > 130:
+        #     continue
         results.append(ref_vntr)
     print_models(results)
 

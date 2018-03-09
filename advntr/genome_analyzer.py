@@ -1,8 +1,8 @@
 from Bio import SeqIO
 
-from src.profiler import time_usage
-from src.sam_utils import extract_unmapped_reads_to_fasta_file
-from src.vntr_finder import VNTRFinder
+from advntr.profiler import time_usage
+from advntr.sam_utils import extract_unmapped_reads_to_fasta_file
+from advntr.vntr_finder import VNTRFinder
 
 
 class GenomeAnalyzer:

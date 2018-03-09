@@ -7,9 +7,8 @@ except ImportError:
 from Bio.Align.Applications import MuscleCommandline
 from Bio import AlignIO
 
-from src.distance import hamming
-from src.hierarchical_clustering import hierarchical_clustering
-from src.settings import *
+from advntr.distance import hamming
+from advntr.hierarchical_clustering import hierarchical_clustering
 
 
 class PacBioHaplotyper:
