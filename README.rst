@@ -29,6 +29,11 @@ You can install required python libraries by running ``pip install -r requiremen
 
 3. In addition, ``ncbi-blast`` version 2.2.29 or above is required
 
+Installation
+------------
+To install locally: ``python setup.py install``
+adVNTR could be invoked with ``advntr``
+
 
 Data Requirements
 -----------------
@@ -42,7 +47,7 @@ Use following command to see the help for running the tool.
 
 .. code:: bash
     
-    python advntr.py --help
+    advntr --help
 
 The program outputs the RU count genotypes of VNTRs. To specify a single VNTR by its ID use ``--vntr_id <id>`` option.
 The list of some known VNTRs and their ID is available at `Disease-linked-VNTRs page <https://github.com/mehrdadbakhtiari/adVNTR/wiki/Disease-linked-VNTRs>`_ in wiki.
@@ -53,19 +58,19 @@ Demo 1: input in BAM format
 
 .. code:: bash
     
-    python advntr.py genotype --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/
+    advntr genotype --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/
 
 * With ``--pacbio``, adVNTR assumes the alignment file contains PacBio sequencing data:
 
 .. code:: bash
     
-    python advntr.py genotype --alignment_file aligned_pacbio_reads.bam --working_directory ./log_dir/ --pacbio
+    advntr genotype --alignment_file aligned_pacbio_reads.bam --working_directory ./log_dir/ --pacbio
 
 * Use ``--frameshift`` to find the possible frameshifts in VNTR:
 
 .. code:: bash
     
-    python advntr.py genotype --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/ --frameshift
+    advntr genotype --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/ --frameshift
 
 Citation:
 ---------
