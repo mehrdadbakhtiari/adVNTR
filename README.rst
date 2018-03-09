@@ -32,6 +32,7 @@ You can install required python libraries by running ``pip install -r requiremen
 Installation
 ------------
 To install locally: ``python setup.py install``
+
 adVNTR could be invoked with ``advntr``
 
 
