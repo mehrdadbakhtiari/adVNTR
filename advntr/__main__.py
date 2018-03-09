@@ -25,7 +25,7 @@ def run_advntr():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, usage=usage, add_help=False)
     subparsers = parser.add_subparsers(title='Commands', dest='command')
 
-    genotype_parser = subparsers.add_parser('genotype', usage='python advntr.py genotype [options]')
+    genotype_parser = subparsers.add_parser('genotype', usage='advntr genotype [options]')
     genotype_parser.add_argument('-a', '--alignment_file', type=str, help='Alignment file in BAM format or SAM format',
                                  metavar='FILE')
     genotype_parser.add_argument('-f', '--fasta', type=str, help='Fasta file containing raw reads', metavar='FILE')
@@ -51,13 +51,13 @@ def run_advntr():
     genotype_parser.add_argument('-naive', '--naive', action='store_true', default=False,
                                  help='Use naive approach for PacBio reads')
 
-    viewmodel_parser = subparsers.add_parser('viewmodel', usage='python advntr.py viewmodel [options]')
+    viewmodel_parser = subparsers.add_parser('viewmodel', usage='advntr viewmodel [options]')
     viewmodel_parser.add_argument('-g', '--gene', type=str, default='', help='Comma-separated list of Gene Names')
     viewmodel_parser.add_argument('-p', '--pattern', type=str, default=None,
                                   help='Repeating pattern of VNTR in forward (5\' to 3\') direction')
 
-    addmodel_parser = subparsers.add_parser('addmodel', usage='python advntr.py addmodel [options]')
-    delmodel_parser = subparsers.add_parser('delmodel', usage='python advntr.py delmodel [options]')
+    addmodel_parser = subparsers.add_parser('addmodel', usage='advntr addmodel [options]')
+    delmodel_parser = subparsers.add_parser('delmodel', usage='advntr delmodel [options]')
 
     args = parser.parse_args()
     if args.command == 'genotype':
