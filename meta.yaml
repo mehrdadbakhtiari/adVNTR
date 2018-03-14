@@ -1,0 +1,37 @@
+{% set version="0.0.1a" %}
+{% set tag="4dc311375dbade608f44af2e0b59aba61811a737" %}
+about:
+    home: https://github.com/mehrdadbakhtiari/adVNTR
+    license: BSD 3-Clause
+    summary: A tool for genotyping Variable Number Tandem Repeats (VNTR) from sequence data
+package:
+    name: advntr
+    version: {{ version }}
+build:
+  number: 0
+  skip: false
+  script: python setup.py install --single-version-externally-managed --record=record.txt
+  entry_points:
+    - advntr=advntr.__main__:main
+source:
+  fn: {{ tag }}.tar.gz
+  url: https://github.com/mehrdadbakhtiari/adVNTR/archive/{{ tag }}.tar.gz
+  sha256: 39fd45dd41e43563d665748c38be9bb9f436ec080abffdf2bdc8d2a7ab13765f
+requirements:
+  build:
+    - python
+    - setuptools
+    - cython
+    - scipy
+    - networkx==1.11
+  run:
+    - python
+    - cython
+    - scipy
+    - networkx==1.11
+    - joblib
+    - biopython
+    - blastn
+    - muscle
+    - pysam>=0.9.1.4
+    - htslib==1.3
