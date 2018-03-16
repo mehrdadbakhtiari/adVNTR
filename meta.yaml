@@ -24,6 +24,7 @@ requirements:
     - cython
     - scipy
     - networkx==1.11
+    - matplotlib
   run:
     - python
     - cython
