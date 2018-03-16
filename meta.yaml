@@ -31,7 +31,7 @@ requirements:
     - networkx==1.11
     - joblib
     - biopython
-    - blastn
+    - blast
     - muscle
     - pysam>=0.9.1.4
     - htslib==1.3

@@ -3,3 +3,4 @@ sudo apt-get install python-pip
 sudo apt-get install python-tk
 sudo apt-get install libz-dev
 sudo apt-get install samtools
+sudo apt-get install muscle

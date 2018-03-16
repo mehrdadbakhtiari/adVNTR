@@ -1,3 +1,4 @@
+setuptools
 matplotlib
 biopython
 pysam>=0.9.1.4
@@ -5,4 +6,3 @@ cython
 networkx==1.11
 scipy
 joblib
-muscle
