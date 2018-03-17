@@ -9,7 +9,7 @@ from advntr import settings
 
 class CustomHelpFormatter(argparse.HelpFormatter):
     def __init__(self, prog):
-        super(CustomHelpFormatter, self).__init__(prog, max_help_position=40, width=80)
+        super(CustomHelpFormatter, self).__init__(prog, max_help_position=40, width=110)
 
     def _format_action_invocation(self, action):
         default = self._metavar_formatter(action, action.dest)
@@ -34,31 +34,40 @@ def run_advntr():
     subparsers = parser.add_subparsers(title='Commands', dest='command')
 
     fmt = lambda prog: CustomHelpFormatter(prog)
-    genotype_parser = subparsers.add_parser('genotype', usage='advntr genotype [options]', formatter_class=fmt)
-    genotype_parser.add_argument('-a', '--alignment_file', type=str, help='Alignment file in BAM format or SAM format',
-                                 metavar='<file>')
-    genotype_parser.add_argument('-f', '--fasta', type=str, help='Fasta file containing raw reads', metavar='<file>')
-    genotype_parser.add_argument('-fs', '--frameshift', action='store_true',
-                                 help='set this flag to search for frameshifts in VNTR instead of copy number.'
-                                 '\n    * Supported VNTR IDs: %s' % settings.FRAMESHIFT_VNTRS)
-    genotype_parser.add_argument('-e', '--expansion', action='store_true',
-                                 help='set this flag to determine long expansion from PCR-free data')
-    genotype_parser.add_argument('-c', '--coverage', type=float, metavar='<float>',
-                                 help='average sequencing coverage in PCR-free sequencing')
-    genotype_parser.add_argument('-p', '--pacbio', action='store_true',
-                                 help='set this flag if input file contains PacBio reads instead of Illumina reads')
-    genotype_parser.add_argument('-n', '--nanopore', action='store_true',
-                                 help='set this flag if input file contains Nanopore MinION reads instead of Illumina')
-    genotype_parser.add_argument('--working_directory', type=str, metavar='<path>',
-                                 help='working directory for creating temporary files needed for computation')
-    genotype_parser.add_argument('-m', '--models', type=str, metavar='<file>', default='vntr_data/hg19_VNTRs.db',
-                                 help='file containing VNTRs information [%(default)s]')
-    genotype_parser.add_argument('-t', '--threads', type=int, metavar='<int>', default=4,
-                                 help='number of threads [%(default)s]')
-    genotype_parser.add_argument('-vid', '--vntr_id', type=str, metavar='<text>', default=None,
-                                 help='comma-separated list of VNTR IDs')
-    genotype_parser.add_argument('-naive', '--naive', action='store_true', default=False,
-                                 help='use naive approach for PacBio reads')
+    genotype_parser = subparsers.add_parser('genotype', usage='advntr genotype [options]', formatter_class=fmt,
+                                            add_help=False)
+    genotype_io_group = genotype_parser.add_argument_group("Input/output options")
+    genotype_io_group.add_argument('-a', '--alignment_file', type=str, metavar='<file>',
+                                   help='Alignment file in BAM format or SAM format')
+    genotype_io_group.add_argument('-f', '--fasta', type=str, metavar='<file>',
+                                   help='Fasta file containing raw reads',)
+    genotype_io_group.add_argument('-p', '--pacbio', action='store_true',
+                                   help='set this flag if input file contains PacBio reads instead of Illumina reads')
+    genotype_io_group.add_argument('-n', '--nanopore', action='store_true',
+                                   help='set this flag if input file contains Nanopore MinION reads instead of Illumina')
+
+    genotype_algortihm_group = genotype_parser.add_argument_group("Algorithm options")
+    genotype_algortihm_group.add_argument('-fs', '--frameshift', action='help',
+                                          help='set this flag to search for frameshifts in VNTR instead of copy'
+                                          ' number. Supported VNTR IDs: %s' % settings.FRAMESHIFT_VNTRS)
+    genotype_algortihm_group.add_argument('-e', '--expansion', action='store_true',
+                                          help='set this flag to determine long expansion from PCR-free data')
+    genotype_algortihm_group.add_argument('-c', '--coverage', type=float, metavar='<float>',
+                                          help='average sequencing coverage in PCR-free sequencing')
+    genotype_algortihm_group.add_argument('-naive', '--naive', action='store_true', default=False,
+                                          help='use naive approach for PacBio reads')
+
+    genotype_others_group = genotype_parser.add_argument_group("Other options")
+    genotype_others_group.add_argument('-h', '--help', action='store_true',
+                                       help='show this help message and exit')
+    genotype_others_group.add_argument('--working_directory', type=str, metavar='<path>',
+                                       help='working directory for creating temporary files needed for computation')
+    genotype_others_group.add_argument('-m', '--models', type=str, metavar='<file>', default='vntr_data/hg19_VNTRs.db',
+                                       help='file containing VNTRs information [%(default)s]')
+    genotype_others_group.add_argument('-t', '--threads', type=int, metavar='<int>', default=4,
+                                       help='number of threads [%(default)s]')
+    genotype_others_group.add_argument('-vid', '--vntr_id', type=str, metavar='<text>', default=None,
+                                       help='comma-separated list of VNTR IDs')
 
     viewmodel_parser = subparsers.add_parser('viewmodel', usage='advntr viewmodel [options]', formatter_class=fmt)
     viewmodel_parser.add_argument('-g', '--gene', type=str, default='', metavar='<text>',
