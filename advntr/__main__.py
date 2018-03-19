@@ -17,7 +17,7 @@ class CustomHelpFormatter(argparse.HelpFormatter):
         return '/'.join(action.option_strings) + ' ' + args_string
 
 
-def run_advntr():
+def main():
     description = '=======================================================\n' \
                   'adVNTR 1.0.0: Genopyting tool for VNTRs\n' \
                   '=======================================================\n' \
@@ -91,4 +91,4 @@ def run_advntr():
         parser.error('Please specify a valid command')
 
 if __name__ == '__main__':
-    run_advntr()
+    main()

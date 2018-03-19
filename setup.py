@@ -12,7 +12,7 @@ setup(name='advntr',
       package_dir={'advntr': 'advntr', 'advntr.pomegranate': 'pomegranate'},
       provides=["advntr"],
       entry_points={
-            'console_scripts': ['advntr=advntr.__main__:run_advntr']
+            'console_scripts': ['advntr=advntr.__main__:main']
       },
       ext_modules=cythonize(["pomegranate/*.pyx"]),
       classifiers=["Environment :: Console",
