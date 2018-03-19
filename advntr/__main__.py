@@ -47,7 +47,7 @@ def run_advntr():
                                    help='set this flag if input file contains Nanopore MinION reads instead of Illumina')
 
     genotype_algortihm_group = genotype_parser.add_argument_group("Algorithm options")
-    genotype_algortihm_group.add_argument('-fs', '--frameshift', action='help',
+    genotype_algortihm_group.add_argument('-fs', '--frameshift', action='store_true',
                                           help='set this flag to search for frameshifts in VNTR instead of copy'
                                           ' number. Supported VNTR IDs: %s' % settings.FRAMESHIFT_VNTRS)
     genotype_algortihm_group.add_argument('-e', '--expansion', action='store_true',
@@ -58,7 +58,7 @@ def run_advntr():
                                           help='use naive approach for PacBio reads')
 
     genotype_others_group = genotype_parser.add_argument_group("Other options")
-    genotype_others_group.add_argument('-h', '--help', action='store_true',
+    genotype_others_group.add_argument('-h', '--help', action='help',
                                        help='show this help message and exit')
     genotype_others_group.add_argument('--working_directory', type=str, metavar='<path>',
                                        help='working directory for creating temporary files needed for computation')
