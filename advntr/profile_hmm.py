@@ -14,7 +14,7 @@ def build_profile_hmm_pseudocounts_for_alignment(thresh, pseu, alphabet, alignme
     thresh = thresh * len(alignment)
     states = []
     insert_index = []
-    for i in xrange(len(alignment[0])):
+    for i in range(len(alignment[0])):
         total = 0
         for j in alignment:
             if j[i] == '-':
@@ -26,15 +26,15 @@ def build_profile_hmm_pseudocounts_for_alignment(thresh, pseu, alphabet, alignme
     emission['unit_start'] = dict((x, 0) for x in alphabet)
     emission['unit_end'] = dict((x, 0) for x in alphabet)
     emission['I0'] = dict((x, 0) for x in alphabet)
-    for i in xrange(1, len(alignment[0]) - len(insert_index) + 1):
+    for i in range(1, len(alignment[0]) - len(insert_index) + 1):
         emission['I' + str(i)] = dict((x, 0) for x in alphabet)
         emission['M' + str(i)] = dict((x, 0) for x in alphabet)
         emission['D' + str(i)] = dict((x, 0) for x in alphabet)
 
-    for i in xrange(len(alignment)):
+    for i in range(len(alignment)):
         per_state = []
         current_index = 1
-        for j in xrange(len(alignment[i])):
+        for j in range(len(alignment[i])):
             if j not in insert_index:
                 if alignment[i][j] == '-':
                     per_state.append('D' + str(current_index))
@@ -79,8 +79,8 @@ def build_profile_hmm_pseudocounts_for_alignment(thresh, pseu, alphabet, alignme
     # for i in states:
     #     transition['I0'][i[0]] += 1
 
-    for i in xrange(len(states)):
-        for j in xrange(len(states[i]) - 1):
+    for i in range(len(states)):
+        for j in range(len(states[i]) - 1):
             if states[i][j] not in transition:
                 transition[states[i][j]] = {}
             if states[i][j + 1] not in transition[states[i][j]]:
@@ -107,7 +107,7 @@ def build_profile_hmm_pseudocounts_for_alignment(thresh, pseu, alphabet, alignme
         if 'unit_end' not in transition['M' + str(len(alignment[0]) - len(insert_index))]:
             transition['M' + str(len(alignment[0]) - len(insert_index))]['unit_end'] = 0
 
-    for i in xrange(1, len(alignment[0]) - len(insert_index) + 1):
+    for i in range(1, len(alignment[0]) - len(insert_index) + 1):
         if not 'I' + str(i) in transition:
             transition['I' + str(i)] = {}
         if not 'M' + str(i) in transition:
@@ -145,7 +145,7 @@ def build_profile_hmm_pseudocounts_for_alignment(thresh, pseu, alphabet, alignme
                         transition[key][sub_key] = 1.0 / 2
 
     index_list = ['unit_start', 'I0']
-    for i in xrange(1, len(alignment[0])-len(insert_index)+1):
+    for i in range(1, len(alignment[0])-len(insert_index)+1):
         index_list.extend(['M'+str(i), 'D'+str(i), 'I'+str(i)])
     index_list.append('unit_end')
     for key1 in index_list:
