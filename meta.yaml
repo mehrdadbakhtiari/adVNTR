@@ -1,4 +1,4 @@
-{% set version="1.0.1" %}
+{% set version="1.0.2" %}
 about:
     home: https://github.com/mehrdadbakhtiari/adVNTR
     license: BSD 3-Clause
@@ -13,9 +13,8 @@ build:
   entry_points:
     - advntr=advntr.__main__:main
 source:
-  fn: adVNTR_{{ version }}.tar.gz
-  url: https://github.com/mehrdadbakhtiari/adVNTR/archive/{{ version }}.tar.gz
-  sha256: ec973bbac42f74782b3c2b3f70d4dfdb2a2ac7b6ed356b15a8fec3736c3cb57f
+  git_url: https://github.com/mehrdadbakhtiari/adVNTR.git
+  git_rev: {{ version }}
 requirements:
   build:
     - python
