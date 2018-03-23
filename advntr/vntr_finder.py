@@ -87,40 +87,40 @@ class VNTRFinder:
         if not os.path.exists(blast_db_name + '.nsq') and not os.path.exists(blast_db_name + '.nal'):
             empty_db = make_blast_database(read_file, blast_db_name)
 
-        word_size = int(len(self.reference_vntr.pattern)/3)
-        if word_size > 11:
-            word_size = 11
-        if word_size < 5:
-            word_size = 5
-        word_size = str(word_size)
+        vntr = ''.join(self.reference_vntr.get_repeat_segments())
+        k = 21
+        if len(vntr) < k:
+            min_copies = int(k / len(vntr)) + 1
+            vntr = str(vntr) * min_copies
+        locus = self.reference_vntr.right_flanking_region[-15:] + vntr + self.reference_vntr.right_flanking_region[:15]
+        queries = []
+        step_size = 5 if len(self.reference_vntr.pattern) != 5 else 6
+        for i in range(0, len(locus) - k + 1, step_size):
+            queries.append(locus[i:i+k])
 
-        search_results = []
-        blast_ids = set([])
-        search_id = str(uuid4()) + str(self.reference_vntr.id)
-        queries = self.reference_vntr.get_repeat_segments()
-        if len(self.reference_vntr.pattern) < 10:
-            min_copies = int(10 / len(self.reference_vntr.pattern))
-            queries = [self.reference_vntr.pattern * min_copies]
-        identity_cutoff = '0'
+        ev = 10 if len(self.reference_vntr.pattern) < k else 100
+        identity_cutoff = '90'
+        word_size = '11'
         if not short_reads:
             queries = [self.reference_vntr.left_flanking_region[-80:], self.reference_vntr.right_flanking_region[:80]]
-            word_size = str('10')
             identity_cutoff = '70'
-        if not empty_db:
-            for query in queries:
-                search_result = get_blast_matched_ids(query, blast_db_name, max_seq='50000', word_size=word_size,
-                                                      evalue=10, search_id=search_id, identity_cutoff=identity_cutoff)
-                search_results.append(search_result)
+        queries = set(queries)
 
-            if short_reads:
-                for search_result in search_results:
-                    blast_ids |= search_result
-            else:
-                blast_ids = search_results[0] & search_results[1]
+        blast_ids = set([])
+        if not empty_db:
+            search_id = str(uuid4()) + str(self.reference_vntr.id)
+            search_results = []
+            for query in queries:
+                search_result = get_blast_matched_ids(query, blast_db_name, max_seq='100000', word_size=word_size,
+                                                      evalue=ev, search_id=search_id, identity_cutoff=identity_cutoff)
+                search_results += list(search_result)
+            counts = {}
+            for i in search_results:
+                counts[i] = counts.get(i, 0) + 1
+
+            blast_ids = set([read_id for read_id, count in counts.items() if count >= min(3, len(queries))])
 
         logging.info('blast selected %s reads for %s' % (len(blast_ids), self.reference_vntr.id))
-        if len(blast_ids) == len(self.reference_vntr.get_repeat_segments()) * 50 * 1000:
-            logging.error('maximum number of read selected in filtering for pattern %s' % self.reference_vntr.id)
         return blast_ids
 
     @staticmethod
