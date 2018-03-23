@@ -89,7 +89,7 @@ def print_models(reference_vntrs):
         if len(gene_name) < 7:
             gene_name += '\t'
         print('%s\t| %s\t|%s| %s\t | %s' % (ref_vntr.id, ref_vntr.chromosome, gene_name,
-                                               ref_vntr.start_point, ref_vntr.pattern))
+                                            ref_vntr.start_point, ref_vntr.pattern))
 
 
 def view_model(args, viewmodel_parser):
