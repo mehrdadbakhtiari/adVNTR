@@ -234,11 +234,11 @@ class VNTRFinder:
     def process_unmapped_read(self, sema, read_segment, hmm, recruitment_score, vntr_bp_in_unmapped_reads,
                               selected_reads, best_seq):
         if read_segment.seq.count('N') <= 0:
-            sequence = str(read_segment.seq)
+            sequence = str(read_segment.seq).upper()
             logp, vpath = hmm.viterbi(sequence)
-            rev_logp, rev_vpath = hmm.viterbi(str(read_segment.seq.reverse_complement()))
+            rev_logp, rev_vpath = hmm.viterbi(str(read_segment.seq.reverse_complement()).upper())
             if logp < rev_logp:
-                sequence = str(read_segment.seq.reverse_complement())
+                sequence = str(read_segment.seq.reverse_complement()).upper()
                 logp = rev_logp
                 vpath = rev_vpath
             if logp > best_seq['logp']:
@@ -348,13 +348,13 @@ class VNTRFinder:
 
         if right_align[3] < left_align[3]:
             return
-        spanning_reads.append(read_str[left_align[3]:right_align[3]+flanking_region_size].upper())
+        spanning_reads.append(read_str[left_align[3]:right_align[3]+flanking_region_size])
         length_distribution.append(right_align[3] - (left_align[3] + flanking_region_size))
 
     def check_if_pacbio_read_spans_vntr(self, sema, read, length_distribution, spanning_reads):
-        self.check_if_flanking_regions_align_to_str(str(read.seq), length_distribution, spanning_reads)
+        self.check_if_flanking_regions_align_to_str(str(read.seq).upper(), length_distribution, spanning_reads)
         reverse_complement_str = str(Seq(str(read.seq)).reverse_complement())
-        self.check_if_flanking_regions_align_to_str(reverse_complement_str, length_distribution, spanning_reads)
+        self.check_if_flanking_regions_align_to_str(reverse_complement_str.upper(), length_distribution, spanning_reads)
         sema.release()
 
     def check_if_pacbio_mapped_read_spans_vntr(self, sema, read, length_distribution, spanning_reads):
@@ -619,11 +619,11 @@ class VNTRFinder:
             read_end = read.reference_end if read.reference_end else read.reference_start + len(read.seq)
             if vntr_start - read_length < read.reference_start < vntr_end or vntr_start < read_end < vntr_end:
                 if read.seq.count('N') <= 0:
-                    sequence = str(read.seq)
+                    sequence = str(read.seq).upper()
                     logp, vpath = hmm.viterbi(sequence)
-                    rev_logp, rev_vpath = hmm.viterbi(str(Seq(read.seq).reverse_complement()))
+                    rev_logp, rev_vpath = hmm.viterbi(str(Seq(read.seq).reverse_complement()).upper())
                     if logp < rev_logp:
-                        sequence = str(Seq(read.seq).reverse_complement())
+                        sequence = str(Seq(read.seq).reverse_complement()).upper()
                         logp = rev_logp
                         vpath = rev_vpath
                     length = len(sequence)
