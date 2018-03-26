@@ -17,7 +17,8 @@ class GenomeAnalyzer:
                 self.vntr_finder[ref_vntr.id] = VNTRFinder(ref_vntr)
 
     @staticmethod
-    def print_genotype(copy_numbers):
+    def print_genotype(vntr_id, copy_numbers):
+        print(vntr_id)
         if copy_numbers is not None:
             print('/'.join([str(cn) for cn in sorted(copy_numbers)]))
         else:
@@ -50,15 +51,13 @@ class GenomeAnalyzer:
         for vid in self.target_vntr_ids:
             reads = vntr_reads[vid]
             copy_numbers = self.vntr_finder[vid].find_repeat_count_from_pacbio_alignment_file(alignment_file, reads)
-            print(vid)
-            self.print_genotype(copy_numbers)
+            self.print_genotype(vid, copy_numbers)
 
     def find_repeat_counts_from_pacbio_reads(self, read_file, naive=False):
         vntr_reads = self.get_vntr_filtered_reads_map(read_file, False)
         for vid in self.target_vntr_ids:
             copy_numbers = self.vntr_finder[vid].find_repeat_count_from_pacbio_reads(vntr_reads[vid], naive)
-            print(vid)
-            self.print_genotype(copy_numbers)
+            self.print_genotype(vid, copy_numbers)
 
     def find_frameshift_from_alignment_file(self, alignment_file):
         for vid in self.target_vntr_ids:
@@ -73,11 +72,9 @@ class GenomeAnalyzer:
             unmapped_reads = vntr_reads[vid]
             copy_number = self.vntr_finder[vid].find_repeat_count_from_alignment_file(alignment_file, unmapped_reads,
                                                                                       average_coverage)
-            print(vid)
-            self.print_genotype(copy_number)
+            self.print_genotype(vid, copy_number)
 
     def find_repeat_counts_from_short_reads(self, read_file):
         for vid in self.target_vntr_ids:
             copy_number = self.vntr_finder[vid].find_repeat_count_from_short_reads(read_file)
-            print(vid)
-            self.print_genotype(copy_number)
+            self.print_genotype(vid, copy_number)
