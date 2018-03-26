@@ -13,8 +13,9 @@ build:
   entry_points:
     - advntr=advntr.__main__:main
 source:
-  git_url: https://github.com/mehrdadbakhtiari/adVNTR.git
-  git_rev: {{ version }}
+  fn: advntr-{{ version }}.tar.gz
+  url: https://github.com/mehrdadbakhtiari/adVNTR/archive/{{ version }}.tar.gz
+  sha256: 2fafdbd0d740bd5ef836c7c199edf40509301f4947d340ba19aca92e504fbc08
 requirements:
   build:
     - python
