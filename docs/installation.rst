@@ -20,8 +20,8 @@ adVNTR could be invoked from command line with ``advntr``
 Install from source (Not recommended)
 -------------------------------------
 
-Software Requirements
-^^^^^^^^^^^^^^^^^^^^^
+Dependencies
+^^^^^^^^^^^^
 1. Following libraries are required
     -   ``python2.7``
     -   ``python-pip``

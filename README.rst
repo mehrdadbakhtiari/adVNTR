@@ -16,7 +16,7 @@ you can install adVNTR from the `bioconda  channel <https://bioconda.github.io/>
 
 adVNTR could be invoked from command line with ``advntr``
 
-Alternatively, you can install requirements and `install the adVNTR from source <http://advntr.readthedocs.io/en/latest/installation.html#install-from-source-not-recommended>`_.
+Alternatively, you can install dependencies and `install the adVNTR from source <http://advntr.readthedocs.io/en/latest/installation.html#install-from-source-not-recommended>`_.
 
 
 Data Requirements
