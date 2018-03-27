@@ -4,43 +4,26 @@ adVNTR - A tool for genotyping VNTRs
 from sequence data. It works with both NGS short reads (Illumina HiSeq) and SMRT reads (PacBio) and finds
 diploid repeating counts for VNTRs and identifies possible mutations in the VNTR sequences.
 
-
-Software Requirements
----------------------
-1. Following libraries are required
-    -   ``python2.7``
-    -   ``python-pip``
-    -   ``python-tk``
-    -   ``libz-dev``
-    -   ``samtools``
-    -   ``muscle``
-
-You can install these requirement in Ubuntu Linux by running ``sudo apt-get install python2.7 python-pip python-tk libz-dev samtools muscle``
-
-2. Following python2.7 packages are required:
-    -   ``biopython``
-    -   ``pysam`` version 0.9.1.4 or above
-    -   ``cython``
-    -   ``networkx`` version 1.11
-    -   ``scipy``
-    -   ``joblib``
-
-You can install required python libraries by running ``pip install -r requirements.txt``
-
-3. In addition, ``ncbi-blast`` version 2.2.29 or above is required
-
 Installation
 ------------
-To install locally: ``python setup.py install``
+If you are using the conda packaging manager (e.g. `miniconda <https://conda.io/miniconda.html>`_ or anaconda),
+you can install adVNTR from the `bioconda  channel <https://bioconda.github.io/>`_:
 
-adVNTR could be invoked with ``advntr``
+.. code:: bash
+
+    conda config --add channels bioconda
+    conda install advntr
+
+adVNTR could be invoked from command line with ``advntr``
+
+Alternatively, you can install requirements and `install the adVNTR from source <http://advntr.readthedocs.io/en/latest/installation.html#install-from-source-not-recommended>`_.
 
 
 Data Requirements
 -----------------
 * To run adVNTR on trained VNTR models:
     - Download `vntr_data.zip <https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data.zip>`_ and extract it inside the project directory.
-Alternatively, you can add model for custom VNTR. See :ref:`add-custom-vntr-label` for more information.
+Alternatively, you can add model for custom VNTR. See `Add Custom VNTR <http://advntr.readthedocs.io/en/latest/tutorial.html#add-custom-vntr-label>`_ for more information.
 
 Execution:
 ----------

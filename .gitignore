@@ -7,7 +7,8 @@ hg19_chromosomes/*
 vntr_data/*
 results/
 docs/_build/doctrees/
-docs/_build/html/
+docs/_build/html
+docs/_build/html/_static
 build
 dist
 pomegranate/*.c
