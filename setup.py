@@ -1,8 +1,9 @@
 from setuptools import setup
 from Cython.Build import cythonize
+import numpy
 
 setup(name='advntr',
-      version='1.0.0',
+      version='1.0.3',
       description='A tool for genotyping Variable Number Tandem Repeats (VNTR) from sequence data',
       author='Mehrdad Bakhtiari',
       author_email='mbakhtia@ucsd.edu',
@@ -16,6 +17,7 @@ setup(name='advntr',
             'console_scripts': ['advntr=advntr.__main__:main']
       },
       ext_modules=cythonize(["pomegranate/*.pyx"]),
+      include_dirs=[numpy.get_include()],
       classifiers=["Environment :: Console",
                    "Intended Audience :: Developers",
                    "Intended Audience :: Science/Research",
