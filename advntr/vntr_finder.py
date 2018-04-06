@@ -92,7 +92,7 @@ class VNTRFinder:
         if len(vntr) < k:
             min_copies = int(k / len(vntr)) + 1
             vntr = str(vntr) * min_copies
-        locus = self.reference_vntr.right_flanking_region[-15:] + vntr + self.reference_vntr.right_flanking_region[:15]
+        locus = self.reference_vntr.left_flanking_region[-15:] + vntr + self.reference_vntr.right_flanking_region[:15]
         queries = []
         step_size = 5 if len(self.reference_vntr.pattern) != 5 else 6
         for i in range(0, len(locus) - k + 1, step_size):
