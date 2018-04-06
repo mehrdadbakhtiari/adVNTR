@@ -5,6 +5,7 @@ from Bio.Blast.Applications import NcbiblastnCommandline
 from Bio import Seq, SeqRecord, SeqIO
 
 from advntr import settings
+from advntr.profiler import time_usage
 
 
 def make_blast_database(fasta_file, db_name):
@@ -33,17 +34,18 @@ def make_blast_database_of_multiple_files(fasta_files, db_name):
 
 
 def run_blast_search(query_file, db, result_file, num_threads, word_size, max_seq, evalue, task, identity_cutoff):
-    blastn_cline = NcbiblastnCommandline(query=query_file, db=db, outfmt='"6 sallseqid"', dust='no', out=result_file,
+    blastn_cline = NcbiblastnCommandline(query=query_file, db=db, outfmt='"6 sseqid"', dust='no', out=result_file,
                                          num_threads=num_threads, word_size=word_size, max_target_seqs=max_seq,
                                          evalue=evalue, task=task, perc_identity=identity_cutoff)
     blastn_cline()
     with open(result_file) as result_input:
         ids = result_input.readlines()
-        matched_ids = set([seq_id.strip() for seq_id in ids])
+        matched_ids = [seq_id.strip() for seq_id in ids]
 
     return matched_ids
 
 
+@time_usage
 def get_blast_matched_ids(query, blast_db_name, word_size='5', max_seq='6000', evalue=10.0, search_id='', threads=None,
                           identity_cutoff='0'):
     if not os.path.exists(settings.BLAST_TMP_DIR):
