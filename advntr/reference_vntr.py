@@ -229,6 +229,15 @@ def save_vntrs_to_database(processed_vntrs, db_file):
     print('%s %s %s' % (processed_vntrs, singles, paired))
 
 
+def update_trained_score_in_database(vntr_id, scaled_recruitment_score):
+    import sqlite3
+    db = sqlite3.connect(settings.TRAINED_MODELS_DB)
+    cursor = db.cursor()
+    cursor.execute('''UPDATE vntrs SET scaled_score=? WHERE id=?''', (scaled_recruitment_score, vntr_id))
+    db.commit()
+    db.close()
+
+
 def is_false_vntr_hit(qresult, ref_vntr, position, threshold):
     for hit in qresult:
         for hsp in hit:
