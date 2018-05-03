@@ -713,32 +713,3 @@ class VNTRFinder:
         alignment_file = '' + short_read_files
         # TODO: use bowtie2 to map short reads to hg19
         return self.find_repeat_count_from_alignment_file(alignment_file, working_directory)
-
-    def find_accuracy(self, samfile='original_reads/paired_dat.sam'):
-        """Find sensitivity and false positive reads for a set of simulated data
-        """
-        reference_end_pos = self.reference_vntr.start_point + self.reference_vntr.get_length()
-        related_reads, read_count = get_related_reads_and_read_count_in_samfile(self.reference_vntr.pattern,
-                                                                                self.reference_vntr.start_point,
-                                                                                read_file=samfile,
-                                                                                pattern_end=reference_end_pos)
-        # TODO
-        selected_reads = []
-        occurrences = 0
-        avg_coverage = 1
-        true_positives = [read for read in selected_reads if read in related_reads]
-        false_positives = [read for read in selected_reads if read not in true_positives]
-        false_negatives = [read for read in related_reads if read not in selected_reads]
-        # print('TP:', len(true_positives), 'FP:', len(false_positives), 'selected:', len(selected_reads))
-        # print('FN:', len(false_negatives))
-        sensitivity = float(len(true_positives)) / len(related_reads) if len(related_reads) > 0 else 0
-        if sensitivity > 0.9:
-            print(sensitivity, len(false_positives))
-        if 1 > sensitivity > 0.9 and len(false_negatives) > 0 and len(false_positives) > 0:
-            print('sensitivity ', sensitivity, ' FN:', false_negatives[0], ' FP:', false_positives[0])
-        with open('FP_and_sensitivity_HMM_read_scoring_method.txt', 'a') as outfile:
-            outfile.write('%s\t%s\t%s\t%s\t%s\n' % (
-                len(false_positives), sensitivity, self.reference_vntr.id, len(self.reference_vntr.pattern),
-                len(true_positives)))
-        error = abs(len(self.reference_vntr.get_repeat_segments()) - occurrences / avg_coverage)
-        print(error)
