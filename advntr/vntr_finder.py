@@ -713,3 +713,45 @@ class VNTRFinder:
         alignment_file = '' + short_read_files
         # TODO: use bowtie2 to map short reads to hg19
         return self.find_repeat_count_from_alignment_file(alignment_file, working_directory)
+
+    def simulate_true_reads(self, read_length):
+        vntr = ''.join(self.reference_vntr.get_repeat_segments())
+        right_flank = self.reference_vntr.right_flanking_region
+        left_flank = self.reference_vntr.left_flanking_region
+        locus = left_flank[-read_length:] + vntr + right_flank[:read_length]
+        step_size = 5
+        alphabet = ['A', 'C', 'G', 'T']
+        sim_reads = []
+        for i in range(0, len(locus) - read_length + 1, step_size):
+            sim_reads.append(locus[i:i+read_length].upper())
+        # add 4 special reads to sim_read
+        sim_reads.append((left_flank[-10:] + self.reference_vntr.pattern + right_flank)[:read_length])
+        sim_reads.append((left_flank + self.reference_vntr.pattern + right_flank[:10])[-read_length:])
+        min_copies = int(read_length / len(vntr)) + 1
+        sim_reads.append((vntr * min_copies)[:read_length])
+        sim_reads.append((vntr * min_copies)[-read_length:])
+        simulated_true_reads = []
+        for sim_read in sim_reads:
+            from random import randint
+            for i in range(randint(1, 2)):
+                temp_read = list(sim_read)
+                temp_read[randint(0, len(sim_read)-1)] = alphabet[randint(0, 3)]
+                sim_read = ''.join(temp_read)
+            simulated_true_reads.append(sim_read)
+        return simulated_true_reads
+
+    @time_usage
+    def find_recruitment_score_threshold(self, processed_true_reads, processed_false_reads):
+        from sklearn.linear_model import LogisticRegression
+        true_scores = [read.logp for read in processed_true_reads]
+        false_scores = [read.logp for read in processed_false_reads]
+        clf = LogisticRegression()
+        x = [[score] for score in true_scores + false_scores]
+        y = [1] * len(true_scores) + [0] * len(false_scores)
+        clf.fit(x, y)
+        recruitment_score = max(true_scores)
+        for i in range(-1, -300, -1):
+            if int(clf.predict(i)) == 0:
+                recruitment_score = i
+                break
+        return recruitment_score
