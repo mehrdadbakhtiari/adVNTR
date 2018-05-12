@@ -952,10 +952,9 @@ def plot_pedigree_tree(pedigree_file='PedigreeGenotypes.png'):
     imgplot = plt.savefig('PedigreeGenotypes.pdf', dpi=1000)
 
 
-def plot_lr_pcr(pcr_file='LRPCR.png'):
+def plot_lr_pcr(pcr_file='LRPCR.png', preliminary_file='LRPCR_ladder.png', preliminary_fig=True):
     import matplotlib.pyplot as plt
     import matplotlib.image as mpimg
-    import numpy as np
     fig = plt.figure()
     plt.gca().spines['bottom'].set_color('None')
     plt.gca().spines['left'].set_color('None')
@@ -963,9 +962,11 @@ def plot_lr_pcr(pcr_file='LRPCR.png'):
     plt.gca().spines['right'].set_color('None')
     plt.tick_params(labelcolor='None', top='off', bottom='off', left='off', right='off')
     ax = fig.add_subplot(1, 1, 1)
-    ax.text(-0.1, 1.27, 'D', transform=ax.transAxes,
-          fontsize=16, fontweight='bold', va='top', ha='right')
-    img = mpimg.imread(pcr_file)
+    # ax.text(-0.1, 1.27, 'D', transform=ax.transAxes, fontsize=16, fontweight='bold', va='top', ha='right')
+    if preliminary_fig:
+        img = mpimg.imread(preliminary_file)
+    else:
+        img = mpimg.imread(pcr_file)
     plt.grid(False)
 
     from matplotlib.patches import Rectangle
@@ -979,7 +980,7 @@ def plot_lr_pcr(pcr_file='LRPCR.png'):
     rec.set_clip_on(False)
 
     fsize = 11
-    ax.text(0.97, -0.03, '566/566', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
+    ax.text(0.97, -0.03, '588/588', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
     ax.text(0.805, -0.03, '433/481', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
     ax.text(0.64, -0.03, '546/584', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
     ax.text(0.48, -0.03, '529/701', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
@@ -1004,6 +1005,42 @@ def plot_lr_pcr(pcr_file='LRPCR.png'):
     ax.text(-0.01, 0.50, '500bp', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
     ax.text(-0.01, 0.65, '600bp', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
     ax.text(-0.01, 0.99, '1000bp', transform=ax.transAxes, fontsize=fsize, va='top', ha='right')
+
+    ax.plot([90, 90], [1, 160], '-', lw=1, color='black', zorder=1)
+    ax.plot([133, 133], [1, 160], '-', lw=1, color='black', zorder=1)
+    ax.plot([225, 225], [1, 160], '-', lw=1, color='black', zorder=1)
+
+    from math import log, e
+    ax.arrow(217, 62, 9, 0.0, fc='r', ec='r', width=2, head_width=5, head_length=5, alpha=0.9)
+
+    ax.arrow(173, 80, 9, 0.0, fc='r', ec='r', width=2, head_width=5, head_length=5, alpha=0.9)
+    ax.arrow(173, 100, 9, 0.0, fc='r', ec='r', width=2, head_width=5, head_length=5, alpha=0.9)
+
+    ax.arrow(126, 64, 9, 0.0, fc='r', ec='r', width=2, head_width=5, head_length=5, alpha=0.9)
+    ax.arrow(126, 73, 9, 0.0, fc='r', ec='r', width=2, head_width=5, head_length=5, alpha=0.9)
+
+    ax.arrow(82, 160-(log(529)-5.572)/1.318*160, 9, 0.0, fc='r', ec='r', width=2, head_width=5, head_length=5, alpha=0.9)
+    ax.arrow(82, 160-(log(699)-5.572)/1.318*160, 9, 0.0, fc='r', ec='r', width=2, head_width=5, head_length=5, alpha=0.9)
+
+    ax.arrow(39, 160-(log(700)-5.572)/1.318*160, 9, 0.0, fc='r', ec='r', width=2, head_width=5, head_length=5, alpha=0.9)
+
+    if preliminary_fig:
+        blue_alpha = 0.5
+        color = 'k'
+        for i in range(-4, 5):
+            ax.arrow(217+15, 160-(log(588+i*22)-5.572)/1.318*160, 25, 0.0, fc=color, ec=color, width=1, head_width=0, head_length=0, alpha=blue_alpha)
+
+        for i in range(-1, 6):
+            ax.arrow(173+15, 160-(log(433+i*40)-5.572)/1.318*160, 25, 0.0, fc=color, ec=color, width=1, head_width=0, head_length=0, alpha=blue_alpha)
+
+        for i in range(-1, 3):
+            ax.arrow(126+15, 160-(log(542+i*39)-5.572)/1.318*160, 25, 0.0, fc=color, ec=color, width=1, head_width=0, head_length=0, alpha=blue_alpha)
+
+        for i in range(-1, 5):
+            ax.arrow(82+15, 160-(log(529+i*86)-5.572)/1.318*160, 25, 0.0, fc=color, ec=color, width=1, head_width=0, head_length=0, alpha=blue_alpha)
+
+        for i in range(-4, 2):
+            ax.arrow(39+15, 160-(log(700+i*30)-5.572)/1.318*160, 25, 0.0, fc=color, ec=color, width=1, head_width=0, head_length=0, alpha=blue_alpha)
 
     imgplot = plt.imshow(img)
     imgplot = plt.savefig('LR_PCR.pdf', dpi=1000)
