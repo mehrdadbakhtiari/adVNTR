@@ -3,13 +3,11 @@ import numpy
 import os
 from multiprocessing import Process, Manager, Value, Semaphore
 from random import random
-from uuid import uuid4
 
 import pysam
 from Bio import pairwise2
 from Bio.Seq import Seq
 
-from advntr.blast_wrapper import get_blast_matched_ids, make_blast_database
 from advntr.coverage_bias import CoverageBiasDetector, CoverageCorrector
 from advntr.hmm_utils import *
 from advntr.pacbio_haplotyper import PacBioHaplotyper
@@ -79,14 +77,7 @@ class VNTRFinder:
             outfile.write(json_str)
         return vntr_matcher
 
-    @time_usage
-    def filter_reads_with_keyword_matching(self, working_directory, read_file, short_reads=True):
-        db_name = 'blast_db__' + os.path.basename(read_file)
-        blast_db_name = working_directory + db_name
-        empty_db = False
-        if not os.path.exists(blast_db_name + '.nsq') and not os.path.exists(blast_db_name + '.nal'):
-            empty_db = make_blast_database(read_file, blast_db_name)
-
+    def get_keywords_for_filtering(self, short_reads=True):
         vntr = ''.join(self.reference_vntr.get_repeat_segments())
         k = 21
         if len(vntr) < k:
@@ -98,30 +89,10 @@ class VNTRFinder:
         for i in range(0, len(locus) - k + 1, step_size):
             queries.append(locus[i:i+k])
 
-        ev = 10 if len(self.reference_vntr.pattern) < k else 100
-        identity_cutoff = '90'
-        word_size = '11'
         if not short_reads:
             queries = [self.reference_vntr.left_flanking_region[-80:], self.reference_vntr.right_flanking_region[:80]]
-            identity_cutoff = '70'
         queries = set(queries)
-
-        blast_ids = set([])
-        if not empty_db:
-            search_id = str(uuid4()) + str(self.reference_vntr.id)
-            search_results = []
-            for query in queries:
-                search_result = get_blast_matched_ids(query, blast_db_name, max_seq='100000', word_size=word_size,
-                                                      evalue=ev, search_id=search_id, identity_cutoff=identity_cutoff)
-                search_results += list(search_result)
-            counts = {}
-            for i in search_results:
-                counts[i] = counts.get(i, 0) + 1
-
-            blast_ids = set([read_id for read_id, count in counts.items() if count >= min(3, len(queries))])
-
-        logging.info('blast selected %s reads for %s' % (len(blast_ids), self.reference_vntr.id))
-        return blast_ids
+        return queries
 
     @staticmethod
     def add_hmm_score_to_list(sema, hmm, read, result_scores):
