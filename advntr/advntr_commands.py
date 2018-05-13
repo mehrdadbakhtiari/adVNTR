@@ -57,7 +57,7 @@ def genotype(args, genotype_parser):
     for i in range(len(reference_vntrs)):
         if not reference_vntrs[i].is_non_overlapping() or reference_vntrs[i].has_homologous_vntr():
             continue
-        target_vntrs.append(i)
+        target_vntrs.append(reference_vntrs[i].id)
 
     if args.vntr_id is not None:
         target_vntrs = [int(vid) for vid in args.vntr_id.split(',')]
