@@ -690,7 +690,7 @@ class VNTRFinder:
         right_flank = self.reference_vntr.right_flanking_region
         left_flank = self.reference_vntr.left_flanking_region
         locus = left_flank[-read_length:] + vntr + right_flank[:read_length]
-        step_size = 5
+        step_size = 10
         alphabet = ['A', 'C', 'G', 'T']
         sim_reads = []
         for i in range(0, len(locus) - read_length + 1, step_size):
