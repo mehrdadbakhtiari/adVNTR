@@ -203,19 +203,17 @@ class VNTRFinder:
         return False
 
     def process_unmapped_read(self, sema, read_segment, hmm, recruitment_score, vntr_bp_in_unmapped_reads,
-                              selected_reads, best_seq):
-        if read_segment.seq.count('N') <= 0:
-            sequence = str(read_segment.seq).upper()
+                              selected_reads, compute_reverse=True):
+        if read_segment.count('N') <= 0:
+            sequence = read_segment.upper()
             logp, vpath = hmm.viterbi(sequence)
-            rev_logp, rev_vpath = hmm.viterbi(str(read_segment.seq.reverse_complement()).upper())
-            if logp < rev_logp:
-                sequence = str(read_segment.seq.reverse_complement()).upper()
-                logp = rev_logp
-                vpath = rev_vpath
-            if logp > best_seq['logp']:
-                best_seq['logp'] = logp
-                best_seq['seq'] = sequence
-                best_seq['vpath'] = vpath
+            if compute_reverse:
+                reverse_sequence = str(Seq(sequence).reverse_complement())
+                rev_logp, rev_vpath = hmm.viterbi(reverse_sequence)
+                if logp < rev_logp:
+                    sequence = reverse_sequence
+                    logp = rev_logp
+                    vpath = rev_vpath
             repeat_bps = get_number_of_repeat_bp_matches_in_vpath(vpath)
             if self.recruit_read(logp, vpath, recruitment_score, len(sequence)):
                 if repeat_bps > self.min_repeat_bp_to_count_repeats:
@@ -540,11 +538,6 @@ class VNTRFinder:
 
         process_list = []
 
-        best_seq = manager.dict()
-        best_seq['logp'] = -10e8
-        best_seq['vpath'] = ''
-        best_seq['seq'] = ''
-
         for read_segment in unmapped_filtered_reads:
             if number_of_reads == 0:
                 read_length = len(str(read_segment.seq))
@@ -557,17 +550,14 @@ class VNTRFinder:
                 continue
 
             sema.acquire()
-            p = Process(target=self.process_unmapped_read, args=(sema, read_segment, hmm, recruitment_score,
-                                                                 vntr_bp_in_unmapped_reads, selected_reads, best_seq))
+            p = Process(target=self.process_unmapped_read, args=(sema, str(read_segment.seq), hmm, recruitment_score,
+                                                                 vntr_bp_in_unmapped_reads, selected_reads))
             process_list.append(p)
             p.start()
         for p in process_list:
             p.join()
 
         logging.debug('vntr base pairs in unmapped reads: %s' % vntr_bp_in_unmapped_reads.value)
-        logging.debug('highest logp in unmapped reads: %s' % best_seq['logp'])
-        logging.debug('best sequence %s' % best_seq['seq'])
-        logging.debug('best vpath: %s' % [state.name for idx, state in list(best_seq['vpath'])[1:-1]])
 
         vntr_bp_in_mapped_reads = 0
         vntr_start = self.reference_vntr.start_point
