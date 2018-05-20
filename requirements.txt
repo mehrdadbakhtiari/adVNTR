@@ -6,3 +6,4 @@ cython
 networkx==1.11
 scipy
 joblib
+sklearn

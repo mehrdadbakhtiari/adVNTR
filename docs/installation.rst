@@ -39,6 +39,7 @@ You can install these requirement in Ubuntu Linux by running ``sudo apt-get inst
     -   ``networkx`` version 1.11
     -   ``scipy``
     -   ``joblib``
+    -   ``sklearn``
 
 You can install required python libraries by running ``pip install -r requirements.txt``
 
