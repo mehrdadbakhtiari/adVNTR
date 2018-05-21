@@ -184,6 +184,14 @@ def get_largest_id_in_database():
     return result
 
 
+def delete_vntr_from_database(vntr_id):
+    db = sqlite3.connect(settings.TRAINED_MODELS_DB)
+    cursor = db.cursor()
+    cursor.execute('DELETE FROM vntrs WHERE id=%s' % vntr_id)
+    db.commit()
+    db.close()
+
+
 def is_false_vntr_hit(qresult, ref_vntr, position, threshold):
     for hit in qresult:
         for hsp in hit:

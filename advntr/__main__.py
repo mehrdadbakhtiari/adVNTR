@@ -3,7 +3,7 @@
 
 import argparse
 
-from advntr.advntr_commands import genotype, view_model, add_model, not_implemented_command
+from advntr.advntr_commands import genotype, view_model, add_model, del_model
 from advntr import settings
 
 
@@ -96,9 +96,18 @@ def main():
     addmodel_other_group.add_argument('-a', '--annotation', type=str, default=None, metavar='<text>',
                                   help='Annotation of VNTR region')
     addmodel_other_group.add_argument('-h', '--help', action='help',
-                                       help='show this help message and exit')
+                                      help='show this help message and exit')
 
-    delmodel_parser = subparsers.add_parser('delmodel', usage='advntr delmodel [options]')
+    delmodel_parser = subparsers.add_parser('delmodel', usage='advntr delmodel [options]', formatter_class=fmt,
+                                            add_help=False)
+    delmodel_args_group = delmodel_parser.add_argument_group("Required arguments")
+    delmodel_other_group = delmodel_parser.add_argument_group("Other options")
+
+    delmodel_args_group.add_argument('-vid', '--vntr_id', type=str, metavar='<text>', default=None,
+                                     help='VNTR ID')
+
+    delmodel_other_group.add_argument('-h', '--help', action='help',
+                                      help='show this help message and exit')
 
     args = parser.parse_args()
     if args.command == 'genotype':
@@ -108,7 +117,7 @@ def main():
     elif args.command == 'addmodel':
         add_model(args, addmodel_parser)
     elif args.command == 'delmodel':
-        not_implemented_command(parser, args.command)
+        del_model(args, delmodel_parser)
     else:
         parser.error('Please specify a valid command')
 

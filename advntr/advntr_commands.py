@@ -6,6 +6,7 @@ from Bio import SeqIO
 
 from advntr.genome_analyzer import GenomeAnalyzer
 from advntr.models import load_unique_vntrs_data, get_largest_id_in_database, save_reference_vntr_to_database
+from advntr.models import delete_vntr_from_database
 from advntr.reference_vntr import ReferenceVNTR
 from advntr.vntr_finder import VNTRFinder
 from advntr import settings
@@ -191,5 +192,7 @@ def add_model(args, addmodel_parser):
     print('Training completed. VNTR saved with ID: %s to the database' % vntr_id)
 
 
-def not_implemented_command(parser, command):
-    parser.error('%s command has not been implemented yet. Sorry for inconvenience.' % command)
+def del_model(args, delmodel_parser):
+    if not args.vntr_id:
+        print_error(delmodel_parser, '--vntr_id is required')
+    delete_vntr_from_database(args.vntr_id)
