@@ -3,7 +3,7 @@
 
 import argparse
 
-from advntr.advntr_commands import genotype, view_model, not_implemented_command
+from advntr.advntr_commands import genotype, view_model, add_model, not_implemented_command
 from advntr import settings
 
 
@@ -75,7 +75,29 @@ def main():
     viewmodel_parser.add_argument('-p', '--pattern', type=str, default=None, metavar='<text>',
                                   help='repeating pattern of VNTR in forward (5\' to 3\') direction')
 
-    addmodel_parser = subparsers.add_parser('addmodel', usage='advntr addmodel [options]')
+    addmodel_parser = subparsers.add_parser('addmodel', usage='advntr addmodel [options]', formatter_class=fmt,
+                                            add_help=False)
+    addmodel_args_group = addmodel_parser.add_argument_group("Required arguments")
+    addmodel_other_group = addmodel_parser.add_argument_group("Other options")
+
+    addmodel_args_group.add_argument('-r', '--reference', type=str, default=None, metavar='<text>',
+                                  help='Reference genome')
+    addmodel_args_group.add_argument('-c', '--chromosome', type=str, default=None, metavar='<text>',
+                                  help='Chromosome (e.g. chr1)')
+    addmodel_args_group.add_argument('-p', '--pattern', type=str, default=None, metavar='<text>',
+                                  help='First repeating pattern of VNTR in forward (5\' to 3\') direction')
+    addmodel_args_group.add_argument('-s', '--start', type=int, default=None, metavar='<int>',
+                                  help='Start coordinate of VNTR in forward (5\' to 3\') direction')
+    addmodel_args_group.add_argument('-e', '--end', type=int, default=None, metavar='<int>',
+                                  help='End coordinate of VNTR in forward (5\' to 3\') direction')
+
+    addmodel_other_group.add_argument('-g', '--gene', type=str, default=None, metavar='<text>',
+                                  help='Gene name')
+    addmodel_other_group.add_argument('-a', '--annotation', type=str, default=None, metavar='<text>',
+                                  help='Annotation of VNTR region')
+    addmodel_other_group.add_argument('-h', '--help', action='help',
+                                       help='show this help message and exit')
+
     delmodel_parser = subparsers.add_parser('delmodel', usage='advntr delmodel [options]')
 
     args = parser.parse_args()
@@ -84,7 +106,7 @@ def main():
     elif args.command == 'viewmodel':
         view_model(args, viewmodel_parser)
     elif args.command == 'addmodel':
-        not_implemented_command(parser, args.command)
+        add_model(args, addmodel_parser)
     elif args.command == 'delmodel':
         not_implemented_command(parser, args.command)
     else:

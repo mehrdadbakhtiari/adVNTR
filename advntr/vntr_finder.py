@@ -77,17 +77,16 @@ class VNTRFinder:
             outfile.write(json_str)
         return vntr_matcher
 
-    def get_keywords_for_filtering(self, short_reads=True):
+    def get_keywords_for_filtering(self, short_reads=True, keyword_size=21):
         vntr = ''.join(self.reference_vntr.get_repeat_segments())
-        k = 21
-        if len(vntr) < k:
-            min_copies = int(k / len(vntr)) + 1
+        if len(vntr) < keyword_size:
+            min_copies = int(keyword_size / len(vntr)) + 1
             vntr = str(vntr) * min_copies
         locus = self.reference_vntr.left_flanking_region[-15:] + vntr + self.reference_vntr.right_flanking_region[:15]
         queries = []
         step_size = 5 if len(self.reference_vntr.pattern) != 5 else 6
-        for i in range(0, len(locus) - k + 1, step_size):
-            queries.append(locus[i:i+k])
+        for i in range(0, len(locus) - keyword_size + 1, step_size):
+            queries.append(locus[i:i+keyword_size])
 
         if not short_reads:
             queries = [self.reference_vntr.left_flanking_region[-80:], self.reference_vntr.right_flanking_region[:80]]
@@ -142,56 +141,10 @@ class VNTRFinder:
             for score in false_scores:
                 out.write('%.4f\n' % score)
 
-    @time_usage
-    def calculate_min_score_to_select_a_read(self, hmm, alignment_file):
-        """Calculate the score distribution of false positive reads
-        and return score to select the 1e-8 percentile of the distribution
-        """
-        process_list = []
-        manager = Manager()
-        false_scores = manager.list()
-        true_scores = manager.list()
-        read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
-        samfile = pysam.AlignmentFile(alignment_file, read_mode)
-        refs = [ref for ref in samfile.references if ref in settings.CHROMOSOMES or 'chr' + ref in settings.CHROMOSOMES]
-        for ref in refs:
-            p = Process(target=self.find_score_distribution_of_ref, args=(samfile, ref, hmm, false_scores, true_scores))
-            process_list.append(p)
-            p.start()
-        for p in process_list:
-            p.join()
-
-        if settings.SAVE_SCORE_DISTRIBUTION:
-            self.save_scores(true_scores, false_scores, alignment_file)
-
-        score = numpy.percentile(false_scores, 100 - settings.SCORE_SELECTION_PERCENTILE)
-        return score
-
-    def get_min_score_to_select_a_read(self, hmm, alignment_file, read_length):
-        """Try to load the minimum score for this VNTR
-
-        If the score is not stored, it will compute the score and write it for this VNTR in precomputed data.
-        """
-        base_name = str(self.reference_vntr.id) + '.scores'
-        stored_scores_file = settings.TRAINED_HMMS_DIR + base_name
-        if settings.USE_TRAINED_HMMS and os.path.isfile(stored_scores_file):
-            with open(stored_scores_file, 'r') as infile:
-                lines = [line.split() for line in infile.readlines() if line.strip() != '']
-                for stored_length, fraction, score in lines:
-                    if int(stored_length) == read_length and settings.SCORE_FINDING_READS_FRACTION == float(fraction):
-                        return float(score)
-                    elif settings.SCALE_SCORES and settings.SCORE_FINDING_READS_FRACTION == float(fraction):
-                        return float(score) * (read_length / int(stored_length))
-
-        logging.debug('Minimum score is not precomputed for vntr id: %s' % self.reference_vntr.id)
-        return None
-        #TODO: Move this code to training method
-        score = self.calculate_min_score_to_select_a_read(hmm, alignment_file)
-        logging.debug('computed score: %s' % score)
-        with open(stored_scores_file, 'a') as outfile:
-            outfile.write('%s %s %s\n' % (read_length, settings.SCORE_FINDING_READS_FRACTION, score))
-
-        return score
+    def get_min_score_to_select_a_read(self, read_length):
+        if self.reference_vntr.scaled_score is None or self.reference_vntr.scaled_score == 0:
+            return None
+        return self.reference_vntr.scaled_score * read_length
 
     @staticmethod
     def recruit_read(logp, vpath, min_score_to_count_read, read_length):
@@ -546,7 +499,7 @@ class VNTRFinder:
             number_of_reads += 1
             if not hmm:
                 hmm = self.get_vntr_matcher_hmm(read_length=read_length)
-                recruitment_score = self.get_min_score_to_select_a_read(hmm, alignment_file, read_length)
+                recruitment_score = self.get_min_score_to_select_a_read(read_length)
 
             if len(read_segment.seq) < read_length:
                 continue
@@ -572,7 +525,7 @@ class VNTRFinder:
             if not hmm:
                 read_length = len(read.seq)
                 hmm = self.get_vntr_matcher_hmm(read_length=read_length)
-                recruitment_score = self.get_min_score_to_select_a_read(hmm, alignment_file, read_length)
+                recruitment_score = self.get_min_score_to_select_a_read(read_length)
 
             if read.is_unmapped:
                 continue
@@ -676,6 +629,35 @@ class VNTRFinder:
         alignment_file = '' + short_read_files
         # TODO: use bowtie2 to map short reads to hg19
         return self.find_repeat_count_from_alignment_file(alignment_file, working_directory)
+
+    @time_usage
+    def train_classifier_threshold(self, false_filtered_reads, read_length=150):
+        hmm = self.get_vntr_matcher_hmm(read_length=read_length)
+        simulated_true_reads = self.simulate_true_reads(read_length)
+
+        processed_true_reads = self.find_hmm_score_of_simulated_reads(hmm, simulated_true_reads)
+        processed_false_reads = self.find_hmm_score_of_simulated_reads(hmm, false_filtered_reads)
+
+        recruitment_score = self.find_recruitment_score_threshold(processed_true_reads, processed_false_reads)
+        return recruitment_score / float(read_length)
+
+    @time_usage
+    def find_hmm_score_of_simulated_reads(self, hmm, reads):
+        initial_recruitment_score = -10000
+        process_list = []
+        sema = Semaphore(settings.CORES)
+        manager = Manager()
+        processed_reads = manager.list([])
+        vntr_bp_in_reads = Value('d', 0.0)
+        for read_segment in reads:
+            sema.acquire()
+            p = Process(target=self.process_unmapped_read, args=(sema, read_segment, hmm, initial_recruitment_score,
+                                                                 vntr_bp_in_reads, processed_reads, False))
+            process_list.append(p)
+            p.start()
+        for p in process_list:
+            p.join()
+        return processed_reads
 
     def simulate_true_reads(self, read_length):
         vntr = ''.join(self.reference_vntr.get_repeat_segments())
