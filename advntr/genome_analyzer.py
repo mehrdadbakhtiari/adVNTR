@@ -79,6 +79,11 @@ class GenomeAnalyzer:
 
     @time_usage
     def get_vntr_filtered_reads_map(self, read_file, illumina=True):
+        """
+        :param read_file: Fasta file containing unmapped reads of sample
+        :param illumina: If this parameter is set, it shows that sample contains short reads
+        :return: All filtered reads, and a map from VNTR id to read id
+        """
         vntr_read_ids = self.get_filtered_read_ids(read_file, illumina)
 
         reads = []
