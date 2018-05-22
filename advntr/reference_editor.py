@@ -1,5 +1,7 @@
 from Bio import Seq, SeqRecord, SeqIO
+
 from utils import get_chromosome_reference_sequence
+from models import load_unique_vntrs_data
 
 
 def add_two_copy_to_all_patterns(patterns, start_points):
@@ -69,7 +71,6 @@ def create_reference_region_with_specific_repeats(reference_vntr, desired_repeat
 
 
 def create_illumina_genotyping_references(illumina_read_dir='../Genotyping/'):
-    from reference_vntr import load_unique_vntrs_data
     reference_vntrs = load_unique_vntrs_data()
     id_to_gene = {1220: 'GP1BA', 1221: 'CSTB', 1214: 'MAOA'}
     repeats = {'GP1BA': range(1, 5), 'CSTB': range(1, 16), 'MAOA': range(1, 6)}
@@ -86,7 +87,6 @@ def create_illumina_genotyping_references(illumina_read_dir='../Genotyping/'):
 
 
 def create_illumina_copy_number_variation_references(illumina_read_dir='../Illumina_copy_number/'):
-    from reference_vntr import load_unique_vntrs_data
     reference_vntrs = load_unique_vntrs_data()
     id_to_gene = {119: 'DRD4', 1220: 'GP1BA', 1221: 'CSTB', 1214: 'MAOA', 1219: 'IL1RN'}
     repeats = {'DRD4': range(1, 12), 'GP1BA': range(1, 6), 'CSTB': range(1, 16), 'MAOA': range(1, 6),
@@ -99,7 +99,6 @@ def create_illumina_copy_number_variation_references(illumina_read_dir='../Illum
 
 
 def create_pacbio_copy_number_variation_references(pacbio_read_dir='../pacbio_recruitment/set1/'):
-    from reference_vntr import load_unique_vntrs_data
     reference_vntrs = load_unique_vntrs_data()
     id_to_gene = {1221: 'CSTB', 1216: 'HIC1', 1215: 'INS'}
     repeats = {'CSTB': range(1, 69), 'HIC1': range(2, 36), 'INS': range(10, 171)}
@@ -115,7 +114,6 @@ def create_pacbio_copy_number_variation_references(pacbio_read_dir='../pacbio_re
 
 
 def create_pacbio_coverage_data_for_3_genes_and_10_cn(pacbio_read_dir='../pacbio_coverage_experiment/'):
-    from reference_vntr import load_unique_vntrs_data
     reference_vntrs = load_unique_vntrs_data()
     id_to_gene = {1221: 'CSTB', 1216: 'HIC1', 1215: 'INS'}
     repeats = {'CSTB': range(2, 42), 'HIC1': range(2, 22), 'INS': range(10, 110)}
@@ -133,7 +131,6 @@ def create_pacbio_coverage_data_for_3_genes_and_10_cn(pacbio_read_dir='../pacbio
 
 
 def create_pacbio_ru_length_data_for_all_vntrs(pacbio_read_dir='../pacbio_ru_data_for_all_vntrs/'):
-    from reference_vntr import load_unique_vntrs_data
     reference_vntrs = load_unique_vntrs_data()
 
     with open('vntr_complex.txt') as infile:
