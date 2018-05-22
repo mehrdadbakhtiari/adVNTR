@@ -161,6 +161,14 @@ def update_trained_score_in_database(vntr_id, scaled_recruitment_score):
     db.close()
 
 
+def update_gene_name_and_annotation_in_database(vntr_id, gene_name, annotation):
+    db = sqlite3.connect(settings.TRAINED_MODELS_DB)
+    cursor = db.cursor()
+    cursor.execute('''UPDATE vntrs SET gene_name=?, annotation=? WHERE id=?''', (gene_name, annotation, vntr_id))
+    db.commit()
+    db.close()
+
+
 def save_reference_vntr_to_database(ref_vntr):
     db = sqlite3.connect(settings.TRAINED_MODELS_DB)
     cursor = db.cursor()
