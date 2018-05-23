@@ -115,7 +115,7 @@ def load_unique_vntrs_data():
     for row in cursor:
         new_row = []
         for element in row:
-            if type(element) != int:
+            if type(element) != int and type(element) != float:
                 new_row.append(str(element))
             else:
                 new_row.append(element)
