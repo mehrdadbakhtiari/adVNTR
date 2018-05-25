@@ -82,7 +82,13 @@ def get_id_of_reads_mapped_to_vntr_in_bamfile(bam_file, reference_vntr):
     for read in alignment_file.fetch(reference_vntr.chromosome, start, end):
         if read.is_secondary or read.is_supplementary:
             continue
-        reads.append(read.qname)
+        read_number = '/1'
+        if read.is_read2:
+            read_number = '/2'
+        name = read.qname
+        if name[-2] != '/':
+            name += read_number
+        reads.append(name)
     return reads
 
 
