@@ -21,7 +21,7 @@ def extract_unmapped_reads_to_fasta_file(alignment_file, working_directory='./',
 
 def make_bam_and_index(samfile):
     bamfile = samfile[:-4]
-    os.system('samtools view -bS %s | samtools sort - %s' % (samfile, bamfile))
+    os.system('samtools view -bS %s | samtools sort - > %s' % (samfile, bamfile + '.bam'))
     os.system('samtools index %s %s' % (bamfile + '.bam', bamfile + '.bai'))
 
 
