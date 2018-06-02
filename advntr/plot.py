@@ -1202,7 +1202,7 @@ def plot_vntr_length_distribution(max_len=1000):
     plt.gca().spines['bottom'].set_color('black')
     plt.gca().spines['left'].set_color('black')
 
-    from reference_vntr import load_unique_vntrs_data
+    from advntr.models import load_unique_vntrs_data
     vntrs = load_unique_vntrs_data()
     lengths = []
     for vntr in vntrs:
