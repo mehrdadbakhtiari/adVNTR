@@ -104,6 +104,18 @@ def identify_homologous_vntrs(vntrs, chromosome=None):
     return vntrs
 
 
+def create_vntrs_database(db_file):
+    db = sqlite3.connect(db_file)
+    cursor = db.cursor()
+    cursor.execute('''
+    CREATE TABLE vntrs(id INTEGER PRIMARY KEY, nonoverlapping TEXT, chromosome TEXT, ref_start INTEGER, gene_name TEXT,
+    annotation TEXT, pattern TEXT, left_flanking TEXT, right_flanking TEXT, repeats TEXT, scaled_score REAL default 0)
+    ''')
+
+    db.commit()
+    db.close()
+
+
 def load_unique_vntrs_data():
     vntrs = []
     db_file = settings.TRAINED_MODELS_DB
@@ -188,7 +200,8 @@ def get_largest_id_in_database():
     cursor.execute('''SELECT MAX(id) FROM vntrs''')
     result = 0
     for row in cursor:
-        result = row[0]
+        if row[0] is not None:
+            result = row[0]
     return result
 
 
@@ -284,7 +297,7 @@ def extend_flanking_regions_in_processed_vntrs(flanking_size=500, output_file='v
                                             right_flanking_region, comma_separated_segments))
 
 
-def create_vntr_database():
+def fill_vntr_database():
     for chrom in settings.CHROMOSOMES:
         processed_vntrs = 'vntr_data/VNTRs_%s.txt' % chrom
         database_file = 'vntr_data/hg19_VNTRs.db'
