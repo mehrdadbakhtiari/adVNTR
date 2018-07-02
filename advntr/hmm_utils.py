@@ -179,20 +179,22 @@ def get_prefix_matcher_hmm(pattern):
     model.add_transition(insert_states[last+1], insert_states[last+1], 0.01)
     model.add_transition(insert_states[last+1], unit_end, 0.99)
 
+    insert_error = settings.MAX_ERROR_RATE * 2 / 5
+    delete_error = settings.MAX_ERROR_RATE * 1 / 5
     for i in range(0, len(pattern)):
-        model.add_transition(match_states[i], insert_states[i+1], 0.01)
-        model.add_transition(delete_states[i], insert_states[i+1], 0.01)
-        model.add_transition(insert_states[i+1], insert_states[i+1], 0.01)
+        model.add_transition(match_states[i], insert_states[i+1], insert_error)
+        model.add_transition(delete_states[i], insert_states[i+1], insert_error)
+        model.add_transition(insert_states[i+1], insert_states[i+1], insert_error)
         if i < len(pattern) - 1:
-            model.add_transition(insert_states[i+1], match_states[i+1], 0.98)
-            model.add_transition(insert_states[i+1], delete_states[i+1], 0.01)
+            model.add_transition(insert_states[i+1], match_states[i+1], 1 - insert_error - delete_error)
+            model.add_transition(insert_states[i+1], delete_states[i+1], delete_error)
 
-            model.add_transition(match_states[i], match_states[i+1], 0.97)
-            model.add_transition(match_states[i], delete_states[i+1], 0.01)
+            model.add_transition(match_states[i], match_states[i+1], 1 - insert_error - delete_error - 0.01)
+            model.add_transition(match_states[i], delete_states[i+1], delete_error)
             model.add_transition(match_states[i], unit_end, 0.01)
 
-            model.add_transition(delete_states[i], delete_states[i+1], 0.01)
-            model.add_transition(delete_states[i], match_states[i+1], 0.98)
+            model.add_transition(delete_states[i], delete_states[i+1], delete_error)
+            model.add_transition(delete_states[i], match_states[i+1], 1 - insert_error - delete_error)
 
     model.bake(merge=None)
 
@@ -245,19 +247,21 @@ def get_suffix_matcher_hmm(pattern):
     model.add_transition(insert_states[last+1], insert_states[last+1], 0.01)
     model.add_transition(insert_states[last+1], unit_end, 0.99)
 
+    insert_error = settings.MAX_ERROR_RATE * 2 / 5
+    delete_error = settings.MAX_ERROR_RATE * 1 / 5
     for i in range(0, len(pattern)):
-        model.add_transition(match_states[i], insert_states[i+1], 0.01)
-        model.add_transition(delete_states[i], insert_states[i+1], 0.01)
-        model.add_transition(insert_states[i+1], insert_states[i+1], 0.01)
+        model.add_transition(match_states[i], insert_states[i+1], insert_error)
+        model.add_transition(delete_states[i], insert_states[i+1], insert_error)
+        model.add_transition(insert_states[i+1], insert_states[i+1], insert_error)
         if i < len(pattern) - 1:
-            model.add_transition(insert_states[i+1], match_states[i+1], 0.98)
-            model.add_transition(insert_states[i+1], delete_states[i+1], 0.01)
+            model.add_transition(insert_states[i+1], match_states[i+1], 1 - insert_error - delete_error)
+            model.add_transition(insert_states[i+1], delete_states[i+1], delete_error)
 
-            model.add_transition(match_states[i], match_states[i+1], 0.98)
-            model.add_transition(match_states[i], delete_states[i+1], 0.01)
+            model.add_transition(match_states[i], match_states[i+1], 1 - insert_error - delete_error)
+            model.add_transition(match_states[i], delete_states[i+1], delete_error)
 
-            model.add_transition(delete_states[i], delete_states[i+1], 0.01)
-            model.add_transition(delete_states[i], match_states[i+1], 0.98)
+            model.add_transition(delete_states[i], delete_states[i+1], delete_error)
+            model.add_transition(delete_states[i], match_states[i+1], 1 - insert_error - delete_error)
 
     model.bake(merge=None)
 
