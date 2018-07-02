@@ -241,7 +241,7 @@ class VNTRFinder:
             return
         min_left, max_left = 10e9, 0
         for aln in left_alignments:
-            if aln[2] < len(left_flanking) * (1 - 0.3):
+            if aln[2] < len(left_flanking) * (1 - settings.MAX_ERROR_RATE):
                 continue
             min_left = min(min_left, aln[3])
             max_left = max(max_left, aln[3])
@@ -257,7 +257,7 @@ class VNTRFinder:
             return
         min_right, max_right = 10e9, 0
         for aln in right_alignments:
-            if aln[2] < len(right_flanking) * (1 - 0.3):
+            if aln[2] < len(right_flanking) * (1 - settings.MAX_ERROR_RATE):
                 continue
             min_right = min(min_right, aln[3])
             max_right = max(max_right, aln[3])
