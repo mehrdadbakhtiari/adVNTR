@@ -33,8 +33,9 @@ class SelectedRead:
 class VNTRFinder:
     """Find the VNTR structure of a reference VNTR in NGS data of the donor."""
 
-    def __init__(self, reference_vntr):
+    def __init__(self, reference_vntr, is_haploid=False):
         self.reference_vntr = reference_vntr
+        self.is_haploid = is_haploid
         self.min_repeat_bp_to_add_read = 2
         if len(self.reference_vntr.pattern) < 30:
             self.min_repeat_bp_to_add_read = 2
@@ -329,7 +330,7 @@ class VNTRFinder:
         if ck != ci and ck != cj:
             return 0.5 * (r_e ** abs(ck-ci) + r_e ** abs(ck-cj))
 
-    def find_genotype_based_on_observed_repeats(self, observed_copy_numbers, haploid=False):
+    def find_genotype_based_on_observed_repeats(self, observed_copy_numbers):
         ru_counts = {}
         for cn in observed_copy_numbers:
             if cn not in ru_counts.keys():
@@ -353,7 +354,7 @@ class VNTRFinder:
                 for j in range(len(ru_counts)):
                     if j < i:
                         continue
-                    if haploid and i != j:
+                    if self.is_haploid and i != j:
                         continue
                     cj = ru_counts[j][0]
                     if (ci, cj) not in prs.keys():
@@ -533,7 +534,9 @@ class VNTRFinder:
 
     @time_usage
     def get_ru_count_with_coverage_method(self, pattern_occurrences, total_counted_vntr_bp, average_coverage):
-        return [int(pattern_occurrences / (average_coverage * 2.0))] * 2
+        haplotypes = 1 if self.is_haploid else 2
+        estimate = [int(pattern_occurrences / (float(average_coverage) * haplotypes))] * 2
+        return estimate
         pattern_occurrences = total_counted_vntr_bp / float(len(self.reference_vntr.pattern))
         read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
         samfile = pysam.AlignmentFile(alignment_file, read_mode)

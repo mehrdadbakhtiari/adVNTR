@@ -54,6 +54,8 @@ def main():
                                           help='set this flag to determine long expansion from PCR-free data')
     genotype_algortihm_group.add_argument('-c', '--coverage', type=float, metavar='<float>',
                                           help='average sequencing coverage in PCR-free sequencing')
+    genotype_algortihm_group.add_argument('--haploid', action='store_true', default=False,
+                                          help='set this flag if the organism is haploid')
     genotype_algortihm_group.add_argument('-naive', '--naive', action='store_true', default=False,
                                           help='use naive approach for PacBio reads')
 

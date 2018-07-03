@@ -68,7 +68,7 @@ def genotype(args, genotype_parser):
         target_vntrs = [int(vid) for vid in args.vntr_id.split(',')]
     else:
         target_vntrs = illumina_targets
-    genome_analyzier = GenomeAnalyzer(reference_vntrs, target_vntrs, working_directory)
+    genome_analyzier = GenomeAnalyzer(reference_vntrs, target_vntrs, working_directory, is_haploid=args.haploid)
     if args.pacbio:
         if input_is_alignment_file:
             genome_analyzier.find_repeat_counts_from_pacbio_alignment_file(input_file)
