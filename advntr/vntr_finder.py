@@ -111,36 +111,6 @@ class VNTRFinder:
             return True
         return False
 
-    def find_score_distribution_of_ref(self, samfile, reference, hmm, false_scores, true_scores):
-        process_list = []
-        sema = Semaphore(settings.CORES)
-        for read in samfile.fetch(reference, multiple_iterators=True):
-            if read.is_unmapped:
-                continue
-            if read.seq.count('N') > 0:
-                continue
-
-            if self.is_true_read(read):
-                sema.acquire()
-                p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, true_scores))
-            else:
-                if random() > settings.SCORE_FINDING_READS_FRACTION:
-                    continue
-                sema.acquire()
-                p = Process(target=VNTRFinder.add_hmm_score_to_list, args=(sema, hmm, read, false_scores))
-            process_list.append(p)
-            p.start()
-        for p in process_list:
-            p.join()
-
-    def save_scores(self, true_scores, false_scores, alignment_file):
-        with open('true_scores_dist_%s_%s' % (self.reference_vntr.id, os.path.basename(alignment_file)), 'w') as out:
-            for score in true_scores:
-                out.write('%.4f\n' % score)
-        with open('false_scores_dist_%s_%s' % (self.reference_vntr.id, os.path.basename(alignment_file)), 'w') as out:
-            for score in false_scores:
-                out.write('%.4f\n' % score)
-
     def get_min_score_to_select_a_read(self, read_length):
         if self.reference_vntr.scaled_score is None or self.reference_vntr.scaled_score == 0:
             return None
