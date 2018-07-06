@@ -9,7 +9,7 @@ Install with conda
 If you are using the conda packaging manager (e.g. `miniconda <https://conda.io/miniconda.html>`_ or anaconda),
 you can install adVNTR from the `bioconda  channel <https://bioconda.github.io/>`_:
 
-.. code:: bash
+::
 
     conda config --add channels bioconda
     conda install advntr
@@ -50,7 +50,7 @@ To Install
 ^^^^^^^^^^
 To get the latest version and install it locally, run:
 
-.. code:: bash
+::
 
     git clone https://github.com/mehrdadbakhtiari/adVNTR
     cd adVNTR
@@ -71,7 +71,7 @@ Execution:
 ----------
 Use following command to see the help for running the tool.
 
-.. code:: bash
+::
 
     advntr --help
 
@@ -82,19 +82,19 @@ Demo 1: input in BAM format
 ---------------------------
 * ``--alignment_file`` specifies the alignment file containing mapped and unmapped reads:
 
-.. code:: bash
+::
 
     advntr genotype --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/
 
 * With ``--pacbio``, adVNTR assumes the alignment file contains PacBio sequencing data:
 
-.. code:: bash
+::
 
     advntr genotype --alignment_file aligned_pacbio_reads.bam --working_directory ./log_dir/ --pacbio
 
 * Use ``--frameshift`` to find the possible frameshifts in VNTR:
 
-.. code:: bash
+::
 
     advntr genotype --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/ --frameshift
 
