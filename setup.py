@@ -2,8 +2,11 @@ from setuptools import setup
 from Cython.Build import cythonize
 import numpy
 
+from advntr import __version__
+
+
 setup(name='advntr',
-      version='1.0.3',
+      version=__version__,
       description='A tool for genotyping Variable Number Tandem Repeats (VNTR) from sequence data',
       author='Mehrdad Bakhtiari',
       author_email='mbakhtia@ucsd.edu',
