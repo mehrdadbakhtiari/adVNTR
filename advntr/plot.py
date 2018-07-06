@@ -739,7 +739,7 @@ def plot_pacbio_ru_length_result(results_dir='../pacbio_ru_data_for_all_vntrs/')
             total_wrongs = wrongs
             total += len(data[key])
             data[key] = 100 - 100 * wrongs / float(len(data[key]))
-        print total_wrongs, total
+        print(total_wrongs, total)
         print(float(total_wrongs) / total * 100)
         label = 'Naive Method' if naive else 'adVNTR'
         matplot_ax.bar(np.array(data.keys()) + offset, data.values(), width=width, label=label)

@@ -5,7 +5,6 @@ python:
   - "3.6"
 os:
   - linux
-  - osx
 install:
   - sudo apt-get update -qq
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
