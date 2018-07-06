@@ -37,15 +37,21 @@ Demo 1: input in BAM format
 ---------------------------
 * ``--alignment_file`` specifies the alignment file containing mapped and unmapped reads:
 
+```sh
     advntr genotype --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/
+```
 
 * With ``--pacbio``, adVNTR assumes the alignment file contains PacBio sequencing data:
 
+```sh
     advntr genotype --alignment_file aligned_pacbio_reads.bam --working_directory ./log_dir/ --pacbio
+```
 
 * Use ``--frameshift`` to find the possible frameshifts in VNTR:
 
+```sh
     advntr genotype --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/ --frameshift
+```
 
 Citation:
 ---------
