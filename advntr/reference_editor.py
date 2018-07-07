@@ -1,7 +1,7 @@
 from Bio import Seq, SeqRecord, SeqIO
 
-from utils import get_chromosome_reference_sequence
-from models import load_unique_vntrs_data
+from advntr.utils import get_chromosome_reference_sequence
+from advntr.models import load_unique_vntrs_data
 
 
 def add_two_copy_to_all_patterns(patterns, start_points):

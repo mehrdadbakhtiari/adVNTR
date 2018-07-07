@@ -1,7 +1,6 @@
-from repeat_finder import *
-from sam_utils import *
-from Bio import SeqIO
-from blast_wrapper import get_blast_matched_ids
+from advntr.repeat_finder import *
+from advntr.sam_utils import *
+from advntr.blast_wrapper import get_blast_matched_ids
 
 
 def get_exact_number_of_repeats_from_sequence(pattern, pattern_start):

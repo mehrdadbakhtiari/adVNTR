@@ -1,6 +1,6 @@
 from Bio import pairwise2, Seq, SeqIO
-from blast_wrapper import get_blast_matched_ids
-import settings
+from advntr.blast_wrapper import get_blast_matched_ids
+from advntr import settings
 
 
 def find_exact_match_from_candid_reads(query, candid_reads, min_similarity_score):

@@ -1,5 +1,5 @@
-from distance import *
 from Bio import SeqIO, Seq
+from advntr.distance import *
 
 
 def match_query_by_sliding_windows(query, query_acgt_content, rc_query_acgt_content, number_of_copies, read_segment):
