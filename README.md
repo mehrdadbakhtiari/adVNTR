@@ -1,5 +1,6 @@
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat-square)](http://bioconda.github.io/recipes/advntr/README.html)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/advntr/badges/downloads.svg)](https://anaconda.org/bioconda/advntr)
+[![Build Status](https://travis-ci.org/mehrdadbakhtiari/adVNTR.svg?branch=master)](https://travis-ci.org/mehrdadbakhtiari/adVNTR)
 
 adVNTR - A tool for genotyping VNTRs
 ------------------------------------
