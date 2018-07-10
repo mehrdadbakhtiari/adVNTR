@@ -15,6 +15,11 @@ class TestGenotyping(unittest.TestCase):
         genotype = vntr_finder.find_genotype_based_on_observed_repeats([3, 3, 3, 3, 3])
         self.assertEqual(genotype, (3, 3))
 
+    def test_statistical_model_for_haploid_organism(self):
+        vntr_finder = VNTRFinder(self.get_reference_vntr(), is_haploid=True)
+        genotype = vntr_finder.find_genotype_based_on_observed_repeats([2, 3, 3, 3, 3])
+        self.assertEqual(genotype, (3, 3))
+
     def test_statistical_model_for_diploid_case(self):
         vntr_finder = VNTRFinder(self.get_reference_vntr())
         genotype = vntr_finder.find_genotype_based_on_observed_repeats([2, 2, 3, 3, 3])
