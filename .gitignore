@@ -1,7 +1,7 @@
 *.pyc
 .idea/
 .DS_Store
-data/
+./data/
 hg19_chromosomes/*
 !hg19_chromosomes/PLACE_HOLDER
 vntr_data/*

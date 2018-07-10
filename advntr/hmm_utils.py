@@ -19,6 +19,84 @@ def path_to_alignment(x, y, path):
     return x, y
 
 
+def get_multiple_alignment_of_viterbi_paths(repeats_sequences, repeats_visited_states):
+    alignment_states = {}
+    multiple_alignment_length = 0
+    for repeat_visited_states in repeats_visited_states:
+        state_map = {}
+        for visited_state in repeat_visited_states:
+            visited_state = visited_state.split('_')[0]
+            if visited_state not in state_map.keys():
+                state_map[visited_state] = 0
+            state_map[visited_state] += 1
+        for key, value in state_map.items():
+            index = int(key.split('_')[0][1:])
+            multiple_alignment_length = max(multiple_alignment_length, index)
+            if key not in alignment_states.keys():
+                alignment_states[key] = value
+            alignment_states[key] = max(alignment_states[key], value)
+
+    alignment_visited_states = []
+    for i in range(multiple_alignment_length+1):
+        key = 'M%s' % i
+        if key in alignment_states.keys():
+            for j in range(alignment_states[key]):
+                alignment_visited_states.append(key)
+        key = 'I%s' % i
+        if key in alignment_states.keys():
+            for j in range(alignment_states[key]):
+                alignment_visited_states.append(key)
+
+    alignment = ['' for _ in range(len(repeats_sequences))]
+    for i, repeat_sequence in enumerate(repeats_sequences):
+        sequence_index = 0
+        individual_alignment = [state.split('_')[0] for state in repeats_visited_states[i]]
+        for state in alignment_visited_states:
+            if state in individual_alignment:
+                alignment[i] += repeat_sequence[sequence_index]
+                sequence_index += 1
+            else:
+                alignment[i] += '-'
+
+    return alignment
+
+
+def extract_repeating_segments_from_read(sequence, visited_states):
+    repeats = []
+    vpaths = []
+    prev_start = None
+    prev_start_state = None
+    sequence_index = 0
+    for i in range(len(visited_states)):
+        if visited_states[i].startswith('unit_end') and prev_start is not None:
+            repeat = ''
+            vpath = []
+            for j in range(prev_start, sequence_index):
+                repeat += sequence[j]
+            for j in range(prev_start_state+1, i):
+                vpath.append(visited_states[j])
+            repeats.append(repeat)
+            vpaths.append(vpath)
+        if visited_states[i].startswith('unit_start'):
+            prev_start = sequence_index
+            prev_start_state = i
+        if is_matching_state(visited_states[i]):
+            sequence_index += 1
+    return repeats, vpaths
+
+
+def get_multiple_alignment_of_repeats_from_reads(sequence_vpath_list):
+    repeats_sequences = []
+    repeats_visited_states = []
+    for sequence, vpath in sequence_vpath_list:
+        visited_states = [state.name for idx, state in vpath[1:-1]]
+        repeats, repeats_vstates = extract_repeating_segments_from_read(sequence, visited_states)
+        repeats_sequences += repeats
+        repeats_visited_states += repeats_vstates
+
+    return get_multiple_alignment_of_viterbi_paths(repeats_sequences, repeats_visited_states)
+
+
 def get_emitted_basepair_from_visited_states(state, visited_states, sequence):
     base_pair_idx = 0
     for visited_state in visited_states:
