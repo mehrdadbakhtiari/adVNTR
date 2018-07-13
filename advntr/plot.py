@@ -683,8 +683,7 @@ def plot_pacbio_ru_length_result(results_dir='../pacbio_ru_data_for_all_vntrs/')
     ax = fig.add_subplot(1, 1, 1)
     plt.gca().spines['bottom'].set_color('black')
     plt.gca().spines['left'].set_color('black')
-    ax.text(-0.1, 1.1, r'\textbf{B}', transform=ax.transAxes,
-          fontsize=16, fontweight='bold', va='top', ha='right')
+    ax.text(-0.1, 1.1, r'\textbf{B}', transform=ax.transAxes, fontsize=16, fontweight='bold', va='top', ha='right')
     import glob
     import os
     ru_dirs = glob.glob(results_dir + '*')
@@ -743,12 +742,15 @@ def plot_pacbio_ru_length_result(results_dir='../pacbio_ru_data_for_all_vntrs/')
         print(float(total_wrongs) / total * 100)
         label = 'Naive Method' if naive else 'adVNTR'
         matplot_ax.bar(np.array(data.keys()) + offset, data.values(), width=width, label=label)
+        matplot_ax.set_xticks(data.keys())
+        matplot_ax.set_xticklabels([r'\textbf{%s-%s}' % (e, e+500) for e in data.keys()])
 
     plot_data(ax, discrepancies, lengths, 0)
     plot_data(ax, naive_discrepancies, naive_lengths, 1)
     ax.set_ylim((0, 100))
-    ax.set_xlabel(r'\emph{VNTR Length}', fontsize=13)
+    ax.set_xlabel(r'\emph{VNTR Length}', fontsize=13, labelpad=8)
     ax.set_ylabel(r'\emph{Correct Estimate Percentage}', fontsize=13)
+    plt.xticks(fontsize=8)#, rotation=45)
 
     # naive_error_bars = []
     # from scipy import stats
@@ -764,7 +766,7 @@ def plot_pacbio_ru_length_result(results_dir='../pacbio_ru_data_for_all_vntrs/')
     #     naive_corrects.append(float(total)/num)
     #     naive_error_bars.append(stats.sem(observed_values))
 
-    plt.tight_layout(pad=2, w_pad=0.5, h_pad=1)
+    # plt.tight_layout(pad=2, w_pad=0.5, h_pad=1)
 
     plt.legend(loc=3, fontsize=16)
     plt.savefig('pacbio_ru_length_results.pdf')
