@@ -508,10 +508,10 @@ def plot_indel_frequencies_for_diabetes():
 
 def add_recruitment_results_for_illumina(illumina_recruitment_plots, results_dir):
     import glob
-    titles = 'DEF'
+    titles = 'ABC'
 
     arrow_heads = [(3, 1), (4, 1), (4, 1)]
-    arrow_tails = [(50, -90), (+10, -65), (+10, -65)]
+    arrow_tails = [(50, -110), (+10, -65), (+10, -65)]
     gene_dirs = glob.glob(results_dir + '*')
     gene_index = 0
     for gene_dir in gene_dirs:
@@ -533,7 +533,7 @@ def add_recruitment_results_for_illumina(illumina_recruitment_plots, results_dir
                 bwa_result.append(float(bwa) / original)
                 bowtie_result.append(float(bowtie) / original)
                 #'o-',markersize=4.2,
-        illumina_recruitment_plots[gene_index].title.set_text(titles[gene_index] + ') %s' % gene_name)
+        illumina_recruitment_plots[gene_index].title.set_text('('+titles[gene_index] + ') %s' % gene_name)
         illumina_recruitment_plots[gene_index].plot(copies, our_selection_result, '.-', markersize=4, label='adVNTR')
         illumina_recruitment_plots[gene_index].plot(copies, bwa_result, '.-', markersize=4, label='BWA-MEM')
         illumina_recruitment_plots[gene_index].plot(copies, bowtie_result, '.-', markersize=4,  label='Bowtie2', color='orange')
@@ -594,14 +594,14 @@ def plot_read_recruitment_results():
     plt.gca().spines['bottom'].set_color('black')
     plt.gca().spines['left'].set_color('black')
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(9, 3))
     ax = list([])
     x_label_font = 13
     y_label_font = 13
 
     ax.append(fig.add_subplot(111))
-    ax[0].set_ylabel(r'\emph{Read Selection Recall}', fontsize=y_label_font)
-    ax[0].set_xlabel(r'\emph{Simulated RU Count}', fontsize=x_label_font)
+    ax[0].set_ylabel(r'\emph{Read Selection Recall}', fontsize=y_label_font, labelpad=10)
+    ax[0].set_xlabel(r'\emph{Simulated RU Count}', fontsize=x_label_font, labelpad=10)
 
     # Turn off axis lines and ticks of the big subplot
     for i in range(1):
@@ -612,25 +612,26 @@ def plot_read_recruitment_results():
         ax[i].tick_params(labelcolor='w', top='off', bottom='off', left='off', right='off')
 
 
-    pacbio_recruitment_plots = list([])
-    pacbio_recruitment_plots.append(fig.add_subplot(231))
-    pacbio_recruitment_plots.append(fig.add_subplot(232, sharey=pacbio_recruitment_plots[0]))
-    pacbio_recruitment_plots.append(fig.add_subplot(233, sharey=pacbio_recruitment_plots[0]))
-    add_recruitment_results_for_pacbio(pacbio_recruitment_plots, results_dir='../pacbio_coverage_experiment/')
+    # pacbio_recruitment_plots = list([])
+    # pacbio_recruitment_plots.append(fig.add_subplot(231))
+    # pacbio_recruitment_plots.append(fig.add_subplot(232, sharey=pacbio_recruitment_plots[0]))
+    # pacbio_recruitment_plots.append(fig.add_subplot(233, sharey=pacbio_recruitment_plots[0]))
+    # add_recruitment_results_for_pacbio(pacbio_recruitment_plots, results_dir='../pacbio_coverage_experiment/')
 
     illumina_recruitment_plots = list([])
-    illumina_recruitment_plots.append(fig.add_subplot(234))
-    illumina_recruitment_plots.append(fig.add_subplot(235))
-    illumina_recruitment_plots.append(fig.add_subplot(236))
+    illumina_recruitment_plots.append(fig.add_subplot(131))
+    illumina_recruitment_plots.append(fig.add_subplot(132))
+    illumina_recruitment_plots.append(fig.add_subplot(133))
     add_recruitment_results_for_illumina(illumina_recruitment_plots, results_dir='../Illumina_copy_number_short_vntrs_mapping/')
 
     plt.tight_layout(pad=0.6, w_pad=0.5, h_pad=1.0)
     # plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.3, hspace=0.4)
-    plt.subplots_adjust(top=0.85, left=0.1, bottom=0.1)
+    plt.subplots_adjust(top=0.80, left=0.1, bottom=0.1)
 
     illumina_handles, illumina_labels = illumina_recruitment_plots[2].get_legend_handles_labels()
-    handles, labels = pacbio_recruitment_plots[2].get_legend_handles_labels()
-    plt.figlegend(handles + illumina_handles[1:], labels + illumina_labels[1:], loc='upper center', ncol=5, labelspacing=0.)
+    # handles, labels = pacbio_recruitment_plots[2].get_legend_handles_labels()
+    # plt.figlegend(handles + illumina_handles[1:], labels + illumina_labels[1:], loc='upper center', ncol=5, labelspacing=0.)
+    plt.figlegend(illumina_handles, illumina_labels, loc='upper center', ncol=5, labelspacing=0.)
     # fig.legend(lines, labels, loc=(0.5, 0), ncol=5)
 
     plt.savefig('read_recruitment_result.pdf', bbox_inches='tight')
