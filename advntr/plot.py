@@ -509,6 +509,7 @@ def plot_indel_frequencies_for_diabetes():
 def add_recruitment_results_for_illumina(illumina_recruitment_plots, results_dir):
     import glob
     titles = 'ABC'
+    ru = [12, 30, 39]
 
     arrow_heads = [(3, 1), (4, 1), (4, 1)]
     arrow_tails = [(50, -110), (+10, -65), (+10, -65)]
@@ -533,7 +534,8 @@ def add_recruitment_results_for_illumina(illumina_recruitment_plots, results_dir
                 bwa_result.append(float(bwa) / original)
                 bowtie_result.append(float(bowtie) / original)
                 #'o-',markersize=4.2,
-        illumina_recruitment_plots[gene_index].title.set_text('('+titles[gene_index] + ') %s' % gene_name)
+        title_text = '('+titles[gene_index] + ') %s' % gene_name + ' \t(RU=%sbp)' % ru[gene_index]
+        illumina_recruitment_plots[gene_index].set_title(title_text, fontsize=13)
         illumina_recruitment_plots[gene_index].plot(copies, our_selection_result, '.-', markersize=4, label='adVNTR')
         illumina_recruitment_plots[gene_index].plot(copies, bwa_result, '.-', markersize=4, label='BWA-MEM')
         illumina_recruitment_plots[gene_index].plot(copies, bowtie_result, '.-', markersize=4,  label='Bowtie2', color='orange')
