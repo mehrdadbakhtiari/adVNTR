@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 def plot1():
     stat_files = ['0_size_related_reads.txt', '1_size_sensitivity.txt', '2_size_blast_selected.txt',
@@ -679,14 +680,15 @@ def plot_pacbio_ru_length_result(results_dir='../pacbio_ru_data_for_all_vntrs/')
     plt.style.use('ggplot')
     plt.rcParams['axes.facecolor'] = '#FFFFFF'
     rc('text', usetex=True)
+    rcParams['text.latex.unicode'] = True
     rcParams['text.latex.preamble'] = [r'\usepackage{sfmath} \boldmath']
-    plt.title('Effect of RU Length on RU Count Estimation')
+    plt.title(r'Effect of RU Length on RU Count Estimation', fontname='Sans')
     plt.ylabel(r'\emph{Correct Estimates Percentage}')
     plt.xlabel(r'\emph{RU Length}')
     ax = fig.add_subplot(1, 1, 1)
     plt.gca().spines['bottom'].set_color('black')
     plt.gca().spines['left'].set_color('black')
-    ax.text(-0.1, 1.1, r'\textbf{B}', transform=ax.transAxes, fontsize=16, fontweight='bold', va='top', ha='right')
+    # ax.text(-0.1, 1.1, r'\textbf{B}', transform=ax.transAxes, fontsize=16, fontweight='bold', va='top', ha='right')
     import glob
     import os
     ru_dirs = glob.glob(results_dir + '*')
@@ -738,12 +740,13 @@ def plot_pacbio_ru_length_result(results_dir='../pacbio_ru_data_for_all_vntrs/')
             data[key].append(discrepancies_list[i])
         for key in data.keys():
             wrongs = sum([1 for e in data[key] if e > 0])
-            total_wrongs = wrongs
+            total_wrongs += wrongs
             total += len(data[key])
             data[key] = 100 - 100 * wrongs / float(len(data[key]))
         print(total_wrongs, total)
-        print(float(total_wrongs) / total * 100)
-        label = 'Naive Method' if naive else 'adVNTR'
+        print('accuracy:', 100-float(total_wrongs) / total * 100)
+        print(data)
+        label = r'Naïve Method'.decode('utf-8') if naive else 'adVNTR'
         matplot_ax.bar(np.array(data.keys()) + offset, data.values(), width=width, label=label)
         matplot_ax.set_xticks(data.keys())
         matplot_ax.set_xticklabels([r'\textbf{%s-%s}' % (e, e+500) for e in data.keys()])
