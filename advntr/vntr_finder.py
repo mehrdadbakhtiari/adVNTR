@@ -1,3 +1,4 @@
+from collections import Counter
 import logging
 import numpy
 import os
@@ -425,6 +426,19 @@ class VNTRFinder:
             copy_numbers.append(get_number_of_repeats_in_vpath(vpath))
         return copy_numbers
 
+    def find_ru_counts_with_naive_approach(self, length_dist):
+        if len(length_dist):
+            ru_counts_list = [round(length / len(self.reference_vntr.pattern)) for length in length_dist]
+            ru_count_frequencies = Counter(ru_counts_list)
+            copy_numbers = [ru_count_frequencies[0][0]]
+            if len(ru_count_frequencies.keys()) > 1 and ru_count_frequencies[1][1] > ru_count_frequencies[0][1] / 5:
+                copy_numbers.append(ru_count_frequencies[1][0])
+            else:
+                copy_numbers = copy_numbers * 2
+        else:
+            copy_numbers = None
+        return copy_numbers
+
     @time_usage
     def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, unmapped_filtered_reads):
         logging.debug('finding repeat count from pacbio alignment file for %s' % self.reference_vntr.id)
@@ -441,11 +455,7 @@ class VNTRFinder:
         logging.debug('finding repeat count from pacbio reads file for %s' % self.reference_vntr.id)
         spanning_reads, length_dist = self.get_spanning_reads_of_unaligned_pacbio_reads(unmapped_filtered_reads)
         if naive:
-            if len(length_dist):
-                average_length = sum(length_dist) / float(len(length_dist))
-                copy_numbers = [round(average_length / len(self.reference_vntr.pattern))] * 2
-            else:
-                copy_numbers = None
+            copy_numbers = self.find_ru_counts_with_naive_approach(length_dist)
         else:
             copy_numbers = self.get_dominant_copy_numbers_from_spanning_reads(spanning_reads)
         return copy_numbers
