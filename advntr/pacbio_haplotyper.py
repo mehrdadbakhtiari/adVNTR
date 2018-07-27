@@ -18,15 +18,16 @@ class PacBioHaplotyper:
         logging.debug('Number of reads for finding haplotypes: %s' % len(reads))
         self.reads = [read.upper() for read in reads]
 
-    def get_error_corrected_haplotypes(self):
+    def get_error_corrected_haplotypes(self, number_of_clusters=2):
         if len(self.reads) < 2:
             logging.info('There is only one spanning read. Returning it as the only available haplotype')
             return self.reads
         haplotypes = []
-        clusters = self.get_read_clusters()
-        logging.debug('Cluster sizes: %s, %s' % (len(clusters[0]), len(clusters[1])))
-        smaller_cluster_size = min(len(clusters[0]), len(clusters[1]))
-        larger_cluster_size = max(len(clusters[0]), len(clusters[1]))
+        clusters = self.get_read_clusters(number_of_clusters)
+        for i, cluster in enumerate(clusters):
+            logging.debug('Cluster[%s] size: %s' % (i, len(cluster)))
+        smaller_cluster_size = min([len(cluster) for cluster in clusters])
+        larger_cluster_size = max([len(cluster) for cluster in clusters])
         homozygous = larger_cluster_size >= 7 * smaller_cluster_size
         for cluster in clusters:
             if len(cluster) == smaller_cluster_size and homozygous:
@@ -69,7 +70,7 @@ class PacBioHaplotyper:
 
         return seq
 
-    def get_read_clusters(self):
+    def get_read_clusters(self, number_of_clusters=2):
         """Cluster reads to two group based on informative base pairs to separate the reads of each haplotype"""
         muscle_cline = MuscleCommandline('muscle', clwstrict=True)
         data = '\n'.join(['>%s\n' % str(i) + self.reads[i] for i in range(len(self.reads))])
@@ -84,7 +85,7 @@ class PacBioHaplotyper:
             distance_matrix.append([])
             for seq in seqs:
                 distance_matrix[i].append(hamming(seq, seqs[i]))
-        clusters = hierarchical_clustering(2, distance_matrix)
+        clusters = hierarchical_clustering(number_of_clusters, distance_matrix)
 
         result = [[self.reads[int(aligned_read_ids[i])] for i in cluster] for cluster in clusters]
         return result
