@@ -25,6 +25,23 @@ def add_two_copy_to_all_patterns(patterns, start_points):
         SeqIO.write([record], output_handle, 'fasta')
 
 
+def create_reference_with_indel(ref_vntr, output_name, position, insertion=True, inserted_bp='C'):
+    sequence = get_chromosome_reference_sequence(ref_vntr.chromosome)
+    left_flank = sequence[ref_vntr.start_point-3000:ref_vntr.start_point]
+    vntr_end = ref_vntr.start_point + ref_vntr.get_length()
+    vntr = sequence[ref_vntr.start_point:vntr_end]
+    right_flank = sequence[vntr_end:vntr_end+3000]
+
+    if insertion:
+        sequence = left_flank + vntr[:position] + inserted_bp + vntr[position:] + right_flank
+    else:
+        sequence = left_flank + vntr[:position] + vntr[position+1:] + right_flank
+    record = SeqRecord.SeqRecord('')
+    record.seq = Seq.Seq(sequence)
+    with open(output_name, 'w') as output_handle:
+        SeqIO.write([record], output_handle, 'fasta')
+
+
 def create_cel_frameshifts(cel_vntr):
     sequence = get_chromosome_reference_sequence(cel_vntr.chromosome)
     left_flank = sequence[cel_vntr.start_point-3000:cel_vntr.start_point]
