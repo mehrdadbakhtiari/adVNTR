@@ -27,10 +27,10 @@ def add_two_copy_to_all_patterns(patterns, start_points):
 
 def create_reference_with_indel(ref_vntr, output_name, position, insertion=True, inserted_bp='C'):
     sequence = get_chromosome_reference_sequence(ref_vntr.chromosome)
-    left_flank = sequence[ref_vntr.start_point-3000:ref_vntr.start_point]
+    left_flank = sequence[ref_vntr.start_point-1000:ref_vntr.start_point]
     vntr_end = ref_vntr.start_point + ref_vntr.get_length()
     vntr = sequence[ref_vntr.start_point:vntr_end]
-    right_flank = sequence[vntr_end:vntr_end+3000]
+    right_flank = sequence[vntr_end:vntr_end+1000]
 
     if insertion:
         sequence = left_flank + vntr[:position] + inserted_bp + vntr[position:] + right_flank
