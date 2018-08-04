@@ -147,6 +147,15 @@ class VNTRFinder:
                     selected_reads.append(SelectedRead(sequence, logp, vpath))
         sema.release()
 
+    def identify_frameshift(self, location_coverage, observed_indel_transitions, expected_indels, error_rate=0.01):
+        if observed_indel_transitions >= location_coverage:
+            return True
+        from scipy.stats import binom
+        sequencing_error_prob = binom.pmf(observed_indel_transitions, location_coverage, error_rate)
+        frameshift_prob = binom.pmf(observed_indel_transitions, location_coverage, expected_indels)
+        prob = sequencing_error_prob / frameshift_prob
+        return prob < 0.01
+
     def find_frameshift_from_selected_reads(self, selected_reads):
         mutations = {}
         repeating_bps_in_data = 0
@@ -184,9 +193,11 @@ class VNTRFinder:
         logging.info(sorted(repeats_lengths_distribution))
         logging.info('Frameshift Candidate and Occurrence %s: %s' % frameshift_candidate)
         logging.info('Observed repeating base pairs in data: %s' % repeating_bps_in_data)
-        avg_bp_coverage = float(repeating_bps_in_data) / self.reference_vntr.get_length()
+        avg_bp_coverage = float(repeating_bps_in_data) / self.reference_vntr.get_length() / 2
         logging.info('Average coverage for each base pair: %s' % avg_bp_coverage)
-        if frameshift_candidate[1] > avg_bp_coverage / 4:
+
+        expected_indel_transitions = 1 / avg_bp_coverage
+        if self.identify_frameshift(avg_bp_coverage, frameshift_candidate[1], expected_indel_transitions):
             logging.info('There is a frameshift at %s' % frameshift_candidate[0])
             return frameshift_candidate[0]
         return None
