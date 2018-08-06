@@ -672,7 +672,7 @@ def get_correct_estimates_for_ru(files, ru_length=None, adVNTR=False):
     return correct_ratio, error_bar
 
 
-def plot_pacbio_ru_length_result(results_dir='../pacbio_ru_data_for_all_vntrs/'):
+def plot_pacbio_ru_length_result(results_dir='../pacbio_ru_data_for_all_vntrs/', diploid=True):
     from matplotlib import rc, rcParams
     import matplotlib.pyplot as plt
     import numpy as np
@@ -705,16 +705,26 @@ def plot_pacbio_ru_length_result(results_dir='../pacbio_ru_data_for_all_vntrs/')
             disc = ast.literal_eval(lines[-1])
         return length, disc
 
+    # from advntr.advntr_commands import get_tested_vntrs
+    # pacbio_ids = get_tested_vntrs(True)
     lengths = []
     naive_lengths = []
     discrepancies = []
     naive_discrepancies = []
+    if diploid:
+        prefix = 'diploid_'
+    else:
+        prefix = ''
     for ru_dir in ru_dirs:
-        vntr_id = os.path.basename(ru_dir)
-        if not os.path.exists(ru_dir + '/advntr_result.txt') or not os.path.exists(ru_dir + '/naive_result.txt'):
+        vntr_id = int(os.path.basename(ru_dir))
+        # if vntr_id not in pacbio_ids:
+        #     continue
+        advntr_results = ru_dir + '/%sadvntr_result.txt' % prefix
+        r3_naive_results = ru_dir + '/%sR3naive_result.txt' % prefix
+        if not os.path.exists(advntr_results) or not os.path.exists(r3_naive_results):
             continue
-        length, disc = get_lengths_and_discrepancies(ru_dir + '/advntr_result.txt')
-        naive_length, naive_disc = get_lengths_and_discrepancies(ru_dir + '/naive_result.txt')
+        length, disc = get_lengths_and_discrepancies(advntr_results)
+        naive_length, naive_disc = get_lengths_and_discrepancies(r3_naive_results)
         lengths += length
         naive_lengths += naive_length
         discrepancies += disc
@@ -746,7 +756,9 @@ def plot_pacbio_ru_length_result(results_dir='../pacbio_ru_data_for_all_vntrs/')
         print(total_wrongs, total)
         print('accuracy:', 100-float(total_wrongs) / total * 100)
         print(data)
-        label = r'Naïve Method'.decode('utf-8') if naive else 'adVNTR'
+        naive_label = r'Naïve Method'.decode('utf-8')
+        naive_label = 'Consensus Method'
+        label = naive_label if naive else 'adVNTR'
         matplot_ax.bar(np.array(data.keys()) + offset, data.values(), width=width, label=label)
         matplot_ax.set_xticks(data.keys())
         matplot_ax.set_xticklabels([r'\textbf{%s-%s}' % (e, e+500) for e in data.keys()])
@@ -758,24 +770,8 @@ def plot_pacbio_ru_length_result(results_dir='../pacbio_ru_data_for_all_vntrs/')
     ax.set_ylabel(r'\emph{Correct Estimate Percentage}', fontsize=13)
     plt.xticks(fontsize=8)#, rotation=45)
 
-    # naive_error_bars = []
-    # from scipy import stats
-    # for x in ru_lengths:
-    #     total = 0.0
-    #     num = 0.0
-    #     observed_values = []
-    #     for xx, yy, zz in naive_points:
-    #         if (xx/10)*10 == x:
-    #             observed_values.append(yy)
-    #             total += yy
-    #             num += 1
-    #     naive_corrects.append(float(total)/num)
-    #     naive_error_bars.append(stats.sem(observed_values))
-
-    # plt.tight_layout(pad=2, w_pad=0.5, h_pad=1)
-
     plt.legend(loc=3, fontsize=16)
-    plt.savefig('pacbio_ru_length_results.pdf')
+    plt.savefig('pacbio%s_ru_length_results.pdf' % prefix)
 
 
 def get_correct_estimates(files):
