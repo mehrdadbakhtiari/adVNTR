@@ -12,3 +12,4 @@ docs/_build/html/_static
 build
 dist
 pomegranate/*.c
+pomegranate/*.so
