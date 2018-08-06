@@ -437,7 +437,22 @@ class VNTRFinder:
             copy_numbers.append(get_number_of_repeats_in_vpath(vpath))
         return copy_numbers
 
-    def find_ru_counts_with_naive_approach(self, length_dist):
+    def find_ru_counts_with_naive_approach(self, length_dist, spanning_reads):
+        haplotyper = PacBioHaplotyper(spanning_reads)
+        haplotypes = haplotyper.get_error_corrected_haplotypes(1)
+        flanking_region_lengths = []
+        new_spanning_reads = []
+        if len(haplotypes) == 0:
+            return None
+        self.check_if_flanking_regions_align_to_str(haplotypes[0].upper(), flanking_region_lengths, new_spanning_reads)
+        reverse_complement_str = str(Seq(haplotypes[0]).reverse_complement())
+        self.check_if_flanking_regions_align_to_str(reverse_complement_str.upper(), flanking_region_lengths, new_spanning_reads)
+        if len(flanking_region_lengths) > 0:
+            return [round(flanking_region_lengths[0] / len(self.reference_vntr.pattern))] * 2
+        else:
+            return None
+
+    def find_ru_counts_from_average_flanking_region_distance(self, length_dist):
         if len(length_dist):
             ru_counts_list = [round(length / len(self.reference_vntr.pattern)) for length in length_dist]
             ru_count_frequencies = Counter(ru_counts_list)
@@ -466,7 +481,7 @@ class VNTRFinder:
         logging.debug('finding repeat count from pacbio reads file for %s' % self.reference_vntr.id)
         spanning_reads, length_dist = self.get_spanning_reads_of_unaligned_pacbio_reads(unmapped_filtered_reads)
         if naive:
-            copy_numbers = self.find_ru_counts_with_naive_approach(length_dist)
+            copy_numbers = self.find_ru_counts_with_naive_approach(length_dist, spanning_reads)
         else:
             copy_numbers = self.get_dominant_copy_numbers_from_spanning_reads(spanning_reads)
         return copy_numbers
