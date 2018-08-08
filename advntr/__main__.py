@@ -69,6 +69,8 @@ def main():
                                        help='file containing VNTRs information [%(default)s]')
     genotype_others_group.add_argument('-t', '--threads', type=int, metavar='<int>', default=4,
                                        help='number of threads [%(default)s]')
+    genotype_others_group.add_argument('-u', '--update', action='store_true', default=False,
+                                       help='set this flag to iteratively update the model')
     genotype_others_group.add_argument('-vid', '--vntr_id', type=str, metavar='<text>', default=None,
                                        help='comma-separated list of VNTR IDs')
 

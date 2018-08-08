@@ -2,7 +2,7 @@ import numpy as np
 
 from pomegranate import DiscreteDistribution, State
 from pomegranate import HiddenMarkovModel as Model
-from advntr.profile_hmm import build_profile_hmm_for_repeats
+from advntr.profile_hmm import build_profile_hmm_for_repeats, build_profile_hmm_pseudocounts_for_alignment
 from advntr.profiler import time_usage
 from advntr import settings
 
@@ -352,10 +352,14 @@ def get_suffix_matcher_hmm(pattern):
 
 
 @time_usage
-def get_constant_number_of_repeats_matcher_hmm(patterns, copies):
+def get_constant_number_of_repeats_matcher_hmm(patterns, copies, vpaths):
     model = Model(name="Repeating Pattern Matcher HMM Model")
 
-    transitions, emissions = build_profile_hmm_for_repeats(patterns, settings.MAX_ERROR_RATE)
+    if vpaths:
+        alignment = get_multiple_alignment_of_repeats_from_reads(vpaths)
+        transitions, emissions = build_profile_hmm_pseudocounts_for_alignment(settings.MAX_ERROR_RATE, alignment)
+    else:
+        transitions, emissions = build_profile_hmm_for_repeats(patterns, settings.MAX_ERROR_RATE)
     matches = [m for m in emissions.keys() if m.startswith('M')]
 
     last_end = None
@@ -425,8 +429,8 @@ def get_constant_number_of_repeats_matcher_hmm(patterns, copies):
 
 
 @time_usage
-def get_variable_number_of_repeats_matcher_hmm(patterns, copies=1):
-    model = get_constant_number_of_repeats_matcher_hmm(patterns, copies)
+def get_variable_number_of_repeats_matcher_hmm(patterns, copies=1, vpaths=None):
+    model = get_constant_number_of_repeats_matcher_hmm(patterns, copies, vpaths)
 
     start_repeats_matches = State(None, name='start_repeating_pattern_match')
     end_repeats_matches = State(None, name='end_repeating_pattern_match')
@@ -477,9 +481,9 @@ def get_variable_number_of_repeats_matcher_hmm(patterns, copies=1):
 
 
 @time_usage
-def get_read_matcher_model(left_flanking_region, right_flanking_region, patterns, copies=1):
+def get_read_matcher_model(left_flanking_region, right_flanking_region, patterns, copies=1, vpaths=None):
     model = get_suffix_matcher_hmm(left_flanking_region)
-    repeats_matcher = get_variable_number_of_repeats_matcher_hmm(patterns, copies)
+    repeats_matcher = get_variable_number_of_repeats_matcher_hmm(patterns, copies, vpaths)
     right_flanking_matcher = get_prefix_matcher_hmm(right_flanking_region)
     model.concatenate(repeats_matcher)
     model.concatenate(right_flanking_matcher)

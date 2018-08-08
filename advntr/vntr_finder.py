@@ -48,6 +48,9 @@ class VNTRFinder:
         self.vntr_start = self.reference_vntr.start_point
         self.vntr_end = self.vntr_start + self.reference_vntr.get_length()
 
+    def get_copies_for_hmm(self, read_length):
+        return int(round(float(read_length) / len(self.reference_vntr.pattern) + 0.5))
+
     @time_usage
     def build_vntr_matcher_hmm(self, copies, flanking_region_size=100):
         patterns = self.reference_vntr.get_repeat_segments()
@@ -62,7 +65,7 @@ class VNTRFinder:
         If there was no trained HMM, it will build one and store it for later usage
         """
         logging.info('Using read length %s' % read_length)
-        copies = int(round(float(read_length) / len(self.reference_vntr.pattern) + 0.5))
+        copies = self.get_copies_for_hmm(read_length)
 
         base_name = str(self.reference_vntr.id) + '_' + str(read_length) + '.json'
         stored_hmm_file = settings.TRAINED_HMMS_DIR + base_name
@@ -487,8 +490,40 @@ class VNTRFinder:
         return copy_numbers
 
     @time_usage
-    def select_illumina_reads(self, alignment_file, unmapped_filtered_reads):
-        hmm = None
+    def iteratively_update_model(self, alignment_file, unmapped_filtered_reads, selected_reads, hmm):
+        updated_selected_reads = selected_reads
+        fitness = sum([read.logp for read in selected_reads])
+        read_length = len(selected_reads[0].sequence)
+
+        reference_repeats = []
+        for reference_repeat in self.reference_vntr.get_repeat_segments():
+            sequence = str(reference_repeat).upper()
+            logp, vpath = hmm.viterbi(sequence)
+            reference_repeats.append(SelectedRead(sequence, logp, vpath))
+
+        logging.info('initial fitness: %s' % fitness)
+
+        flanking_region_size = read_length
+        left_flanking_region = self.reference_vntr.left_flanking_region[-flanking_region_size:]
+        right_flanking_region = self.reference_vntr.right_flanking_region[:flanking_region_size]
+        copies = self.get_copies_for_hmm(read_length)
+        max_steps = 1000
+        min_improvement = 1
+        for i in range(max_steps):
+            old_fitness = fitness
+            current_vpaths = [(read.sequence, read.vpath) for read in updated_selected_reads + reference_repeats]
+            hmm = get_read_matcher_model(left_flanking_region, right_flanking_region, None, copies, current_vpaths)
+            updated_selected_reads = self.select_illumina_reads(alignment_file, unmapped_filtered_reads, False, hmm)
+            fitness = sum([read.logp for read in selected_reads])
+
+            if fitness - old_fitness < min_improvement:
+                break
+
+        logging.info('final fitness: %s' % fitness)
+        return updated_selected_reads
+
+    @time_usage
+    def select_illumina_reads(self, alignment_file, unmapped_filtered_reads, update=False, hmm=None):
         recruitment_score = None
         sema = Semaphore(settings.CORES)
         manager = Manager()
@@ -506,6 +541,7 @@ class VNTRFinder:
             number_of_reads += 1
             if not hmm:
                 hmm = self.get_vntr_matcher_hmm(read_length=read_length)
+            if not recruitment_score:
                 recruitment_score = self.get_min_score_to_select_a_read(read_length)
 
             if len(read_segment.seq) < read_length:
@@ -529,10 +565,11 @@ class VNTRFinder:
         reference = get_reference_genome_of_alignment_file(samfile)
         chromosome = self.reference_vntr.chromosome if reference == 'HG19' else self.reference_vntr.chromosome[3:]
         for read in samfile.fetch(chromosome, vntr_start, vntr_end):
-            if not hmm:
+            if not recruitment_score:
                 read_length = len(read.seq)
-                hmm = self.get_vntr_matcher_hmm(read_length=read_length)
                 recruitment_score = self.get_min_score_to_select_a_read(read_length)
+            if not hmm:
+                hmm = self.get_vntr_matcher_hmm(read_length=read_length)
 
             if read.is_unmapped:
                 continue
@@ -558,6 +595,9 @@ class VNTRFinder:
                 start = max(read.reference_start, vntr_start)
                 vntr_bp_in_mapped_reads += end - start
         logging.debug('vntr base pairs in mapped reads: %s' % vntr_bp_in_mapped_reads)
+
+        if update:
+            selected_reads = self.iteratively_update_model(alignment_file, unmapped_filtered_reads, selected_reads, hmm)
 
         return selected_reads
 
@@ -587,10 +627,11 @@ class VNTRFinder:
         return [scaled_copy_number]
 
     @time_usage
-    def find_repeat_count_from_alignment_file(self, alignment_file, unmapped_filtered_reads, average_coverage=None):
+    def find_repeat_count_from_alignment_file(self, alignment_file, unmapped_filtered_reads, average_coverage=None,
+                                              update=False):
         logging.debug('finding repeat count from alignment file for %s' % self.reference_vntr.id)
 
-        selected_reads = self.select_illumina_reads(alignment_file, unmapped_filtered_reads)
+        selected_reads = self.select_illumina_reads(alignment_file, unmapped_filtered_reads, update)
 
         covered_repeats = []
         flanking_repeats = []

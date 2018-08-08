@@ -81,7 +81,7 @@ def genotype(args, genotype_parser):
             else:
                 print_error(genotype_parser, '--frameshift is not available for these VNTRs')
         elif input_is_alignment_file:
-            genome_analyzier.find_repeat_counts_from_alignment_file(input_file, average_coverage)
+            genome_analyzier.find_repeat_counts_from_alignment_file(input_file, average_coverage, args.update)
         else:
             genome_analyzier.find_repeat_counts_from_short_reads(input_file)
 
