@@ -52,7 +52,12 @@ def get_multiple_alignment_of_viterbi_paths(repeats_sequences, repeats_visited_s
         sequence_index = 0
         individual_alignment = [state.split('_')[0] for state in repeats_visited_states[i]]
         for state in alignment_visited_states:
-            if state in individual_alignment:
+            found = False
+            for k, ind_state in enumerate(individual_alignment):
+                if state == ind_state:
+                    individual_alignment[k] = 'DELETED'
+                    found = True
+            if found:
                 alignment[i] += repeat_sequence[sequence_index]
                 sequence_index += 1
             else:
