@@ -10,12 +10,16 @@ from advntr.profiler import time_usage
 
 
 @time_usage
-def build_profile_hmm_pseudocounts_for_alignment(thresh, pseu, alphabet, alignment):
+def build_profile_hmm_pseudocounts_for_alignment(error_rate, alignment):
+    alphabet = 'ACGT'
+    pseu = (len(alignment) / 4.0) * (error_rate / 10)
+    thresh = 0.5
+
     thresh = thresh * len(alignment)
     states = []
     insert_index = []
     for i in range(len(alignment[0])):
-        total = 0
+        total = 0.0
         for j in alignment:
             if j[i] == '-':
                 total += 1
@@ -159,14 +163,10 @@ def build_profile_hmm_pseudocounts_for_alignment(thresh, pseu, alphabet, alignme
 
 @time_usage
 def build_profile_hmm_for_repeats(repeats, error_rate):
-    alphabet = 'ACGT'
-    pseudocounts = (len(repeats) / 4.0) * (error_rate / 10)
-    threshold = 0.5
-
     muscle_cline = MuscleCommandline('muscle', clwstrict=True)
     data = '\n'.join(['>%s\n' % str(i) + repeats[i] for i in range(len(repeats))])
     stdout, stderr = muscle_cline(stdin=data)
     alignment = AlignIO.read(StringIO(stdout), "clustal")
     aligned_repeats = [str(aligned.seq) for aligned in alignment]
 
-    return build_profile_hmm_pseudocounts_for_alignment(threshold, pseudocounts, alphabet, aligned_repeats)
+    return build_profile_hmm_pseudocounts_for_alignment(error_rate, aligned_repeats)
