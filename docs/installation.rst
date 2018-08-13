@@ -80,6 +80,8 @@ Use following command to see the help for running the tool.
 The program outputs the RU count genotypes of VNTRs. To specify a single VNTR by its ID use ``--vntr_id <id>`` option.
 The list of some known VNTRs and their ID is available at `Disease-linked-VNTRs page <https://github.com/mehrdadbakhtiari/adVNTR/wiki/Disease-linked-VNTRs>`_ in wiki.
 
+See the demo execution or :ref:`quickstart` page to see an example data set with step-by-step genotyping commands.
+
 Demo: input in BAM format
 -------------------------
 * ``--alignment_file`` specifies the alignment file containing mapped and unmapped reads:

@@ -1,3 +1,5 @@
+.. _quickstart:
+
 Quick Start
 ===========
 To help verify the installation and showing the workflow, we include a small data set and commands to genotype
@@ -24,7 +26,7 @@ project directory to use these models from human genome. Here, we genotype a VNT
 disease-linked VNTR. The list of some known VNTRs and their ID is available at
 `Disease-linked-VNTRs page <https://github.com/mehrdadbakhtiari/adVNTR/wiki/Disease-linked-VNTRs>`_ in wiki.
 
-Then, download `simulated sequencing data of a human sample <https://conda.io/miniconda.html>`_.
+Then, download `simulated sequencing data of a human sample <https://cseweb.ucsd.edu/~mbakhtia/adVNTR/quickstart/>`_.
 It only includes reads around a VNTR in CSTB gene which is known to be linked to progressive myoclonus epilepsies.
 Run this command to get 2/5 genotype for this VNTR.
 
