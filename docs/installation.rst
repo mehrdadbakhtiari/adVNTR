@@ -4,8 +4,10 @@ In order to use adVNTR, it is recommended to (1) install adVNTR using conda pack
 predefined models for human genome from :ref:`data-requirements` section. However, you can install it from the source
 and/or use custom models.
 
-Install with conda
-------------------
+.. _install-with-conda:
+
+1. Install adVNTR with conda
+----------------------------
 If you are using the conda packaging manager (e.g. `miniconda <https://conda.io/miniconda.html>`_ or anaconda),
 you can install adVNTR from the `bioconda  channel <https://bioconda.github.io/>`_:
 
@@ -17,8 +19,8 @@ you can install adVNTR from the `bioconda  channel <https://bioconda.github.io/>
 adVNTR could be invoked from command line with ``advntr``
 
 
-Install from source (Not recommended)
--------------------------------------
+2. Install from source (Not recommended)
+----------------------------------------
 
 Dependencies
 ^^^^^^^^^^^^
@@ -78,8 +80,8 @@ Use following command to see the help for running the tool.
 The program outputs the RU count genotypes of VNTRs. To specify a single VNTR by its ID use ``--vntr_id <id>`` option.
 The list of some known VNTRs and their ID is available at `Disease-linked-VNTRs page <https://github.com/mehrdadbakhtiari/adVNTR/wiki/Disease-linked-VNTRs>`_ in wiki.
 
-Demo 1: input in BAM format
----------------------------
+Demo: input in BAM format
+-------------------------
 * ``--alignment_file`` specifies the alignment file containing mapped and unmapped reads:
 
 ::
