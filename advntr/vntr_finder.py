@@ -8,6 +8,7 @@ from random import random
 import pysam
 from Bio import pairwise2
 from Bio.Seq import Seq
+from Bio import SeqIO
 
 from advntr.coverage_bias import CoverageBiasDetector, CoverageCorrector
 from advntr.hmm_utils import *
@@ -681,12 +682,13 @@ class VNTRFinder:
         return self.find_repeat_count_from_alignment_file(alignment_file, working_directory)
 
     @time_usage
-    def train_classifier_threshold(self, false_filtered_reads, read_length=150):
+    def train_classifier_threshold(self, referene_file, read_length=150):
         hmm = self.get_vntr_matcher_hmm(read_length=read_length)
         simulated_true_reads = self.simulate_true_reads(read_length)
+        simulated_false_filtered_reads = self.simulate_false_filtered_reads(referene_file)
 
         processed_true_reads = self.find_hmm_score_of_simulated_reads(hmm, simulated_true_reads)
-        processed_false_reads = self.find_hmm_score_of_simulated_reads(hmm, false_filtered_reads)
+        processed_false_reads = self.find_hmm_score_of_simulated_reads(hmm, simulated_false_filtered_reads)
 
         recruitment_score = self.find_recruitment_score_threshold(processed_true_reads, processed_false_reads)
         return recruitment_score / float(read_length)
@@ -708,6 +710,52 @@ class VNTRFinder:
         for p in process_list:
             p.join()
         return processed_reads
+
+    @time_usage
+    def simulate_false_filtered_reads(self, reference_file):
+        alphabet = {'A': 0, 'C': 1, 'G': 2, 'T': 3}
+        m = 4194301
+
+        def get_hash(string):
+            result = 0
+            for k in range(len(string)):
+                result = (result + alphabet[string[k].upper()] * (4 ** (keyword_size - k - 1))) % m
+            return result
+
+        false_filtered_reads = []
+        read_size = 150
+        keyword_size = 11
+        keywords = self.get_keywords_for_filtering(True, keyword_size)
+        hashed_keywords = set([get_hash(keyword) for keyword in keywords])
+        match_positions = []
+        vntr_start = self.reference_vntr.start_point
+        vntr_end = vntr_start + self.reference_vntr.get_length()
+        fasta_sequences = SeqIO.parse(open(reference_file), 'fasta')
+        for fasta in fasta_sequences:
+            name, sequence = fasta.id, str(fasta.seq)
+            if name != self.reference_vntr.chromosome:
+                continue
+            window_hash = None
+            for i in range(0, len(sequence) - keyword_size):
+                if sequence[i].upper() == 'N' or sequence[i - 1 + keyword_size].upper() == 'N':
+                    continue
+                if window_hash is None or sequence[i - 1].upper() == 'N':
+                    if 'N' in sequence[i:i + keyword_size].upper():
+                        window_hash = None
+                        continue
+                    window_hash = get_hash(sequence[i:i + keyword_size])
+                    continue
+                window_hash -= alphabet[sequence[i - 1].upper()] * (4 ** (keyword_size - 1))
+                window_hash = (window_hash * 4 + alphabet[sequence[i - 1 + keyword_size].upper()]) % m
+                if window_hash in hashed_keywords:
+                    if name == self.reference_vntr.chromosome and vntr_start - read_size < i < vntr_end:
+                        continue
+                    if sequence[i:i + keyword_size].upper() in keywords:
+                        match_positions.append(i)
+                        if len(match_positions) > 3 and match_positions[-1] - match_positions[-3] < read_size:
+                            for j in range(match_positions[-1] - read_size, match_positions[-3], 5):
+                                false_filtered_reads.append(sequence[j:j + read_size])
+        return false_filtered_reads
 
     def simulate_true_reads(self, read_length):
         vntr = ''.join(self.reference_vntr.get_repeat_segments())

@@ -148,48 +148,7 @@ def add_model(args, addmodel_parser):
     vntr_finder = VNTRFinder(ref_vntr)
 
     print('Searching reference genome for regions with shared kmers with VNTR. It takes a few hours for human genome')
-    alphabet = {'A': 0, 'C': 1, 'G': 2, 'T': 3}
-    m = 4194301
-
-    def get_hash(string):
-        result = 0
-        for k in range(len(string)):
-            result = (result + alphabet[string[k].upper()] * (4 ** (keyword_size - k - 1))) % m
-        return result
-
-    false_filtered_reads = []
-    read_size = 150
-    keyword_size = 11
-    keywords = vntr_finder.get_keywords_for_filtering(True, keyword_size)
-    hashed_keywords = set([get_hash(keyword) for keyword in keywords])
-    match_positions = []
-    fasta_sequences = SeqIO.parse(open(args.reference), 'fasta')
-    for fasta in fasta_sequences:
-        name, sequence = fasta.id, str(fasta.seq)
-        if name != args.chromosome:
-            continue
-        window_hash = None
-        for i in range(0, len(sequence) - keyword_size):
-            if sequence[i].upper() == 'N' or sequence[i - 1 + keyword_size].upper() == 'N':
-                continue
-            if window_hash is None or sequence[i - 1].upper() == 'N':
-                if 'N' in sequence[i:i + keyword_size].upper():
-                    window_hash = None
-                    continue
-                window_hash = get_hash(sequence[i:i + keyword_size])
-                continue
-            window_hash -= alphabet[sequence[i - 1].upper()] * (4 ** (keyword_size - 1))
-            window_hash = (window_hash * 4 + alphabet[sequence[i - 1 + keyword_size].upper()]) % m
-            if window_hash in hashed_keywords:
-                if name == args.chromosome and args.start - read_size < i < args.end:
-                    continue
-                if sequence[i:i + keyword_size].upper() in keywords:
-                    match_positions.append(i)
-                    if len(match_positions) > 3 and match_positions[-1] - match_positions[-3] < read_size:
-                        for j in range(match_positions[-1] - read_size, match_positions[-3], 5):
-                            false_filtered_reads.append(sequence[j:j + read_size])
-
-    scaled_recruitment_score = vntr_finder.train_classifier_threshold(false_filtered_reads)
+    scaled_recruitment_score = vntr_finder.train_classifier_threshold(args.reference)
     ref_vntr.scaled_score = scaled_recruitment_score
     save_reference_vntr_to_database(ref_vntr)
     print('Training completed. VNTR saved with ID: %s to the database' % vntr_id)
