@@ -6,8 +6,8 @@ and/or use custom models.
 
 .. _install-with-conda:
 
-1. Install adVNTR with conda
-----------------------------
+Install adVNTR with conda
+-------------------------
 If you are using the conda packaging manager (e.g. `miniconda <https://conda.io/miniconda.html>`_ or anaconda),
 you can install adVNTR from the `bioconda  channel <https://bioconda.github.io/>`_:
 
@@ -19,8 +19,51 @@ you can install adVNTR from the `bioconda  channel <https://bioconda.github.io/>
 adVNTR could be invoked from command line with ``advntr``
 
 
-2. Install from source (Not recommended)
-----------------------------------------
+.. _data-requirements:
+
+Data Requirements
+-----------------
+* To run adVNTR on trained VNTR models:
+    - Download `vntr_data.zip <https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data.zip>`_ and extract it inside the project directory.
+Alternatively, you can add model for custom VNTR. See :ref:`add-custom-vntr-label` for more information.
+
+Execution:
+----------
+Use following command to see the help for running the tool.
+
+::
+
+    advntr --help
+
+The program outputs the RU count genotypes of VNTRs. To specify a single VNTR by its ID use ``--vntr_id <id>`` option.
+The list of some known VNTRs and their ID is available at `Disease-linked-VNTRs page <https://github.com/mehrdadbakhtiari/adVNTR/wiki/Disease-linked-VNTRs>`_ in wiki.
+
+See the demo execution here or :ref:`quickstart` page to see an example data set with step-by-step genotyping commands.
+
+Demo: input in BAM format
+-------------------------
+* ``--alignment_file`` specifies the alignment file containing mapped and unmapped reads:
+
+::
+
+    advntr genotype --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/
+
+* With ``--pacbio``, adVNTR assumes the alignment file contains PacBio sequencing data:
+
+::
+
+    advntr genotype --alignment_file aligned_pacbio_reads.bam --working_directory ./log_dir/ --pacbio
+
+* Use ``--frameshift`` to find the possible frameshifts in VNTR:
+
+::
+
+    advntr genotype --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/ --frameshift
+
+
+Install from source (Not recommended)
+-------------------------------------
+You can also install adVNTR from the source instead of using conda.
 
 Dependencies
 ^^^^^^^^^^^^
@@ -59,46 +102,3 @@ To get the latest version and install it locally, run:
     python setup.py install
 
 adVNTR could be invoked from command line with ``advntr``
-
-
-.. _data-requirements:
-
-Data Requirements
------------------
-* To run adVNTR on trained VNTR models:
-    - Download `vntr_data.zip <https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data.zip>`_ and extract it inside the project directory.
-Alternatively, you can add model for custom VNTR. See :ref:`add-custom-vntr-label` for more information.
-
-Execution:
-----------
-Use following command to see the help for running the tool.
-
-::
-
-    advntr --help
-
-The program outputs the RU count genotypes of VNTRs. To specify a single VNTR by its ID use ``--vntr_id <id>`` option.
-The list of some known VNTRs and their ID is available at `Disease-linked-VNTRs page <https://github.com/mehrdadbakhtiari/adVNTR/wiki/Disease-linked-VNTRs>`_ in wiki.
-
-See the demo execution or :ref:`quickstart` page to see an example data set with step-by-step genotyping commands.
-
-Demo: input in BAM format
--------------------------
-* ``--alignment_file`` specifies the alignment file containing mapped and unmapped reads:
-
-::
-
-    advntr genotype --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/
-
-* With ``--pacbio``, adVNTR assumes the alignment file contains PacBio sequencing data:
-
-::
-
-    advntr genotype --alignment_file aligned_pacbio_reads.bam --working_directory ./log_dir/ --pacbio
-
-* Use ``--frameshift`` to find the possible frameshifts in VNTR:
-
-::
-
-    advntr genotype --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/ --frameshift
-
