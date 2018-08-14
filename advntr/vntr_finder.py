@@ -682,10 +682,10 @@ class VNTRFinder:
         return self.find_repeat_count_from_alignment_file(alignment_file, working_directory)
 
     @time_usage
-    def train_classifier_threshold(self, referene_file, read_length=150):
+    def train_classifier_threshold(self, reference_file, read_length=150):
         hmm = self.get_vntr_matcher_hmm(read_length=read_length)
         simulated_true_reads = self.simulate_true_reads(read_length)
-        simulated_false_filtered_reads = self.simulate_false_filtered_reads(referene_file)
+        simulated_false_filtered_reads = self.simulate_false_filtered_reads(reference_file)
 
         processed_true_reads = self.find_hmm_score_of_simulated_reads(hmm, simulated_true_reads)
         processed_false_reads = self.find_hmm_score_of_simulated_reads(hmm, simulated_false_filtered_reads)
