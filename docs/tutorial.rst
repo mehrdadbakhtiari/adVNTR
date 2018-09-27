@@ -36,7 +36,58 @@ Each of these commands and their options is described below.
 
 Genotype
 ^^^^^^^^
-Under construction. In the meantime, please refer to the examples in the Installation page.
+Use :code:`advntr genotype [options]` to genotype a VNTR using sequencing data.
+Alignment file and working directory are required.
+
+Summary of options:
+
+:code:`--frameshift`: Use this option to identify frameshift instead of finding copy number of a VNTR.
+
+:code:`--pacbio`: Use this flag to genotype VNTRs using PacBio sequencing data.
+
+:code:`--update`: Use this option to iteratively update the model using real data before finding the genotype.
+
+Input/output options:
+
++---------------------------+--------------------------------------------------------------------------------+
+| -a/--alignment_file <file>| Alignment file in BAM format or SAM format                                     |
++---------------------------+--------------------------------------------------------------------------------+
+| -f/--fasta <file>         | Fasta file containing raw reads                                                |
++---------------------------+--------------------------------------------------------------------------------+
+| -p/--pacbio               | set this flag if input file contains PacBio reads instead of Illumina reads    |
++---------------------------+--------------------------------------------------------------------------------+
+| -n/--nanopore             | set this flag if input file contains Nanopore MinION reads instead of Illumina |
++---------------------------+--------------------------------------------------------------------------------+
+
+Algorithm options:
+
++---------------------------+--------------------------------------------------------------------------------+
+| -fs/--frameshift          | set this flag to search for frameshifts in VNTR instead of copy number.        |
++---------------------------+--------------------------------------------------------------------------------+
+| -e/--expansion            | set this flag to determine long expansion from PCR-free data                   |
++---------------------------+--------------------------------------------------------------------------------+
+| -c/--coverage <float>     | average sequencing coverage in PCR-free sequencing                             |
++---------------------------+--------------------------------------------------------------------------------+
+| --haploid                 | set this flag if the organism is haploid                                       |
++---------------------------+--------------------------------------------------------------------------------+
+| -naive/--naive            | use naive approach for PacBio reads                                            |
++---------------------------+--------------------------------------------------------------------------------+
+
+Other options:
+
++---------------------------+--------------------------------------------------------------------------------+
+| -h/--help                 | show this help message and exit                                                |
++---------------------------+--------------------------------------------------------------------------------+
+| --working_directory <path>| working directory for creating temporary files needed for computation          |
++---------------------------+--------------------------------------------------------------------------------+
+| -m/--models <file>        | file containing VNTRs information [vntr_data/hg19_VNTRs.db]                    |
++---------------------------+--------------------------------------------------------------------------------+
+| -t/--threads <int>        | number of threads [4]                                                          |
++---------------------------+--------------------------------------------------------------------------------+
+| -u/--update               | set this flag to iteratively update the model                                  |
++---------------------------+--------------------------------------------------------------------------------+
+| -vid/--vntr_id <text>     | comma-separated list of VNTR IDs                                               |
++---------------------------+--------------------------------------------------------------------------------+
 
 
 View VNTRs
@@ -73,6 +124,8 @@ Other options:
 +-------------------------+--------------------------------+
 | -h/--help               |show this help message and exit |
 +-------------------------+--------------------------------+
+
+You can use :code:`--update` in genotyping step to iteratively update the model using real data.
 
 
 Delete a VNTR
