@@ -33,6 +33,12 @@ int f[MAXS];
 // GOTO FUNCTION (OR TRIE) IS IMPLEMENTED USING g[][] 
 int g[MAXS][MAXC]; 
 
+struct count_t
+{
+	int value;
+	count_t(): value(0){} // default value 0
+};
+
 int char_to_num(char ch)
 {
     if (ch == 'A')
@@ -220,7 +226,7 @@ int main(int argc,char **argv)
     buildMatchingMachine(arr, k);
     cerr << "Matching Machine has been built" << endl;
 
-    map<int, vector<string> > vntr_read_list;
+    map<int, map<string, count_t> > vntr_read_list;
     map<string, string> read_sequences;
     string line;
     string name, seq;
@@ -235,6 +241,7 @@ int main(int argc,char **argv)
         name = name.substr(1);
 
         int current_state = 0;
+        map<int, count_t> vntr_matches_count;
         for (int i = 0; i < seq.length(); i++)
         {
             current_state = findNextState(current_state, seq[i]);
@@ -246,11 +253,20 @@ int main(int argc,char **argv)
             {
             	int word_index = *it;
             	int vntr_id = keyword_to_vntr[word_index];
-            	vntr_read_list[vntr_id].push_back(name);
-            	read_sequences[name] = seq;
-//            	cerr << "vntr " << vntr_id << " and read " << name << endl;
-//                cout << "Word " << arr[word_index] << " appears from "
-//                << (i - arr[word_index].size() + 1) << " to " << i << " of " << name << endl;
+                int value = vntr_matches_count[vntr_id].value;
+                vntr_matches_count[vntr_id].value = value + 1;
+            }
+        }
+        // PUT RESULTS IN PERMANENT DATA STRUCTURE
+        typedef map<int, count_t>::iterator it_type;
+        for (it_type it = vntr_matches_count.begin(); it != vntr_matches_count.end(); it++)
+        {
+            int vntr_id = it->first;
+            int occurrence = it->second.value;
+            if (occurrence >= min_number_of_keyword_matches)
+            {
+                vntr_read_list[vntr_id][name].value = occurrence;
+                read_sequences[name] = seq;
             }
         }
 
@@ -266,30 +282,16 @@ int main(int argc,char **argv)
     for (int i = 0; i < vntr_ids.size(); i++)
     {
     	int vntr_id = vntr_ids[i];
-    	std::sort(vntr_read_list[vntr_id].begin(), vntr_read_list[vntr_id].end());
-    	int start = 0;
-    	int end = 1;
-    	while (start != vntr_read_list[vntr_id].size())
-    	{
-    		if (end < vntr_read_list[vntr_id].size() and vntr_read_list[vntr_id][start] == vntr_read_list[vntr_id][end])
-    		{
-    			end++;
-    			continue;
-    		}
-    		else
-    		{
-    			if (end - start >= min_number_of_keyword_matches)
-    			{
-    				vntr_filtered_reads[vntr_id].push_back(make_pair(end-start, vntr_read_list[vntr_id][start]));
-    			}
-    			start = end;
-    			end++;
-    		}
+        for (map<string, count_t>::iterator it = vntr_read_list[vntr_id].begin(); it != vntr_read_list[vntr_id].end(); it++)
+        {
+            string read_name = it->first;
+            int occurrence = it->second.value;
+            vntr_filtered_reads[vntr_id].push_back(make_pair(occurrence, read_name));
     	}
+
+		cout << vntr_id << " " << vntr_filtered_reads[vntr_id].size();
     	if (vntr_filtered_reads[vntr_id].size() > 0)
     	{
-			cout << vntr_id << " " << vntr_filtered_reads[vntr_id].size();
-
 			std::sort(vntr_filtered_reads[vntr_id].rbegin(), vntr_filtered_reads[vntr_id].rend());
 			for (int j = 0; j < vntr_filtered_reads[vntr_id].size(); j++)
 			{
@@ -309,4 +311,5 @@ int main(int argc,char **argv)
     	cout << name << " " << read_sequences[name] << endl;
     }
     return 0;
+
 }
