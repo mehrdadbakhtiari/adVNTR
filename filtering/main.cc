@@ -13,7 +13,7 @@
 
 using namespace std;
 
-int min_number_of_keyword_matches = 3;
+int min_number_of_keyword_matches = 5;
 int max_reads_to_report_for_vntr = 10000;
 
 map<int, int> keyword_to_vntr;
@@ -289,7 +289,10 @@ int main(int argc,char **argv)
             vntr_filtered_reads[vntr_id].push_back(make_pair(occurrence, read_name));
     	}
 
-		cout << vntr_id << " " << vntr_filtered_reads[vntr_id].size();
+        int result_size = vntr_filtered_reads[vntr_id].size();
+        if (result_size > max_reads_to_report_for_vntr)
+            result_size = max_reads_to_report_for_vntr;
+		cout << vntr_id << " " << result_size;
     	if (vntr_filtered_reads[vntr_id].size() > 0)
     	{
 			std::sort(vntr_filtered_reads[vntr_id].rbegin(), vntr_filtered_reads[vntr_id].rend());
@@ -297,11 +300,11 @@ int main(int argc,char **argv)
 			{
 				filtered_reads.insert(vntr_filtered_reads[vntr_id][j].second);
 				cout << " " << vntr_filtered_reads[vntr_id][j].second;
-				if (j > max_reads_to_report_for_vntr)
+				if (j >= max_reads_to_report_for_vntr)
 					break;
 			}
-			cout << endl;
     	}
+		cout << endl;
     }
 
     cerr << "Printing read sequences" << endl;
