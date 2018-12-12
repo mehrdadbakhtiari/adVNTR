@@ -535,11 +535,11 @@ def add_recruitment_results_for_illumina(illumina_recruitment_plots, results_dir
                 bwa_result.append(float(bwa) / original)
                 bowtie_result.append(float(bowtie) / original)
                 #'o-',markersize=4.2,
-        title_text = '('+titles[gene_index] + ') %s' % gene_name + ' \t(RU=%sbp)' % ru[gene_index]
+        title_text = '('+titles[gene_index] + ') \emph{%s}' % gene_name + ' \t(RU=%sbp)' % ru[gene_index]
         illumina_recruitment_plots[gene_index].set_title(title_text, fontsize=13)
         illumina_recruitment_plots[gene_index].plot(copies, our_selection_result, '.-', markersize=4, label='adVNTR')
         illumina_recruitment_plots[gene_index].plot(copies, bwa_result, '.-', markersize=4, label='BWA-MEM')
-        illumina_recruitment_plots[gene_index].plot(copies, bowtie_result, '.-', markersize=4,  label='Bowtie2', color='orange')
+        illumina_recruitment_plots[gene_index].plot(copies, bowtie_result, '.-', markersize=4,  label='Bowtie 2', color='orange')
         illumina_recruitment_plots[gene_index].spines['bottom'].set_color('black')
         illumina_recruitment_plots[gene_index].spines['left'].set_color('black')
 
@@ -987,7 +987,7 @@ def plot_pedigree_tree(pedigree_file='PedigreeGenotypes.png'):
     imgplot = plt.savefig('PedigreeGenotypes.pdf', dpi=1000)
 
 
-def plot_lr_pcr(pcr_file='LRPCR.png', preliminary_file='LRPCR_ladder.png', preliminary_fig=True):
+def plot_lr_pcr(pcr_file='LRPCR.png', preliminary_file='LRPCR_ladder.png', preliminary_fig=False):
     import matplotlib.pyplot as plt
     import matplotlib.image as mpimg
     fig = plt.figure()
