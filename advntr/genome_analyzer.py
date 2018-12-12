@@ -1,10 +1,8 @@
 import logging
 import os
-from uuid import uuid4
 
-from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
 
-from advntr.blast_wrapper import get_blast_matched_ids, make_blast_database
 from advntr.profiler import time_usage
 from advntr.sam_utils import extract_unmapped_reads_to_fasta_file
 from advntr.vntr_finder import VNTRFinder
@@ -34,48 +32,30 @@ class GenomeAnalyzer:
 
     @time_usage
     def get_filtered_read_ids(self, read_file, illumina=True):
-        db_name = 'blast_db__' + os.path.basename(read_file)
-        blast_db_name = self.working_dir + db_name
-        empty_db = False
-        if not os.path.exists(blast_db_name + '.nsq') and not os.path.exists(blast_db_name + '.nal'):
-            empty_db = make_blast_database(read_file, blast_db_name)
-
-        import sys
-        ev = sys.maxsize
-        word_size = '11'
-        identity_cutoff = '100'
-        if not illumina:
-            identity_cutoff = '70'
-        min_keywords = 5 if illumina else 2
-
         vntr_read_ids = {}
-        queries = []
-        for vid in self.target_vntr_ids:
-            keywords = self.vntr_finder[vid].get_keywords_for_filtering(illumina)
-            blast_query = '@'.join(keywords)
-            queries.append(blast_query)
-            vntr_read_ids[vid] = []
+        reads = []
 
-        if not empty_db:
-            counts = {}
-            for i in range(len(queries)):
-                search_id = str(uuid4())
-                search_results = get_blast_matched_ids(queries[i], blast_db_name, max_seq='100000', word_size=word_size,
-                                                   evalue=ev, search_id=search_id, identity_cutoff=identity_cutoff)
-                vid = self.target_vntr_ids[i]
-                counts[vid] = {}
-                for read_id in search_results:
-                    counts[vid][read_id] = counts[vid].get(read_id, 0) + 1
-
+        keywords_filename = self.working_dir + '/keywords.txt'
+        with open(keywords_filename, 'w') as keywords_file:
             for vid in self.target_vntr_ids:
-                if vid in counts.keys():
-                    blast_ids = set([read_id for read_id, count in counts[vid].items() if count >= min_keywords])
-                else:
-                    blast_ids = []
-                logging.info('blast selected %s reads for %s' % (len(blast_ids), vid))
-                vntr_read_ids[vid] = blast_ids
+                keywords = self.vntr_finder[vid].get_keywords_for_filtering(illumina, keyword_size=15)
+                keywords_file.write('%s %s\n' % (vid, ' '.join(keywords)))
+                vntr_read_ids[vid] = []
 
-        return vntr_read_ids
+        filtering_result = self.working_dir + 'filtering_out.txt'
+        os.system('adVNTR-Filtering %s < %s > %s' % (read_file, keywords_filename, filtering_result))
+        with open(filtering_result) as infile:
+            lines = infile.readlines()
+            for line in lines:
+                line = line.split()
+                if line[0].isdigit() and line[1].isdigit():
+                    logging.info('filtering selected %s reads for %s' % (line[1], line[0]))
+                    vntr_read_ids[int(line[0])] = set(line[2:])
+                else:
+                    read = SeqRecord(line[1], line[0])
+                    reads.append(read)
+
+        return reads, vntr_read_ids
 
     @time_usage
     def get_vntr_filtered_reads_map(self, read_file, illumina=True):
@@ -84,16 +64,8 @@ class GenomeAnalyzer:
         :param illumina: If this parameter is set, it shows that sample contains short reads
         :return: All filtered reads, and a map from VNTR id to read id
         """
-        vntr_read_ids = self.get_filtered_read_ids(read_file, illumina)
+        reads, vntr_read_ids = self.get_filtered_read_ids(read_file, illumina)
 
-        reads = []
-        if len(vntr_read_ids.values()) > 0:
-            unmapped_reads = SeqIO.parse(read_file, 'fasta')
-            for read in unmapped_reads:
-                for vntr_id in vntr_read_ids.keys():
-                    if read.id in vntr_read_ids[vntr_id]:
-                        reads.append(read)
-                        break
         return reads, vntr_read_ids
 
     def find_repeat_counts_from_pacbio_alignment_file(self, alignment_file):
