@@ -65,4 +65,4 @@ See [Quickstart](http://advntr.readthedocs.io/en/latest/quickstart.html) page to
 
 Citation:
 ---------
-Bakhtiari, M., Shleizer-Burko, S., Gymrek, M., Bansal, V. and Bafna, V., 2017. [Targeted Genotyping of Variable Number Tandem Repeats with adVNTR](https://doi.org/10.1101/221754/). bioRxiv, p.221754.
+Bakhtiari, M., Shleizer-Burko, S., Gymrek, M., Bansal, V. and Bafna, V., 2018. [Targeted genotyping of variable number tandem repeats with adVNTR](https://genome.cshlp.org/content/28/11/1709). Genome Research, 28(11), pp.1709-1719.
