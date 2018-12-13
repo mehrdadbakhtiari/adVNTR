@@ -1,4 +1,7 @@
 CXX=g++ -g -std=c++0x
+ifeq ($(detected_OS),Darwin)        # Mac OS X
+	    CXX += -stdlib=libstdc++
+endif
 LDFLAGS = -I. -lm -O2 -lpthread
 PREFIX    = $(DESTDIR)/usr/local
 #PREFIX = /usr/local
@@ -7,7 +10,7 @@ OBJDIR=.
 
 SRCS = $(wildcard filtering/*.cc)
 OBJS = $(foreach OBJ,$(SRCS:.cc=.o),$(OBJDIR)/$(OBJ))
-	DEPS = $(wildcard *.h)
+DEPS = $(wildcard *.h)
 
 $(OBJDIR):
 		if [ ! -d $(OBJDIR) ]; then mkdir $(OBJDIR); fi
