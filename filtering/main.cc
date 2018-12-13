@@ -19,7 +19,7 @@ int max_reads_to_report_for_vntr = 10000;
 map<int, int> keyword_to_vntr;
 vector<int> vntr_ids;
 
-const int MAXS = 29997 * 21; // Sum of lengths of keywords
+const int MAXS = 103582 * 21; // Sum of lengths of keywords
 const int MAXC = 5; // ACGT and N
 
 // OUTPUT FUNCTION IS IMPLEMENTED USING out[] 
@@ -198,8 +198,8 @@ map<int, int> get_keywords(vector<string> &arr)
 //        if (++counter > 20)
 //        	break;
     }
-    vector<string>::iterator it = std::unique( arr.begin(), arr.end() );
-/*    if (it == arr.end())
+/*    vector<string>::iterator it = std::unique( arr.begin(), arr.end() );
+    if (it == arr.end())
     	cerr << "keywords are unique" << endl;
     else
     	cerr << "KEYWORDS ARE NOT UNIQUE!" << endl;
