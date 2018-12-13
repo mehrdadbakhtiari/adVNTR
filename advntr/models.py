@@ -231,7 +231,7 @@ def find_similar_region_for_vntr(sema, reference_vntr, ref_file, result_list):
     vntr_id = reference_vntr.id
     q = reference_vntr.left_flanking_region[-30:] + reference_vntr.pattern + reference_vntr.right_flanking_region[:30]
     search_index = vntr_id
-    qfile = settings.BLAST_TMP_DIR + str(vntr_id) + '_' + str(search_index) + '_query.fasta'
+    qfile = str(vntr_id) + '_' + str(search_index) + '_query.fasta'
     with open(qfile, "w") as output_handle:
         my_rec = SeqRecord.SeqRecord(seq=Seq.Seq(q), id='query', description='')
         SeqIO.write([my_rec], output_handle, 'fasta')

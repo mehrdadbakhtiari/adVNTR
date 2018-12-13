@@ -88,9 +88,6 @@ You can install these requirement in Ubuntu Linux by running ``sudo apt-get inst
 
 You can install required python libraries by running ``pip install -r requirements.txt``
 
-3. In addition, ``ncbi-blast`` version 2.2.29 or above is required:
-    - The easiest way to install ``ncbi-blast`` is to download `BLAST+ executables <ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/>`_ and add them in the path.
-
 To Install
 ^^^^^^^^^^
 To get the latest version and install it locally, run:
