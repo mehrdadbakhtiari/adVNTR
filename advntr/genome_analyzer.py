@@ -9,10 +9,11 @@ from advntr.vntr_finder import VNTRFinder
 
 
 class GenomeAnalyzer:
-    def __init__(self, reference_vntrs, target_vntr_ids, working_directory='./', is_haploid=False):
+    def __init__(self, reference_vntrs, target_vntr_ids, working_directory='./', outfmt='text', is_haploid=False):
         self.reference_vntrs = reference_vntrs
         self.target_vntr_ids = target_vntr_ids
         self.working_dir = working_directory
+        self.outfmt = outfmt
         self.is_haploid = is_haploid
 
         self.vntr_finder = {}
@@ -21,6 +22,29 @@ class GenomeAnalyzer:
                 self.vntr_finder[ref_vntr.id] = VNTRFinder(ref_vntr, is_haploid=is_haploid)
 
     def print_genotype(self, vntr_id, copy_numbers):
+        if self.outfmt == 'bed':
+            self.print_genotype_in_bed_format(vntr_id, copy_numbers)
+        else:
+            self.print_genotype_in_text_format(vntr_id, copy_numbers)
+
+    def print_bed_header(self):
+        repeats = 'R' if self.is_haploid else 'R1\tR2'
+        print('#CHROM\tStart\tEND\tVNTR_ID\tGene\tMotif\tRefCopy\t%s' % repeats)
+
+    def print_genotype_in_bed_format(self, vntr_id, copy_numbers):
+        chr = self.vntr_finder[vntr_id].reference_vntr.chromosome
+        start = self.vntr_finder[vntr_id].reference_vntr.start_point
+        end = start + self.vntr_finder[vntr_id].reference_vntr.get_length()
+        gene = self.vntr_finder[vntr_id].reference_vntr.gene_name
+        motif = self.vntr_finder[vntr_id].reference_vntr.pattern
+        ref_copy = len(self.vntr_finder[vntr_id].reference_vntr.get_repeat_segments())
+        if copy_numbers is None:
+            repeats = 'None' if self.is_haploid else 'None\tNone'
+        else:
+            repeats = str(copy_numbers[0]) if self.is_haploid else '\t'.join([str(cn) for cn in sorted(copy_numbers)])
+        print('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s' % (chr, start, end, vntr_id, gene, motif, ref_copy, repeats))
+
+    def print_genotype_in_text_format(self, vntr_id, copy_numbers):
         print(vntr_id)
         if copy_numbers is not None:
             if self.is_haploid:
@@ -72,6 +96,8 @@ class GenomeAnalyzer:
         unmapped_reads_file = extract_unmapped_reads_to_fasta_file(alignment_file, self.working_dir)
         filtered_reads, vntr_reads_ids = self.get_vntr_filtered_reads_map(unmapped_reads_file, False)
 
+        if self.outfmt == 'bed':
+            self.print_bed_header()
         for vid in self.target_vntr_ids:
             reads = [read for read in filtered_reads if read.id in vntr_reads_ids[vid]]
             copy_numbers = self.vntr_finder[vid].find_repeat_count_from_pacbio_alignment_file(alignment_file, reads)
@@ -79,6 +105,8 @@ class GenomeAnalyzer:
 
     def find_repeat_counts_from_pacbio_reads(self, read_file, naive=False):
         filtered_reads, vntr_reads_ids = self.get_vntr_filtered_reads_map(read_file, False)
+        if self.outfmt == 'bed':
+            self.print_bed_header()
         for vid in self.target_vntr_ids:
             unmapped_reads = [read for read in filtered_reads if read.id in vntr_reads_ids[vid]]
             copy_numbers = self.vntr_finder[vid].find_repeat_count_from_pacbio_reads(unmapped_reads, naive)
@@ -93,6 +121,8 @@ class GenomeAnalyzer:
     def find_repeat_counts_from_alignment_file(self, alignment_file, average_coverage, update=False):
         unmapped_reads_file = extract_unmapped_reads_to_fasta_file(alignment_file, self.working_dir)
         filtered_reads, vntr_reads_ids = self.get_vntr_filtered_reads_map(unmapped_reads_file)
+        if self.outfmt == 'bed':
+            self.print_bed_header()
         for vid in self.target_vntr_ids:
             unmapped_reads = [read for read in filtered_reads if read.id in vntr_reads_ids[vid]]
             copy_number = self.vntr_finder[vid].find_repeat_count_from_alignment_file(alignment_file, unmapped_reads,
@@ -100,6 +130,8 @@ class GenomeAnalyzer:
             self.print_genotype(vid, copy_number)
 
     def find_repeat_counts_from_short_reads(self, read_file):
+        if self.outfmt == 'bed':
+            self.print_bed_header()
         for vid in self.target_vntr_ids:
             copy_number = self.vntr_finder[vid].find_repeat_count_from_short_reads(read_file)
             self.print_genotype(vid, copy_number)
