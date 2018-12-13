@@ -99,6 +99,7 @@ To get the latest version and install it locally, run:
 
     git clone https://github.com/mehrdadbakhtiari/adVNTR
     cd adVNTR
+    make; make install
     python setup.py install
 
 adVNTR could be invoked from command line with ``advntr``
