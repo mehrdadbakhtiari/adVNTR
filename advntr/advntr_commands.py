@@ -24,6 +24,40 @@ def print_error(subparser, msg):
     sys.exit("\nERROR: %s" % msg)
 
 
+def get_default_vntrs(reference_vntrs, is_pacbio=False):
+    pacbio_results = []
+    illumina_results = []
+
+    for ref_vntr in reference_vntrs:
+        if not ref_vntr.is_non_overlapping() or ref_vntr.has_homologous_vntr():
+            continue
+        if 'N' in ref_vntr.left_flanking_region[-100:] or 'N' in ref_vntr.right_flanking_region[:100]:
+            continue
+
+        if ref_vntr.get_length() < 140 and ref_vntr.annotation in ['Coding', 'UTR', 'Promoter']:
+            illumina = True
+        else:
+            illumina = False
+        if ref_vntr.id in [532789, 188871, 301645, 468671, 503431]:
+            illumina = True
+
+        pacbio = True if illumina or ref_vntr.annotation in ['Coding', 'UTR', 'Promoter'] else False
+
+        if ref_vntr.id in [3056, 25561, 69212, 415277, 519759, 379159, 532789, 70186, 188143, 193369, 193364, 258405,
+                           188871, 301645, 400825, 468671]:
+            pacbio = True
+
+        if pacbio:
+            pacbio_results.append(ref_vntr.id)
+        if illumina:
+            illumina_results.append(ref_vntr.id)
+
+    if is_pacbio:
+        return pacbio_results
+    else:
+        return illumina_results
+
+
 def genotype(args, genotype_parser):
     if args.alignment_file is None and args.fasta is None:
         print_error(genotype_parser, 'No input specified. Please specify alignment file or fasta file')
@@ -55,19 +89,12 @@ def genotype(args, genotype_parser):
     settings.TRAINED_MODELS_DB = args.models
     settings.TRAINED_HMMS_DIR = os.path.dirname(os.path.realpath(settings.TRAINED_MODELS_DB)) + '/'
     reference_vntrs = load_unique_vntrs_data()
-    # reference_vntrs = identify_homologous_vntrs(reference_vntrs, 'chr15')
-    illumina_targets = [532789, 188871, 301645, 600000]
-
-    target_vntrs = []
-    for i in range(len(reference_vntrs)):
-        if not reference_vntrs[i].is_non_overlapping() or reference_vntrs[i].has_homologous_vntr():
-            continue
-        target_vntrs.append(reference_vntrs[i].id)
+    default_target_loci = get_default_vntrs(reference_vntrs, args.pacbio)
 
     if args.vntr_id is not None:
         target_vntrs = [int(vid) for vid in args.vntr_id.split(',')]
     else:
-        target_vntrs = illumina_targets
+        target_vntrs = default_target_loci
     genome_analyzier = GenomeAnalyzer(reference_vntrs, target_vntrs, working_directory, args.outfmt, args.haploid)
     if args.pacbio:
         if input_is_alignment_file:
