@@ -199,11 +199,12 @@ map<int, int> get_keywords(vector<string> &arr)
 //        	break;
     }
     vector<string>::iterator it = std::unique( arr.begin(), arr.end() );
-    if (it == arr.end())
+/*    if (it == arr.end())
     	cerr << "keywords are unique" << endl;
     else
     	cerr << "KEYWORDS ARE NOT UNIQUE!" << endl;
     cerr << "returning the keywords map with " << arr.size() << " keywords" << endl;
+*/
     return m;
 }
 
@@ -224,7 +225,7 @@ int main(int argc,char **argv)
     keyword_to_vntr = get_keywords(arr);
     int k = arr.size();
     buildMatchingMachine(arr, k);
-    cerr << "Matching Machine has been built" << endl;
+//    cerr << "Matching Machine has been built" << endl;
 
     map<int, map<string, count_t> > vntr_read_list;
     map<string, string> read_sequences;
@@ -275,7 +276,7 @@ int main(int argc,char **argv)
     }
     in2.close();
 
-    cerr << "Done with Aho-Corasick." << endl;
+//    cerr << "Done with Aho-Corasick." << endl;
 
     set<string> filtered_reads;
     map<int, vector<pair<int, string> > > vntr_filtered_reads;
@@ -307,7 +308,7 @@ int main(int argc,char **argv)
 		cout << endl;
     }
 
-    cerr << "Printing read sequences" << endl;
+//    cerr << "Printing read sequences" << endl;
     for (std::set<string>::iterator it = filtered_reads.begin(); it != filtered_reads.end(); it++)
     {
     	string name = *it;
