@@ -14,7 +14,7 @@
 using namespace std;
 
 int min_number_of_keyword_matches = 5;
-int max_reads_to_report_for_vntr = 10000;
+int max_reads_to_report_for_vntr = 2000;
 
 map<int, int> keyword_to_vntr;
 vector<int> vntr_ids;
@@ -264,6 +264,8 @@ int main(int argc,char **argv)
         {
             int vntr_id = it->first;
             int occurrence = it->second.value;
+            if (vntr_read_list[vntr_id].size() > max_reads_to_report_for_vntr * 3)
+                continue;
             if (occurrence >= min_number_of_keyword_matches)
             {
                 vntr_read_list[vntr_id][name].value = occurrence;
