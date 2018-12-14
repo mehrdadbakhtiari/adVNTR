@@ -323,8 +323,8 @@ class VNTRFinder:
         process_list = []
         for read in samfile.fetch(chromosome, region_start, region_end):
             sema.acquire()
-            p = Process(target=self.check_if_pacbio_read_spans_vntr, args=(sema, read, length_distribution,
-                                                                           mapped_spanning_reads))
+            p = Process(target=self.check_if_pacbio_mapped_read_spans_vntr, args=(sema, read, length_distribution,
+                                                                                  mapped_spanning_reads))
             process_list.append(p)
             p.start()
 
