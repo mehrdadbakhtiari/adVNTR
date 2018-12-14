@@ -8,8 +8,33 @@ Inputs
 
 Outputs
 -------
+Currently there are two possible formats to get the genotyping output:
+
 - Text
-- VCF (Under construction)
+    Writes two lines in the output for each VNTR. The first contains the VNTR ID and the second line contains R1/R2
+    as the repeating unit counts.
+    Below is an example output in text format for one VNTR:
+
+  | 301645
+  | 2/3
+  |
+
+- BED
+    BED format contains one line per locus and it is a tab-delimited output comprised of 9 columns: 1. The name of the
+    chromosome, 2. Start position of the VNTR, 3. End position of the VNTR, 4. VNTR ID, 5. Name of the gene that
+    contains the VNTR, 6. Repeating motif, 7. Number of repeats in reference genome, 8 and 9. Number of repeats in the
+    sample.
+    Below is an example output in BED format for one VNTR:
+
++--------+---------+---------+---------+------+-------------+---------+---+---+
+| #CHROM | Start   | End     | VNTR_ID | Gene | Motif       | RefCopy | R1| R2|
++--------+---------+---------+---------+------+-------------+---------+---+---+
+| chr21  |45196324 |45196360 | 301645  | CSTB |CGCGGGGCGGGG | 3       |2  | 3 |
++--------+---------+---------+---------+------+-------------+---------+---+---+
+
+
+- VCF
+    (Under construction)
 
 Usage
 -----
@@ -57,6 +82,8 @@ Input/output options:
 | -p/--pacbio               | set this flag if input file contains PacBio reads instead of Illumina reads    |
 +---------------------------+--------------------------------------------------------------------------------+
 | -n/--nanopore             | set this flag if input file contains Nanopore MinION reads instead of Illumina |
++---------------------------+--------------------------------------------------------------------------------+
+| -of/--outfmt format       | output format. Allowed values are {text, bed} [text]                           |
 +---------------------------+--------------------------------------------------------------------------------+
 
 Algorithm options:
