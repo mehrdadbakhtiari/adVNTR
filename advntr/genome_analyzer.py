@@ -29,7 +29,7 @@ class GenomeAnalyzer:
 
     def print_bed_header(self):
         repeats = 'R' if self.is_haploid else 'R1\tR2'
-        print('#CHROM\tStart\tEND\tVNTR_ID\tGene\tMotif\tRefCopy\t%s' % repeats)
+        print('#CHROM\tStart\tEnd\tVNTR_ID\tGene\tMotif\tRefCopy\t%s' % repeats)
 
     def print_genotype_in_bed_format(self, vntr_id, copy_numbers):
         chr = self.vntr_finder[vntr_id].reference_vntr.chromosome
