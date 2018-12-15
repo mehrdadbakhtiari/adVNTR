@@ -74,17 +74,19 @@ Summary of options:
 
 Input/output options:
 
-+---------------------------+--------------------------------------------------------------------------------+
-| -a/--alignment_file <file>| Alignment file in BAM format or SAM format                                     |
-+---------------------------+--------------------------------------------------------------------------------+
-| -f/--fasta <file>         | Fasta file containing raw reads                                                |
-+---------------------------+--------------------------------------------------------------------------------+
-| -p/--pacbio               | set this flag if input file contains PacBio reads instead of Illumina reads    |
-+---------------------------+--------------------------------------------------------------------------------+
-| -n/--nanopore             | set this flag if input file contains Nanopore MinION reads instead of Illumina |
-+---------------------------+--------------------------------------------------------------------------------+
-| -of/--outfmt format       | output format. Allowed values are {text, bed} [text]                           |
-+---------------------------+--------------------------------------------------------------------------------+
++-------------------------------+--------------------------------------------------------------------------------+
+| -a/--alignment_file <file>    | alignment file in SAM/BAM/CRAM format                                          |
++-------------------------------+--------------------------------------------------------------------------------+
+| -r/--reference_filename <file>| path to a FASTA-formatted reference file for CRAM files.                       |
++-------------------------------+--------------------------------------------------------------------------------+
+| -f/--fasta <file>             | Fasta file containing raw reads                                                |
++-------------------------------+--------------------------------------------------------------------------------+
+| -p/--pacbio                   | set this flag if input file contains PacBio reads instead of Illumina reads    |
++-------------------------------+--------------------------------------------------------------------------------+
+| -n/--nanopore                 | set this flag if input file contains Nanopore MinION reads instead of Illumina |
++-------------------------------+--------------------------------------------------------------------------------+
+| -of/--outfmt format           | output format. Allowed values are {text, bed} [text]                           |
++-------------------------------+--------------------------------------------------------------------------------+
 
 Algorithm options:
 
