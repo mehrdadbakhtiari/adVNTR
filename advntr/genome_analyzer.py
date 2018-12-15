@@ -9,17 +9,17 @@ from advntr.vntr_finder import VNTRFinder
 
 
 class GenomeAnalyzer:
-    def __init__(self, reference_vntrs, target_vntr_ids, working_directory='./', outfmt='text', is_haploid=False):
-        self.reference_vntrs = reference_vntrs
+    def __init__(self, ref_vntrs, target_vntr_ids, working_dir='./', outfmt='text', is_haploid=False, ref_filename=None):
+        self.reference_vntrs = ref_vntrs
         self.target_vntr_ids = target_vntr_ids
-        self.working_dir = working_directory
+        self.working_dir = working_dir
         self.outfmt = outfmt
         self.is_haploid = is_haploid
 
         self.vntr_finder = {}
         for ref_vntr in self.reference_vntrs:
             if ref_vntr.id in target_vntr_ids:
-                self.vntr_finder[ref_vntr.id] = VNTRFinder(ref_vntr, is_haploid=is_haploid)
+                self.vntr_finder[ref_vntr.id] = VNTRFinder(ref_vntr, is_haploid, ref_filename)
 
     def print_genotype(self, vntr_id, copy_numbers):
         if self.outfmt == 'bed':
@@ -32,7 +32,7 @@ class GenomeAnalyzer:
         print('#CHROM\tStart\tEnd\tVNTR_ID\tGene\tMotif\tRefCopy\t%s' % repeats)
 
     def print_genotype_in_bed_format(self, vntr_id, copy_numbers):
-        chr = self.vntr_finder[vntr_id].reference_vntr.chromosome
+        chromosome = self.vntr_finder[vntr_id].reference_vntr.chromosome
         start = self.vntr_finder[vntr_id].reference_vntr.start_point
         end = start + self.vntr_finder[vntr_id].reference_vntr.get_length()
         gene = self.vntr_finder[vntr_id].reference_vntr.gene_name
@@ -42,7 +42,7 @@ class GenomeAnalyzer:
             repeats = 'None' if self.is_haploid else 'None\tNone'
         else:
             repeats = str(copy_numbers[0]) if self.is_haploid else '\t'.join([str(cn) for cn in sorted(copy_numbers)])
-        print('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s' % (chr, start, end, vntr_id, gene, motif, ref_copy, repeats))
+        print('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s' % (chromosome, start, end, vntr_id, gene, motif, ref_copy, repeats))
 
     def print_genotype_in_text_format(self, vntr_id, copy_numbers):
         print(vntr_id)

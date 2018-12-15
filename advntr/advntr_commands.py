@@ -78,7 +78,7 @@ def genotype(args, genotype_parser):
     average_coverage = args.coverage if args.expansion else None
 
     input_file = args.alignment_file if args.alignment_file else args.fasta
-    input_is_alignment_file = input_file.endswith('bam') or input_file.endswith('sam')
+    input_is_alignment_file = input_file.endswith('bam') or input_file.endswith('sam') or input_file.endswith('cram')
     working_directory = args.working_directory + '/' if args.working_directory else os.path.dirname(input_file) + '/'
 
     log_file = working_directory + 'log_%s.log' % os.path.basename(input_file)
@@ -94,7 +94,8 @@ def genotype(args, genotype_parser):
         target_vntrs = [int(vid) for vid in args.vntr_id.split(',')]
     else:
         target_vntrs = default_target_loci
-    genome_analyzier = GenomeAnalyzer(reference_vntrs, target_vntrs, working_directory, args.outfmt, args.haploid)
+    genome_analyzier = GenomeAnalyzer(reference_vntrs, target_vntrs, working_directory, args.outfmt, args.haploid,
+                                      args.reference_filename)
     if args.pacbio:
         if input_is_alignment_file:
             genome_analyzier.find_repeat_counts_from_pacbio_alignment_file(input_file)

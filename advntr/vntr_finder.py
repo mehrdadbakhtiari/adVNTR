@@ -35,9 +35,10 @@ class SelectedRead:
 class VNTRFinder:
     """Find the VNTR structure of a reference VNTR in NGS data of the donor."""
 
-    def __init__(self, reference_vntr, is_haploid=False):
+    def __init__(self, reference_vntr, is_haploid=False, reference_filename=None):
         self.reference_vntr = reference_vntr
         self.is_haploid = is_haploid
+        self.reference_filename = reference_filename
         self.min_repeat_bp_to_add_read = 2
         if len(self.reference_vntr.pattern) < 30:
             self.min_repeat_bp_to_add_read = 2
@@ -51,6 +52,13 @@ class VNTRFinder:
 
     def get_copies_for_hmm(self, read_length):
         return int(round(float(read_length) / len(self.reference_vntr.pattern) + 0.5))
+
+    @staticmethod
+    def get_alignment_file_read_mode(alignment_file):
+        read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
+        if alignment_file.endswith('cram'):
+            read_mode = 'rc'
+        return read_mode
 
     @time_usage
     def build_vntr_matcher_hmm(self, copies, flanking_region_size=100):
@@ -316,8 +324,8 @@ class VNTRFinder:
         vntr_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
         region_start = vntr_start
         region_end = vntr_end
-        read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
-        samfile = pysam.AlignmentFile(alignment_file, read_mode)
+        read_mode = self.get_alignment_file_read_mode(alignment_file)
+        samfile = pysam.AlignmentFile(alignment_file, read_mode, reference_filename=self.reference_filename)
         reference = get_reference_genome_of_alignment_file(samfile)
         chromosome = self.reference_vntr.chromosome if reference == 'HG19' else self.reference_vntr.chromosome[3:]
         process_list = []
@@ -561,8 +569,8 @@ class VNTRFinder:
         vntr_bp_in_mapped_reads = 0
         vntr_start = self.reference_vntr.start_point
         vntr_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
-        read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
-        samfile = pysam.AlignmentFile(alignment_file, read_mode)
+        read_mode = self.get_alignment_file_read_mode(alignment_file)
+        samfile = pysam.AlignmentFile(alignment_file, read_mode, reference_filename=self.reference_filename)
         reference = get_reference_genome_of_alignment_file(samfile)
         chromosome = self.reference_vntr.chromosome if reference == 'HG19' else self.reference_vntr.chromosome[3:]
         for read in samfile.fetch(chromosome, vntr_start, vntr_end):
@@ -615,8 +623,8 @@ class VNTRFinder:
         estimate = [int(pattern_occurrences / (float(average_coverage) * haplotypes))] * 2
         return estimate
         pattern_occurrences = total_counted_vntr_bp / float(len(self.reference_vntr.pattern))
-        read_mode = 'r' if alignment_file.endswith('sam') else 'rb'
-        samfile = pysam.AlignmentFile(alignment_file, read_mode)
+        read_mode = self.get_alignment_file_read_mode(alignment_file)
+        samfile = pysam.AlignmentFile(alignment_file, read_mode, reference_filename=self.reference_filename)
         reference = get_reference_genome_of_alignment_file(samfile)
         bias_detector = CoverageBiasDetector(alignment_file, self.reference_vntr.chromosome, reference)
         coverage_corrector = CoverageCorrector(bias_detector.get_gc_content_coverage_map())

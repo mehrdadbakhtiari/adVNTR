@@ -39,7 +39,10 @@ def main():
                                             add_help=False)
     genotype_io_group = genotype_parser.add_argument_group("Input/output options")
     genotype_io_group.add_argument('-a', '--alignment_file', type=str, metavar='<file>',
-                                   help='Alignment file in BAM format or SAM format')
+                                   help='alignment file in SAM/BAM/CRAM format')
+    genotype_io_group.add_argument('-r', '--reference_filename', type=str, metavar='<file>',
+                                   help='path to a FASTA-formatted reference file for CRAM files. It overrides filename'
+                                        ' specified in header, which is normally used to find the reference')
     genotype_io_group.add_argument('-f', '--fasta', type=str, metavar='<file>',
                                    help='Fasta file containing raw reads',)
     genotype_io_group.add_argument('-p', '--pacbio', action='store_true',
