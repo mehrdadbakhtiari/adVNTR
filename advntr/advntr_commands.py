@@ -90,6 +90,8 @@ def genotype(args, genotype_parser):
     reference_vntrs = load_unique_vntrs_data()
     default_target_loci = get_default_vntrs(reference_vntrs, args.pacbio)
 
+    if args.outfile:
+        sys.stdout = open(args.outfile, 'w')
     if args.vntr_id is not None:
         target_vntrs = [int(vid) for vid in args.vntr_id.split(',')]
     else:

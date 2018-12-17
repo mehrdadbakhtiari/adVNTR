@@ -49,8 +49,11 @@ def main():
                                    help='set this flag if input file contains PacBio reads instead of Illumina reads')
     genotype_io_group.add_argument('-n', '--nanopore', action='store_true',
                                    help='set this flag if input file contains Nanopore MinION reads instead of Illumina')
+    genotype_io_group.add_argument('-o', '--outfile', metavar='<file>', default=None,
+                                   help='file to write results. '
+                                        'adVNTR writes output to stdout if oufile is not specified.')
     outfmt_choices = ['text', 'bed']
-    genotype_io_group.add_argument('-of', '--outfmt', metavar='format', default='text', choices=outfmt_choices,
+    genotype_io_group.add_argument('-of', '--outfmt', metavar='<format>', default='text', choices=outfmt_choices,
                                    help='output format. Allowed values are {'+', '.join(outfmt_choices)+'} [%(default)s]')
 
     genotype_algortihm_group = genotype_parser.add_argument_group("Algorithm options")
