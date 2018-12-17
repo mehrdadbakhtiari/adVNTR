@@ -86,9 +86,10 @@ class VNTRFinder:
         flanking_region_size = read_length
         vntr_matcher = self.build_vntr_matcher_hmm(copies, flanking_region_size)
 
-        json_str = vntr_matcher.to_json()
-        with open(stored_hmm_file, 'w') as outfile:
-            outfile.write(json_str)
+        if settings.USE_TRAINED_HMMS:
+            json_str = vntr_matcher.to_json()
+            with open(stored_hmm_file, 'w') as outfile:
+                outfile.write(json_str)
         return vntr_matcher
 
     def get_keywords_for_filtering(self, short_reads=True, keyword_size=21):

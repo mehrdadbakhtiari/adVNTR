@@ -6,7 +6,7 @@ CHROMOSOMES = ['chr' + str(chr_number) for chr_number in list(range(1, 23))] + [
 GENOME_LENGTH = 3100000000
 MAX_INSERT_SIZE = 1000
 
-USE_TRAINED_HMMS = True
+USE_TRAINED_HMMS = False
 TRAINED_MODELS_DB = 'vntr_data/hg19_VNTRs.db'
 TRAINED_HMMS_DIR = 'vntr_data/'
 
