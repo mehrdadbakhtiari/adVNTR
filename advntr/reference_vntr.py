@@ -70,7 +70,7 @@ class ReferenceVNTR:
 
     def get_corresponding_region_in_ref(self):
         ref_sequence = self.__get_chromosome_reference_sequence()
-        estimated_length = len(self.pattern) * self.estimated_repeats
+        estimated_length = int(len(self.pattern) * self.estimated_repeats)
         corresponding_region_in_ref = ref_sequence[self.start_point:self.start_point + estimated_length].upper()
         while corresponding_region_in_ref.find('N') != -1:
             n_index = corresponding_region_in_ref.find('N')
