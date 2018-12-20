@@ -171,7 +171,7 @@ def add_model(args, addmodel_parser):
     if not os.path.exists(settings.TRAINED_MODELS_DB):
         create_vntrs_database(settings.TRAINED_MODELS_DB)
     vntr_id = get_largest_id_in_database() + 1
-    estimated_repeats = (args.end - args.start) / len(args.pattern) + 5
+    estimated_repeats = int((args.end - args.start) / len(args.pattern) + 5)
     ref_vntr = ReferenceVNTR(vntr_id, args.pattern, args.start, chromosome, None, None, estimated_repeats, chr_sequence)
     ref_vntr.init_from_vntrseek_data()
     vntr_finder = VNTRFinder(ref_vntr)

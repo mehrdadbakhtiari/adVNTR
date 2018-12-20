@@ -803,7 +803,7 @@ class VNTRFinder:
         clf.fit(x, y)
         recruitment_score = max(true_scores)
         for i in range(-1, -300, -1):
-            if int(clf.predict(i)) == 0:
+            if int(clf.predict([[i]])) == 0:
                 recruitment_score = i
                 break
         return recruitment_score
