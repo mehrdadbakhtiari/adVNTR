@@ -59,14 +59,14 @@ class GenomeAnalyzer:
         vntr_read_ids = {}
         reads = []
 
-        keywords_filename = self.working_dir + '/keywords.txt'
+        keywords_filename = self.working_dir + '/keywords_%s.txt' % os.path.basename(read_file)
         with open(keywords_filename, 'w') as keywords_file:
             for vid in self.target_vntr_ids:
                 keywords = self.vntr_finder[vid].get_keywords_for_filtering(illumina, keyword_size=15)
                 keywords_file.write('%s %s\n' % (vid, ' '.join(keywords)))
                 vntr_read_ids[vid] = []
 
-        filtering_result = self.working_dir + 'filtering_out.txt'
+        filtering_result = self.working_dir + 'filtering_out_%s.txt' % os.path.basename(read_file)
         os.system('adVNTR-Filtering %s < %s > %s' % (read_file, keywords_filename, filtering_result))
         with open(filtering_result) as infile:
             lines = infile.readlines()
