@@ -1,6 +1,8 @@
 *.pyc
 *.o
 .idea/
+.eggs/
+advntr.egg-info/
 .DS_Store
 ./data/
 hg19_chromosomes/*
@@ -14,6 +16,9 @@ build
 dist
 pomegranate/*.c
 pomegranate/*.so
+
+.coverage
+htmlcov/
 
 filtering/.project
 filtering/.cproject
