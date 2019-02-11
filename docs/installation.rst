@@ -63,11 +63,11 @@ Demo: input in BAM format
 
 Install from source (Not recommended)
 -------------------------------------
-You can also install adVNTR from the source instead of using conda.
+You can also install adVNTR from the source instead of using conda. First, you need to install the following packages:
 
 Dependencies
 ^^^^^^^^^^^^
-1. Following libraries are required
+1. Following libraries are required to be installed on the system:
     -   ``python2.7``
     -   ``python-pip``
     -   ``python-tk``
@@ -76,6 +76,7 @@ Dependencies
     -   ``muscle``
 
 You can install these requirement in Ubuntu Linux by running ``sudo apt-get install python2.7 python-pip python-tk libz-dev samtools muscle``
+To install these packages on Mac OS, you can use `Homebrew <https://brew.sh/>`_.
 
 2. Following python2.7 packages are required:
     -   ``biopython``
