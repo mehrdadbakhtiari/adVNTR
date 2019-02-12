@@ -732,6 +732,7 @@ class VNTRFinder:
             return result
 
         false_filtered_reads = []
+        MAX_FALSE_READS = 10000
         read_size = 150
         keyword_size = 11
         keywords = self.get_keywords_for_filtering(True, keyword_size)
@@ -764,6 +765,8 @@ class VNTRFinder:
                         if len(match_positions) > 3 and match_positions[-1] - match_positions[-3] < read_size:
                             for j in range(match_positions[-1] - read_size, match_positions[-3], 5):
                                 false_filtered_reads.append(sequence[j:j + read_size])
+                if len(false_filtered_reads) > MAX_FALSE_READS:
+                    break
         return false_filtered_reads
 
     def simulate_true_reads(self, read_length):
