@@ -721,7 +721,7 @@ class VNTRFinder:
         return processed_reads
 
     @time_usage
-    def simulate_false_filtered_reads(self, reference_file):
+    def simulate_false_filtered_reads(self, reference_file, min_match=4):
         alphabet = {'A': 0, 'C': 1, 'G': 2, 'T': 3}
         m = 4194301
 
@@ -762,9 +762,10 @@ class VNTRFinder:
                         continue
                     if sequence[i:i + keyword_size].upper() in keywords:
                         match_positions.append(i)
-                        if len(match_positions) > 3 and match_positions[-1] - match_positions[-3] < read_size:
-                            for j in range(match_positions[-1] - read_size, match_positions[-3], 5):
-                                false_filtered_reads.append(sequence[j:j + read_size])
+                        if len(match_positions) >= min_match and match_positions[-1] - match_positions[-min_match] < read_size:
+                            for j in range(match_positions[-1] - read_size, match_positions[-min_match], 5):
+                                if 'N' not in sequence[j:j + read_size].upper():
+                                    false_filtered_reads.append(sequence[j:j + read_size])
                 if len(false_filtered_reads) > MAX_FALSE_READS:
                     break
         return false_filtered_reads
