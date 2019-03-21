@@ -163,10 +163,13 @@ def build_profile_hmm_pseudocounts_for_alignment(error_rate, alignment):
 
 @time_usage
 def build_profile_hmm_for_repeats(repeats, error_rate):
-    muscle_cline = MuscleCommandline('muscle', clwstrict=True)
-    data = '\n'.join(['>%s\n' % str(i) + repeats[i] for i in range(len(repeats))])
-    stdout, stderr = muscle_cline(stdin=data)
-    alignment = AlignIO.read(StringIO(stdout), "clustal")
-    aligned_repeats = [str(aligned.seq) for aligned in alignment]
+    if len(repeats) > 1:
+        muscle_cline = MuscleCommandline('muscle', clwstrict=True)
+        data = '\n'.join(['>%s\n' % str(i) + repeats[i] for i in range(len(repeats))])
+        stdout, stderr = muscle_cline(stdin=data)
+        alignment = AlignIO.read(StringIO(stdout), "clustal")
+        aligned_repeats = [str(aligned.seq) for aligned in alignment]
+    else:
+        aligned_repeats = repeats
 
     return build_profile_hmm_pseudocounts_for_alignment(error_rate, aligned_repeats)
