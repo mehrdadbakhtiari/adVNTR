@@ -118,9 +118,10 @@ def create_vntrs_database(db_file):
     db.close()
 
 
-def load_unique_vntrs_data():
+def load_unique_vntrs_data(db_file=None):
     vntrs = []
-    db_file = settings.TRAINED_MODELS_DB
+    if db_file is None:
+        db_file = settings.TRAINED_MODELS_DB
     db = sqlite3.connect(db_file)
     cursor = db.cursor()
     cursor.execute('''SELECT id, nonoverlapping, chromosome, ref_start, gene_name, annotation, pattern, left_flanking,
@@ -183,8 +184,10 @@ def update_gene_name_and_annotation_in_database(vntr_id, gene_name, annotation):
     db.close()
 
 
-def save_reference_vntr_to_database(ref_vntr):
-    db = sqlite3.connect(settings.TRAINED_MODELS_DB)
+def save_reference_vntr_to_database(ref_vntr, db_file=None):
+    if db_file is None:
+        db_file = settings.TRAINED_MODELS_DB
+    db = sqlite3.connect(db_file)
     cursor = db.cursor()
     segments = ','.join(ref_vntr.get_repeat_segments())
     cursor.execute('''INSERT INTO vntrs(id, nonoverlapping, chromosome, ref_start, gene_name, annotation, pattern,
