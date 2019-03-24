@@ -747,9 +747,9 @@ class VNTRFinder:
                 continue
             window_hash = None
             for i in range(0, len(sequence) - keyword_size):
-                if sequence[i].upper() == 'N' or sequence[i - 1 + keyword_size].upper() == 'N':
+                if sequence[i].upper() not in 'ACTG' or sequence[i - 1 + keyword_size].upper() not in 'ACTG':
                     continue
-                if window_hash is None or sequence[i - 1].upper() == 'N':
+                if window_hash is None or sequence[i - 1].upper() not in 'ACTG':
                     if 'N' in sequence[i:i + keyword_size].upper():
                         window_hash = None
                         continue
