@@ -85,17 +85,21 @@ def genotype(args, genotype_parser):
     log_format = '%(asctime)s %(levelname)s:%(message)s'
     logging.basicConfig(format=log_format, filename=log_file, level=logging.DEBUG, filemode='w')
 
-    settings.TRAINED_MODELS_DB = args.models
-    settings.TRAINED_HMMS_DIR = os.path.dirname(os.path.realpath(settings.TRAINED_MODELS_DB)) + '/'
-    reference_vntrs = load_unique_vntrs_data()
-    default_target_loci = get_default_vntrs(reference_vntrs, args.pacbio)
-
     if args.outfile:
         sys.stdout = open(args.outfile, 'w')
+
+    models_file = args.models
+    if models_file is None:
+        models_file = settings.ILLUMINA_DEFAULT_MODELS_FILE
+        if args.pacbio:
+            models_file = settings.PACBIO_DEFAULT_MODELS_FILE
+    settings.TRAINED_MODELS_DB = models_file
+    settings.TRAINED_HMMS_DIR = os.path.dirname(os.path.realpath(settings.TRAINED_MODELS_DB)) + '/'
+
+    reference_vntrs = load_unique_vntrs_data()
+    target_vntrs = [ref_vntr.id for ref_vntr in reference_vntrs]
     if args.vntr_id is not None:
         target_vntrs = [int(vid) for vid in args.vntr_id.split(',')]
-    else:
-        target_vntrs = default_target_loci
     genome_analyzier = GenomeAnalyzer(reference_vntrs, target_vntrs, working_directory, args.outfmt, args.haploid,
                                       args.reference_filename)
     if args.pacbio:

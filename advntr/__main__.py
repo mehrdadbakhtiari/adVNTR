@@ -74,8 +74,8 @@ def main():
                                        help='show this help message and exit')
     genotype_others_group.add_argument('--working_directory', type=str, metavar='<path>',
                                        help='working directory for creating temporary files needed for computation')
-    genotype_others_group.add_argument('-m', '--models', type=str, metavar='<file>', default='vntr_data/hg19_VNTRs.db',
-                                       help='file containing VNTRs information [%(default)s]')
+    genotype_others_group.add_argument('-m', '--models', type=str, metavar='<file>', default=None,
+                                       help='VNTR models file [%s]' % settings.ILLUMINA_DEFAULT_MODELS_FILE)
     genotype_others_group.add_argument('-t', '--threads', type=int, metavar='<int>', default=4,
                                        help='number of threads [%(default)s]')
     genotype_others_group.add_argument('-u', '--update', action='store_true', default=False,
