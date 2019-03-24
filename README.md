@@ -23,10 +23,15 @@ Alternatively, you can install dependencies and [install the adVNTR from source]
 
 Data Requirements
 -----------------
+In order to genotype VNTRs, you need to either train models for loci of interest or use pre-trained models (recommended):
 * To run adVNTR on trained VNTR models:
-    - Download [vntr_data.zip](https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data.zip) and extract it inside the project directory.
+    - Download [vntr_data_recommended_loci.zip](https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data_recommended_loci.zip)
+    and extract it inside the project directory. This includes a set of pre-trained VNTR models for Illumina (6719 loci)
+    and Pacbio (8960 loci) sequencing data.
+    - You can also download and use [vntr_data_genic_loci.zip](https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data_genic_loci.zip)
+    for 158522 VNTRs that results in having much longer running time.
 
-Alternatively, you can add model for custom VNTR. See [Add Custom VNTR](http://advntr.readthedocs.io/en/latest/tutorial.html#add-custom-vntr-label) for more information.
+Alternatively, you can add model for custom VNTR. See [Add Custom VNTR](http://advntr.readthedocs.io/en/latest/tutorial.html#add-custom-vntr-label) for more information about training models for custom VNTRs.
 
 Execution:
 ----------
@@ -34,8 +39,11 @@ Use following command to see the help for running the tool.
 
     advntr --help
 
-The program outputs the RU count genotypes of VNTRs. To specify a single VNTR by its ID use ``--vntr_id <id>`` option.
+The program outputs the RU count genotypes of trained VNTRs. To specify a single VNTR by its ID use ``--vntr_id <id>`` option.
 The list of some known VNTRs and their ID is available at [Disease-linked-VNTRs page](https://github.com/mehrdadbakhtiari/adVNTR/wiki/Disease-linked-VNTRs) in wiki.
+
+See the demo below or [Quickstart](http://advntr.readthedocs.io/en/latest/quickstart.html) page to see an example
+data set with step-by-step genotyping commands.
 
 Demo input in BAM format
 ------------------------
