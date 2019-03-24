@@ -98,8 +98,8 @@ def get_gene_name_and_annotation_of_vntr(vntr_chromosome, vntr_start, vntr_end, 
 
 
 def is_vntr_close_to_gene(genes_info, vntr_chromosome, vntr_start, vntr_end):
-    for start, end, _ in genes_info[vntr_chromosome]:
-        if intersect(start, end, vntr_start, vntr_end):
+    for start, end, _, _direction in genes_info[vntr_chromosome]:
+        if intersect(start-1000, end+1000, vntr_start, vntr_end):
             return True
         if start > vntr_end:
             return False
