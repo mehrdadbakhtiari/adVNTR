@@ -801,6 +801,8 @@ class VNTRFinder:
         from sklearn.linear_model import LogisticRegression
         true_scores = [read.logp for read in processed_true_reads]
         false_scores = [read.logp for read in processed_false_reads]
+        if len(false_scores) == 0:
+            false_scores = [min(true_scores) - 2]
         clf = LogisticRegression()
         x = [[score] for score in true_scores + false_scores]
         y = [1] * len(true_scores) + [0] * len(false_scores)
