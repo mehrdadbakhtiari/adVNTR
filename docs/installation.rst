@@ -23,9 +23,11 @@ adVNTR could be invoked from command line with ``advntr``
 
 Data Requirements
 -----------------
+In order to genotype VNTRs, you need to either train models for loci of interest or use pre-trained models (recommended):
 * To run adVNTR on trained VNTR models:
-    - Download `vntr_data.zip <https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data.zip>`_ and extract it inside the project directory.
-Alternatively, you can add model for custom VNTR. See :ref:`add-custom-vntr-label` for more information.
+    - Download `vntr_data_recommended_loci.zip <https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data_recommended_loci.zip>`_ and extract it inside the project directory. This includes a set of pre-trained VNTR models for Illumina (6719 loci) and Pacbio (8960 loci) sequencing data.
+    - You can also download and use `vntr_data_genic_loci.zip <https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data_genic_loci.zip>`_ for 158522 VNTRs that results in having much longer running time.
+Alternatively, you can add model for custom VNTR. See :ref:`add-custom-vntr-label` for more information about training models for custom VNTRs.
 
 Execution:
 ----------
