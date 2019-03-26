@@ -74,51 +74,30 @@ Summary of options:
 
 Input/output options:
 
-+-------------------------------+---------------------------------------------------------------------------------+
-| -a/--alignment_file <file>    | alignment file in SAM/BAM/CRAM format                                           |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -r/--reference_filename <file>| path to a FASTA-formatted reference file for CRAM files.                        |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -f/--fasta <file>             | Fasta file containing raw reads                                                 |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -p/--pacbio                   | set this flag if input file contains PacBio reads instead of Illumina reads     |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -n/--nanopore                 | set this flag if input file contains Nanopore MinION reads instead of Illumina  |
-+-------------------------------+---------------------------------------------------------------------------------+
-| -o/--outfile <file>           | file to write results. adVNTR writes output to stdout if oufile is not specified|
-+-------------------------------+---------------------------------------------------------------------------------+
-| -of/--outfmt <format>         | output format. Allowed values are {text, bed} [text]                            |
-+-------------------------------+---------------------------------------------------------------------------------+
+-f, --alignment_file <file>          alignment file in SAM/BAM/CRAM format
+-r, --reference_filename <file>      path to a FASTA-formatted reference file for CRAM files.
+-f, --fasta <file>                   Fasta file containing raw reads
+-p, --pacbio                         set this flag if input file contains PacBio reads instead of Illumina reads
+-n, --nanopore                       set this flag if input file contains Nanopore MinION reads instead of Illumina
+-o, --outfile <file>                 file to write results. adVNTR writes output to stdout if oufile is not specified
+-of, --outfmt <format>               output format. Allowed values are {text, bed} [text]
 
 Algorithm options:
 
-+---------------------------+--------------------------------------------------------------------------------+
-| -fs/--frameshift          | set this flag to search for frameshifts in VNTR instead of copy number.        |
-+---------------------------+--------------------------------------------------------------------------------+
-| -e/--expansion            | set this flag to determine long expansion from PCR-free data                   |
-+---------------------------+--------------------------------------------------------------------------------+
-| -c/--coverage <float>     | average sequencing coverage in PCR-free sequencing                             |
-+---------------------------+--------------------------------------------------------------------------------+
-| --haploid                 | set this flag if the organism is haploid                                       |
-+---------------------------+--------------------------------------------------------------------------------+
-| -naive/--naive            | use naive approach for PacBio reads                                            |
-+---------------------------+--------------------------------------------------------------------------------+
+-fs, --frameshift                   set this flag to search for frameshifts in VNTR instead of copy number.
+-e, --expansion                     set this flag to determine long expansion from PCR-free data
+-c, --coverage <float>              average sequencing coverage in PCR-free sequencing
+--haploid                           set this flag if the organism is haploid
+-naive, --naive                     use naive approach for PacBio reads
 
 Other options:
 
-+---------------------------+--------------------------------------------------------------------------------+
-| -h/--help                 | show this help message and exit                                                |
-+---------------------------+--------------------------------------------------------------------------------+
-| --working_directory <path>| working directory for creating temporary files needed for computation          |
-+---------------------------+--------------------------------------------------------------------------------+
-| -m/--models <file>        | file containing VNTRs information [vntr_data/hg19_VNTRs.db]                    |
-+---------------------------+--------------------------------------------------------------------------------+
-| -t/--threads <int>        | number of threads [4]                                                          |
-+---------------------------+--------------------------------------------------------------------------------+
-| -u/--update               | set this flag to iteratively update the model                                  |
-+---------------------------+--------------------------------------------------------------------------------+
-| -vid/--vntr_id <text>     | comma-separated list of VNTR IDs                                               |
-+---------------------------+--------------------------------------------------------------------------------+
+-h, --help                  show this help message and exit
+--working_directory <path>  working directory for creating temporary files needed for computation
+-m, --models <file>         file containing VNTRs information [vntr_data/hg19_VNTRs.db]
+-t, --threads <int>         number of threads [4]
+-u, --update                set this flag to iteratively update the model
+-vid, --vntr_id <text>      comma-separated list of VNTR IDs
 
 
 View VNTRs
@@ -134,27 +113,17 @@ The structure of VNTR and its genomic coordinate are required.
 
 Required arguments:
 
-+-----------------------+----------------------------------------------------------------+
-| -r/--reference <text> | Reference genome                                               |
-+-----------------------+----------------------------------------------------------------+
-| -c/--chromosome <text>| Chromosome (e.g. chr1)                                         |
-+-----------------------+----------------------------------------------------------------+
-| -p/--pattern <text>   | First repeating pattern of VNTR in forward (5' to 3') direction|
-+-----------------------+----------------------------------------------------------------+
-| -s/--start <int>      | Start coordinate of VNTR in forward (5' to 3') direction       |
-+-----------------------+----------------------------------------------------------------+
-| -e/--end <int>        |  End coordinate of VNTR in forward (5' to 3') direction        |
-+-----------------------+----------------------------------------------------------------+
+-r, --reference <text>   Reference genome
+-c, --chromosome <text>  Chromosome (e.g. chr1)
+-p, --pattern <text>     First repeating pattern of VNTR in forward (5' to 3') direction
+-s, --start <int>        Start coordinate of VNTR in forward (5' to 3') direction
+-e, --end <int>          End coordinate of VNTR in forward (5' to 3') direction
 
 Other options:
 
-+-------------------------+--------------------------------+
-| -g/--gene <text>        |Gene name                       |
-+-------------------------+--------------------------------+
-| -a/--annotation <text>  |Annotation of VNTR region       |
-+-------------------------+--------------------------------+
-| -h/--help               |show this help message and exit |
-+-------------------------+--------------------------------+
+-g, --gene <text>        Gene name
+-a, --annotation <text>  Annotation of VNTR region
+-h, --help               show this help message and exit
 
 You can use :code:`--update` in genotyping step to iteratively update the model using real data.
 
