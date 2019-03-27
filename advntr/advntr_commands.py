@@ -81,6 +81,8 @@ def genotype(args, genotype_parser):
     input_is_alignment_file = input_file.endswith('bam') or input_file.endswith('sam') or input_file.endswith('cram')
     if not input_is_alignment_file:
         print_error(genotype_parser, "The input file format is not supported. Please use BAM/CRAM files.")
+    if args.working_directory is None:
+        print_error(genotype_parser, 'Please specify working directory by -wd or --working_directory')
     working_directory = args.working_directory + '/' if args.working_directory else os.path.dirname(input_file) + '/'
 
     log_file = working_directory + 'log_%s.log' % os.path.basename(input_file)

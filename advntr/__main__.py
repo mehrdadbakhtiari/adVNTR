@@ -72,7 +72,7 @@ def main():
     genotype_others_group = genotype_parser.add_argument_group("Other options")
     genotype_others_group.add_argument('-h', '--help', action='help',
                                        help='show this help message and exit')
-    genotype_others_group.add_argument('--working_directory', type=str, metavar='<path>',
+    genotype_others_group.add_argument('--working_directory', type=str, metavar='<path>', default=None,
                                        help='working directory for creating temporary files needed for computation')
     genotype_others_group.add_argument('-m', '--models', type=str, metavar='<file>', default=None,
                                        help='VNTR models file [%s]' % settings.ILLUMINA_DEFAULT_MODELS_FILE)
