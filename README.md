@@ -10,7 +10,7 @@ diploid repeating counts for VNTRs and identifies possible mutations in the VNTR
 
 Installation
 ------------
-If you are using the conda packaging manager (e.g. [miniconda](https://conda.io/miniconda.html) or anaconda),
+If you are using the conda packaging manager (e.g. [miniconda](https://docs.conda.io/en/latest/miniconda.html) or anaconda),
 you can install adVNTR from the [bioconda  channel](https://bioconda.github.io/):
 
     conda config --add channels bioconda
