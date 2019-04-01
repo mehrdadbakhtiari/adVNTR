@@ -8,7 +8,7 @@ and/or use custom models.
 
 Install adVNTR with conda
 -------------------------
-If you are using the conda packaging manager (e.g. `miniconda <https://conda.io/miniconda.html>`_ or anaconda),
+If you are using the conda packaging manager (e.g. `miniconda <https://docs.conda.io/en/latest/miniconda.html>`_ or anaconda),
 you can install adVNTR from the `bioconda  channel <https://bioconda.github.io/>`_:
 
 ::
