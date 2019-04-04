@@ -15,6 +15,7 @@ class GenomeAnalyzer:
         self.working_dir = working_dir
         self.outfmt = outfmt
         self.is_haploid = is_haploid
+        self.ref_filename = ref_filename
 
         self.vntr_finder = {}
         for ref_vntr in self.reference_vntrs:
@@ -93,7 +94,7 @@ class GenomeAnalyzer:
         return reads, vntr_read_ids
 
     def find_repeat_counts_from_pacbio_alignment_file(self, alignment_file):
-        unmapped_reads_file = extract_unmapped_reads_to_fasta_file(alignment_file, self.working_dir)
+        unmapped_reads_file = extract_unmapped_reads_to_fasta_file(alignment_file, self.working_dir, self.ref_filename)
         filtered_reads, vntr_reads_ids = self.get_vntr_filtered_reads_map(unmapped_reads_file, False)
 
         if self.outfmt == 'bed':
@@ -119,7 +120,7 @@ class GenomeAnalyzer:
             print(result)
 
     def find_repeat_counts_from_alignment_file(self, alignment_file, average_coverage, update=False):
-        unmapped_reads_file = extract_unmapped_reads_to_fasta_file(alignment_file, self.working_dir)
+        unmapped_reads_file = extract_unmapped_reads_to_fasta_file(alignment_file, self.working_dir, self.ref_filename)
         filtered_reads, vntr_reads_ids = self.get_vntr_filtered_reads_map(unmapped_reads_file)
         if self.outfmt == 'bed':
             self.print_bed_header()
