@@ -140,6 +140,8 @@ def view_model(args, viewmodel_parser):
         for element in set(args.pattern.upper()):
             if element not in valid_characters:
                 print_error(viewmodel_parser, 'Pattern should only contain A, C, G, T')
+    if args.models is not None:
+        settings.TRAINED_MODELS_DB = args.models
 
     genes = [gene.upper() for gene in args.gene.split(',') if gene]
     reference_vntrs = load_unique_vntrs_data()
@@ -176,8 +178,11 @@ def add_model(args, addmodel_parser):
         if name == chromosome:
             chr_sequence = sequence
 
+    if args.models is not None:
+        settings.TRAINED_MODELS_DB = args.models
     if not os.path.exists(settings.TRAINED_MODELS_DB):
         create_vntrs_database(settings.TRAINED_MODELS_DB)
+
     vntr_id = get_largest_id_in_database() + 1
     estimated_repeats = int((args.end - args.start) / len(args.pattern) + 5)
     ref_vntr = ReferenceVNTR(vntr_id, args.pattern, args.start, chromosome, None, None, estimated_repeats, chr_sequence)
@@ -194,4 +199,6 @@ def add_model(args, addmodel_parser):
 def del_model(args, delmodel_parser):
     if not args.vntr_id:
         print_error(delmodel_parser, '--vntr_id is required')
+    if args.models is not None:
+        settings.TRAINED_MODELS_DB = args.models
     delete_vntr_from_database(args.vntr_id)

@@ -88,6 +88,8 @@ def main():
                                   help='comma-separated list of Gene Names')
     viewmodel_parser.add_argument('-p', '--pattern', type=str, default=None, metavar='<text>',
                                   help='repeating pattern of VNTR in forward (5\' to 3\') direction')
+    viewmodel_parser.add_argument('-m', '--models', type=str, default=None, metavar='<file>',
+                                  help='VNTR models file [%s]' % settings.ILLUMINA_DEFAULT_MODELS_FILE)
 
     addmodel_parser = subparsers.add_parser('addmodel', usage='advntr addmodel [options]', formatter_class=fmt,
                                             add_help=False)
@@ -95,20 +97,22 @@ def main():
     addmodel_other_group = addmodel_parser.add_argument_group("Other options")
 
     addmodel_args_group.add_argument('-r', '--reference', type=str, default=None, metavar='<text>',
-                                  help='Reference genome')
+                                     help='Reference genome')
     addmodel_args_group.add_argument('-c', '--chromosome', type=str, default=None, metavar='<text>',
-                                  help='Chromosome (e.g. chr1)')
+                                     help='Chromosome (e.g. chr1)')
     addmodel_args_group.add_argument('-p', '--pattern', type=str, default=None, metavar='<text>',
-                                  help='First repeating pattern of VNTR in forward (5\' to 3\') direction')
+                                     help='First repeating pattern of VNTR in forward (5\' to 3\') direction')
     addmodel_args_group.add_argument('-s', '--start', type=int, default=None, metavar='<int>',
-                                  help='Start coordinate of VNTR in forward (5\' to 3\') direction')
+                                     help='Start coordinate of VNTR in forward (5\' to 3\') direction')
     addmodel_args_group.add_argument('-e', '--end', type=int, default=None, metavar='<int>',
-                                  help='End coordinate of VNTR in forward (5\' to 3\') direction')
+                                     help='End coordinate of VNTR in forward (5\' to 3\') direction')
 
     addmodel_other_group.add_argument('-g', '--gene', type=str, default=None, metavar='<text>',
-                                  help='Gene name')
+                                      help='Gene name')
     addmodel_other_group.add_argument('-a', '--annotation', type=str, default=None, metavar='<text>',
-                                  help='Annotation of VNTR region')
+                                      help='Annotation of VNTR region')
+    addmodel_other_group.add_argument('-m', '--models', type=str, default=None, metavar='<file>',
+                                      help='VNTR models file [%s]' % settings.ILLUMINA_DEFAULT_MODELS_FILE)
     addmodel_other_group.add_argument('-h', '--help', action='help',
                                       help='show this help message and exit')
 
@@ -120,6 +124,8 @@ def main():
     delmodel_args_group.add_argument('-vid', '--vntr_id', type=str, metavar='<text>', default=None,
                                      help='VNTR ID')
 
+    delmodel_other_group.add_argument('-m', '--models', type=str, default=None, metavar='<file>',
+                                      help='VNTR models file [%s]' % settings.ILLUMINA_DEFAULT_MODELS_FILE)
     delmodel_other_group.add_argument('-h', '--help', action='help',
                                       help='show this help message and exit')
 
