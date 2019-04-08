@@ -123,6 +123,7 @@ Other options:
 
 -g, --gene <text>        Gene name
 -a, --annotation <text>  Annotation of VNTR region
+-m/--models <file>       VNTR models file [vntr_data/hg19_selected_VNTRs_Illumina.db]
 -h, --help               show this help message and exit
 
 You can use :code:`--update` in genotyping step to iteratively update the model using real data.
@@ -131,3 +132,11 @@ You can use :code:`--update` in genotyping step to iteratively update the model 
 Delete a VNTR
 ^^^^^^^^^^^^^
 Use :code:`advntr delmodel --vntr_id <ID>` to remove a VNTR from database.
+
+Required arguments:
+-vid/--vntr_id <text>    VNTR ID
+
+Other options:
+
+-m/--models <file>       VNTR models file [vntr_data/hg19_selected_VNTRs_Illumina.db]
+-h, --help               show this help message and exit
