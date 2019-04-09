@@ -189,12 +189,20 @@ map<int, int> get_keywords(vector<string> &arr)
         copy(istream_iterator<string>(iss),
              istream_iterator<string>(),
              back_inserter(tokens));
+        if (tokens.size() < 1)
+            break;
         vntr_id = atoi(tokens[0].c_str());
         vntr_ids.push_back(vntr_id);
+
+        set<string> unique_tokens;
         for (int i = 1; i < tokens.size(); i++)
         {
+            unique_tokens.insert(tokens[i]);
+        }
+        for (std::set<string>::iterator it = unique_tokens.begin(); it != unique_tokens.end(); it++)
+        {
             m[arr.size()] = vntr_id;
-            arr.push_back(tokens[i]);
+            arr.push_back(*it);
         }
 //        if (++counter > 20)
 //        	break;
