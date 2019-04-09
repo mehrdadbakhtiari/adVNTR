@@ -220,7 +220,9 @@ map<int, int> get_keywords(vector<string> &arr)
 int usage(int status=0)
 {
 	cerr << "Program: adVNTR-Filtering" << endl;
-	cerr << "usage: adVNTR-Filtering sequences.fa < keywords.txt > output.txt" << endl;
+	cerr << "usage: adVNTR-Filtering sequences.fa [options] < keywords.txt > output.txt" << endl;
+	cerr << "\n" << "Options:" << endl;
+	cerr << "--min_matches INT" << "\t" << "Minimum number of matches to accept a read" << endl;
 	return status;
 }
 
@@ -230,6 +232,9 @@ int main(int argc,char **argv)
 		return usage(1);
 	if (strcmp(argv[1], "--help") == 0)
 		return usage(0);
+	if (argc >= 3 and strcmp(argv[2], "--min_matches") == 0)
+	    min_number_of_keyword_matches = atoi(argv[3]);
+
     vector<string> arr;
     keyword_to_vntr = get_keywords(arr);
     int k = arr.size();
