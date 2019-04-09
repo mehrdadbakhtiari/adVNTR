@@ -147,7 +147,7 @@ def view_model(args, viewmodel_parser):
     reference_vntrs = load_unique_vntrs_data()
     results = []
     for ref_vntr in reference_vntrs:
-        if len(genes) and ref_vntr.gene_name not in genes:
+        if len(genes) and ref_vntr.gene_name.upper() not in genes:
             continue
         if args.pattern and ref_vntr.pattern != args.pattern.upper():
             continue
