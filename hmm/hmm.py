@@ -54,6 +54,9 @@ class Model:
     def add_states(self, states):
         pass
 
+    def states(self):
+        pass
+
     def add_transition(self, from_state, to_state, probability, pseudocount):
         pass
 
@@ -66,6 +69,23 @@ class Model:
     def viterbi(self):
         pass
 
+    def dense_transition_matrix(self):
+        pass
+
+    def start_index(self):
+        pass
+
+    def end_index(self):
+        pass
+
+    def from_matrix(self,mat, distributions, starts, ends, name, state_names, merge=None):
+        pass
+
+    def concatenate(self,model):
+        pass
+  
+    def fit(self,fit_patterns, algorithm='viterbi', transition_pseudocount=1, use_pseudocount=True)
+        pass
 
 if __name__ == "__main__":
     pass
