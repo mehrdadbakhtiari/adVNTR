@@ -1,4 +1,6 @@
 from collections import defaultdict
+import sys
+sys.path.append('../')
 
 from hmm import State
 from hmm import Model
@@ -18,6 +20,46 @@ class TestMethods(unittest.TestCase):
     def test_example_pomegranate(self):
         """
         This example is taken from https://pomegranate.readthedocs.io/en/latest/HiddenMarkovModel.html
+        """
+
+        from pomegranate import DiscreteDistribution, State, HiddenMarkovModel
+        d1 = DiscreteDistribution({'A': 0.35, 'C': 0.20, 'G': 0.05, 'T': 0.40})
+        d2 = DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
+        d3 = DiscreteDistribution({'A': 0.10, 'C': 0.40, 'G': 0.40, 'T': 0.10})
+
+        s1 = State(d1, name="s1")
+        s2 = State(d2, name="s2")
+        s3 = State(d3, name="s3")
+
+        model = HiddenMarkovModel(name='example')
+        model.add_states(s1, s2, s3)
+        model.add_transition(model.start, s1, 0.90)
+        model.add_transition(model.start, s2, 0.10)
+        model.add_transition(s1, s1, 0.80)
+        model.add_transition(s1, s2, 0.20)
+        model.add_transition(s2, s2, 0.90)
+        model.add_transition(s2, s3, 0.10)
+        model.add_transition(s3, s3, 0.70)
+        model.add_transition(s3, model.end, 0.30)
+        model.bake()
+
+        answer = model.log_probability(list('ACGACTATTCGAT'))
+        expected = -22.73896159971087
+
+        print(" > log probability of pomegranate model for 'ACGACTATTCGAT': ", answer)
+        # should be -22.73896159971087
+        self.assertAlmostEqual(expected, answer)
+
+        print(" > pomegranate viterbi states: ",", ".join(state.name for i, state in model.viterbi(list('ACGACTATTCGAT'))[1]))
+        # should be example - start, s1, s2, s2, s2, s2, s2, s2, s2, s2, s2, s2, s2, s3, example - end
+
+        answer = ", ".join(state.name for i, state in model.viterbi(list('ACGACTATTCGAT'))[1])
+        expected = "example-start, s1, s2, s2, s2, s2, s2, s2, s2, s2, s2, s2, s2, s3, example-end"
+        self.assertEqual(expected, answer)
+
+    def test_log_probability(self):
+        """
+        this test is for computing probability of a sequence with the model
         """
 
         d1 = DiscreteDistribution({'A': 0.35, 'C': 0.20, 'G': 0.05, 'T': 0.40})
@@ -40,24 +82,18 @@ class TestMethods(unittest.TestCase):
         model.add_transition(s3, model.end, 0.30)
         model.bake()
 
-        print(model.log_probability(list('ACGACTATTCGAT')))
-        # should be -22.73896159971087
-
         answer = model.log_probability(list('ACGACTATTCGAT'))
         expected = -22.73896159971087
+
+        print(" > log probability of pomegranate model for 'ACGACTATTCGAT': ", answer)
+        # should be -22.73896159971087
         self.assertAlmostEqual(expected, answer)
-
-        print(", ".join(state.name for i, state in model.viterbi(list('ACGACTATTCGAT'))[1]))
-        # should be example - start, s1, s2, s2, s2, s2, s2, s2, s2, s2, s2, s2, s2, s3, example - end
-
-        answer = ", ".join(state.name for i, state in model.viterbi(list('ACGACTATTCGAT'))[1])
-        expected = "example - start, s1, s2, s2, s2, s2, s2, s2, s2, s2, s2, s2, s2, s3, example - end"
-        self.assertEqual(expected, answer)
 
     def test_hmm_add_transition_before_add_state(self):
 
         hmm = Model("add transtion test")
-        distribution = {'A': 0.2, 'C': 0.3, 'G': 0.3, 'T': 0.2}
+        emission = {'A': 0.2, 'C': 0.3, 'G': 0.3, 'T': 0.2}
+        distribution = DiscreteDistribution(emission)
         s1 = State(distribution, name="s1")
         s2 = State(distribution, name="s2")
         transition = dict({})
