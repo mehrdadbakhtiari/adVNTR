@@ -63,49 +63,21 @@ class Model:
 
     def add_states(self, *states):
         for state in states:
-            self.add_state(state)
-
-    def add_edge(self, a, b):
-        '''
-
-        :param a: state1
-        :param b: state2
-        :return:
-        '''
-        self.edges.append( ( a, b ) )
-        self.n_edges += 1
-
-    def add_transition( self, a, b ):
-        self.add_edge( a, b )
+            if isinstance( state, list ):
+                for s in state:
+                    self.add_state( s )
+            else:
+                self.add_state( state )
 
     def state_count(self):
         return self.n_states
-
-    def edge_count(self):
-        return self.n_edges
-
-    def dense_transition_matrix(self):
-        """
-        Returns the dense transition matrix. Useful if the transitions of
-        somewhat small models need to be analyzed.
-        """
-
-        m = len(self.states)
-        transition_log_probabilities = np.zeros( (m, m) ) + np.NINFNEGINF
-
-        for i in range(m):
-          for n in range( self.out_edge_count[i], self.out_edge_count[i+1] ):
-            transition_log_probabilities[i, self.out_transitions[n]] = \
-              self.out_transition_log_probabilities[n]
-
-        return transition_log_probabilities
 
     def add_transition(self, from_state, to_state, probability, pseudocount=None):
         if from_state not in self.states:
             print ("ERROR: No such state named {}".format(from_state.name))
             raise Exception("No such state")
         elif to_state not in self.states:
-            print ("ERROR: No such state named {}".format(from_state.name))
+            print ("ERROR: No such state named {}".format(to_state.name))
             raise Exception("No such state")
         else:
             self.transition_map[from_state.name][to_state.name] = probability
@@ -141,8 +113,31 @@ class Model:
     def viterbi(self):
         pass
 
-    def dense_transition_matrix(self):
-        pass
+    def dense_transition_matrix( self ):
+        """Returns the dense transition matrix.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        matrix : numpy.ndarray, shape (n_states, n_states)
+            A dense transition matrix, containing the probability
+            of transitioning from each state to each other state.
+        """
+
+        m = len(self.states)-2
+        transition_probabilities = numpy.zeros( (m, m) ) 
+
+        for i in xrange(m):
+            state1 = self.states[i+2]
+            for n in xrange(m):
+                state2 = self.states[n+2]
+                if (self_transition_map[state1.name][state2.name] > 0.0):
+                  transition_probabilities[i, n] = self_transition_map[state1.name][state2.name]
+
+        return transition_probabilities
 
     def start_index(self):
         pass
@@ -158,6 +153,23 @@ class Model:
   
     def fit(self, fit_patterns, algorithm='viterbi', transition_pseudocount=1, use_pseudocount=True):
         pass
+
+    #def add_edge(self, a, b):
+    #    '''
+
+    #    :param a: state1
+    #    :param b: state2
+    #    :return:
+    #    '''
+    #    self.edges.append( ( a, b ) )
+    #    self.n_edges += 1
+
+    #def add_transition( self, a, b ):
+    #    self.add_edge( a, b )
+
+    #def edge_count(self):
+    #    return self.n_edges
+
 
 if __name__ == "__main__":
     pass

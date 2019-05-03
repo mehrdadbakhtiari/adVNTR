@@ -10,6 +10,7 @@ from advntr import profile_hmm
 
 import unittest
 
+import numpy as np
 
 class TestMethods(unittest.TestCase):
 
@@ -32,7 +33,7 @@ class TestMethods(unittest.TestCase):
         s3 = State(d3, name="s3")
 
         model = HiddenMarkovModel(name='example')
-        model.add_states(s1, s2, s3)
+        model.add_states([s1, s2, s3])
         model.add_transition(model.start, s1, 0.90)
         model.add_transition(model.start, s2, 0.10)
         model.add_transition(s1, s1, 0.80)
@@ -59,7 +60,7 @@ class TestMethods(unittest.TestCase):
 
     def test_log_probability(self):
         """
-        this test is for computing probability of a sequence with the model
+        This test is for computing probability of a sequence with the model
         """
 
         d1 = DiscreteDistribution({'A': 0.35, 'C': 0.20, 'G': 0.05, 'T': 0.40})
@@ -71,7 +72,7 @@ class TestMethods(unittest.TestCase):
         s3 = State(d3, name="s3")
 
         model = Model(name='example')
-        model.add_states(s1, s2, s3)
+        model.add_states([s1, s2, s3])
         model.add_transition(model.start, s1, 0.90)
         model.add_transition(model.start, s2, 0.10)
         model.add_transition(s1, s1, 0.80)
@@ -88,6 +89,58 @@ class TestMethods(unittest.TestCase):
         print(" > log probability of pomegranate model for 'ACGACTATTCGAT': ", answer)
         # should be -22.73896159971087
         self.assertAlmostEqual(expected, answer)
+
+    def test_dense_transition_matrix(self):
+        """
+        This test checks the computation of the dense_transition_matrix method
+        """
+        from pomegranate import DiscreteDistribution as pome_DiscreteDistribution 
+        from pomegranate import State as pome_State 
+        from pomegranate import HiddenMarkovModel as pome_HiddenMarkovModel
+        d1 = pome_DiscreteDistribution({'A': 0.35, 'C': 0.20, 'G': 0.05, 'T': 0.40})
+        d2 = pome_DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
+        d3 = pome_DiscreteDistribution({'A': 0.10, 'C': 0.40, 'G': 0.40, 'T': 0.10})
+
+        s1 = pome_State(d1, name="s1")
+        s2 = pome_State(d2, name="s2")
+        s3 = pome_State(d3, name="s3")
+
+        pome_model = pome_HiddenMarkovModel(name='example')
+        pome_model.add_states([s1, s2, s3])
+        pome_model.add_transition(pome_model.start, s1, 0.90)
+        pome_model.add_transition(pome_model.start, s2, 0.10)
+        pome_model.add_transition(s1, s1, 0.80)
+        pome_model.add_transition(s1, s2, 0.20)
+        pome_model.add_transition(s2, s2, 0.90)
+        pome_model.add_transition(s2, s3, 0.10)
+        pome_model.add_transition(s3, s3, 0.70)
+        pome_model.add_transition(s3, pome_model.end, 0.30)
+        pome_model.bake()
+
+        pome_mat = pome_model.dense_transition_matrix()
+
+        d1 = DiscreteDistribution({'A': 0.35, 'C': 0.20, 'G': 0.05, 'T': 0.40})
+        d2 = DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
+        d3 = DiscreteDistribution({'A': 0.10, 'C': 0.40, 'G': 0.40, 'T': 0.10})
+
+        s1 = State(d1, name="s1")
+        s2 = State(d2, name="s2")
+        s3 = State(d3, name="s3")
+
+        model = Model(name='example')
+        model.add_states([s1, s2, s3])
+        model.add_transition(model.start, s1, 0.90)
+        model.add_transition(model.start, s2, 0.10)
+        model.add_transition(s1, s1, 0.80)
+        model.add_transition(s1, s2, 0.20)
+        model.add_transition(s2, s2, 0.90)
+        model.add_transition(s2, s3, 0.10)
+        model.add_transition(s3, s3, 0.70)
+        model.add_transition(s3, model.end, 0.30)
+        model.bake()
+
+        mat = pome_model.dense_transition_matrix()
+        self.assertTrue(np.array_equal(mat, pome_mat))
 
     def test_hmm_add_transition_before_add_state(self):
 
