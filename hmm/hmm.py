@@ -116,23 +116,23 @@ class Model:
     def log_probability(self, seq):
         T = len(seq)
         N = self.state_count() - 2 # exclude the first two states (model-start and model-end)
-        prob_mat = np.zeros((N,T))
+        prob_mat = np.zeros((N,2))
         for n in range(N):
             state = self.states[n+2]
             prob_mat[n,0] = self.transition_map[self.states[0].name][state.name] * state.distribution[seq[0]]
         for t in range(1,T):
+            prob_mat[:,t%2] = 0.0
             for n in range(N):
                 state = self.states[n+2]
                 for n_prev in range(N):
                     state_prev = self.states[n_prev+2]
-                    prob_mat[n,t] += prob_mat[n_prev,t-1] * self.transition_map[state_prev.name][state.name]
-                prob_mat[n,t] *= state.distribution[seq[t]]
+                    prob_mat[n,t%2] += prob_mat[n_prev,(t-1)%2] * self.transition_map[state_prev.name][state.name]
+                prob_mat[n,t%2] *= state.distribution[seq[t]]
         for n in range(N):
             state = self.states[n+2]
-            prob_mat[n,T-1] *= self.transition_map[state.name][self.states[1].name]
-        prob = sum(prob_mat[:,T-1])
+            prob_mat[n,(T-1)%2] *= self.transition_map[state.name][self.states[1].name]
+        prob = sum(prob_mat[:,(T-1)%2])
         return np.log(prob)
-        pass
 
     def bake(self):
         # set the topology and sort by the state name
