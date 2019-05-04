@@ -86,7 +86,7 @@ class TestMethods(unittest.TestCase):
         answer = model.log_probability(list('ACGACTATTCGAT'))
         expected = -22.73896159971087
 
-        print(" > log probability of pomegranate model for 'ACGACTATTCGAT': ", answer)
+        print(" > log probability of hmm model for 'ACGACTATTCGAT': ", answer)
         # should be -22.73896159971087
         self.assertAlmostEqual(expected, answer)
 
@@ -118,6 +118,7 @@ class TestMethods(unittest.TestCase):
         pome_model.bake()
 
         pome_mat = pome_model.dense_transition_matrix()
+        #print(pome_mat)
 
         d1 = DiscreteDistribution({'A': 0.35, 'C': 0.20, 'G': 0.05, 'T': 0.40})
         d2 = DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
@@ -139,26 +140,54 @@ class TestMethods(unittest.TestCase):
         model.add_transition(s3, model.end, 0.30)
         model.bake()
 
-        mat = pome_model.dense_transition_matrix()
-        self.assertTrue(np.array_equal(mat, pome_mat))
+        mat = model.dense_transition_matrix()
+        #print(mat)
 
-    def test_hmm_add_transition_before_add_state(self):
+        self.assertAlmostEqual(np.sum(np.abs(mat-pome_mat)), 0.0)
 
-        hmm = Model("add transtion test")
-        emission = {'A': 0.2, 'C': 0.3, 'G': 0.3, 'T': 0.2}
-        distribution = DiscreteDistribution(emission)
-        s1 = State(distribution, name="s1")
-        s2 = State(distribution, name="s2")
-        transition = dict({})
-        transition['s1'] = dict([('s2', 0.3)])
+    def test_from_matrix(self):
 
-        with self.assertRaises(Exception) as context:
-            hmm.add_transition(s1, s2, transition['s1']['s2'])  # Will raise an exception
+        d1 = DiscreteDistribution({'A': 0.35, 'C': 0.20, 'G': 0.05, 'T': 0.40})
+        d2 = DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
+        d3 = DiscreteDistribution({'A': 0.10, 'C': 0.40, 'G': 0.40, 'T': 0.10})
+        distributions = [d1, d2, d3]
+    
+        transition_probabilities = np.array([[0.8, 0.2, 0.0],
+                                             [0.0, 0.9, 0.1],
+                                             [0.0, 0.0, 0.7]])
 
-        self.assertTrue("No such state" in context.exception)
+        starts = np.array([0.9, 0.1, 0.0])
+        ends = np.array([0.0, 0.0, 0.3])
+        state_names = ['s1', 's2', 's3']
+
+        model = Model.from_matrix(transition_probabilities, distributions, starts, ends,
+        state_names, name="from_matrix_model", verbose=False, merge=None )
+
+        answer = model.log_probability(list('ACGACTATTCGAT'))
+        expected = -22.73896159971087
+
+        print(" > log probability of model from matrix for 'ACGACTATTCGAT': ", answer)
+        # should be -22.73896159971087
+        self.assertAlmostEqual(expected, answer)
+        pass
+
+    #def test_hmm_add_transition_before_add_state(self):
+
+    #    hmm = Model("add transtion test")
+    #    emission = {'A': 0.2, 'C': 0.3, 'G': 0.3, 'T': 0.2}
+    #    distribution = DiscreteDistribution(emission)
+    #    s1 = State(distribution, name="s1")
+    #    s2 = State(distribution, name="s2")
+    #    transition = dict({})
+    #    transition['s1'] = dict([('s2', 0.3)])
+
+    #    with self.assertRaises(Exception) as context:
+    #        hmm.add_transition(s1, s2, transition['s1']['s2'])  # Will raise an exception
+
+    #    self.assertTrue("No such state" in context.exception)
 
     def test_hmm_add_transition(self):
-
+        pass
         model = Model("transition test")
         distribution = {'A': 0.2, 'C': 0.3, 'G': 0.3, 'T': 0.2}
         s1 = State(distribution, name="s1")
@@ -190,6 +219,7 @@ class TestMethods(unittest.TestCase):
         pass
 
     def test_hmm_state(self):
+        pass
         transitions = defaultdict(lambda: defaultdict(float))
         emissions = defaultdict(lambda: defaultdict(float))
 
@@ -207,26 +237,6 @@ class TestMethods(unittest.TestCase):
 
         self.assertEqual("intron", state1.name)
         self.assertEqual("exon", state2.name)
-
-    def test_hmm_model(self):
-        hmm = Model(name="HiddenMarkovModel")
-
-        distribution = {'A':0.2, 'C':0.3, 'G':0.3, 'T':0.2}
-        state1 = State(distribution, name="s1")
-        state2 = State(distribution, name="s2")
-
-        hmm.add_states(state1, state2)
-        hmm.add_edge(hmm.start, state1)
-        hmm.add_edge(state1, state2)
-        hmm.add_edge(state2, hmm.start)
-
-        print("states: ", hmm.states)
-        for state in hmm.states:
-            print("state name: ", state.name)
-        print("n states: ", hmm.n_states)
-        print("n edges: ", hmm.n_edges)
-        pass
-
 
 if __name__ == "__main__":
     unittest.main()
