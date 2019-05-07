@@ -265,9 +265,6 @@ class Model:
     def concatenate(self, model):
         pass
   
-    def fit(self, fit_patterns, algorithm='viterbi', transition_pseudocount=1, use_pseudocount=True):
-        pass
-
     def viterbi(self):
         pass
 
