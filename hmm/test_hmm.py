@@ -171,7 +171,7 @@ class TestMethods(unittest.TestCase):
         self.assertAlmostEqual(expected, answer)
         pass
 
-    def test_concatinate(self):
+    def test_concatenate(self):
 
         from pomegranate import DiscreteDistribution as pome_DiscreteDistribution 
         from pomegranate import State as pome_State 
