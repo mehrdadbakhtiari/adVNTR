@@ -171,6 +171,95 @@ class TestMethods(unittest.TestCase):
         self.assertAlmostEqual(expected, answer)
         pass
 
+    def test_concatinate(self):
+
+        from pomegranate import DiscreteDistribution as pome_DiscreteDistribution 
+        from pomegranate import State as pome_State 
+        from pomegranate import HiddenMarkovModel as pome_HiddenMarkovModel
+        d1 = pome_DiscreteDistribution({'A': 0.35, 'C': 0.20, 'G': 0.05, 'T': 0.40})
+        d2 = pome_DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
+        d3 = pome_DiscreteDistribution({'A': 0.10, 'C': 0.40, 'G': 0.40, 'T': 0.10})
+
+        s1_1 = pome_State(d1, name="s1_1")
+        s2_1 = pome_State(d2, name="s2_1")
+        s3_1 = pome_State(d3, name="s3_1")
+
+        s1_2 = pome_State(d3, name="s1_2")
+        s2_2 = pome_State(d1, name="s2_2")
+        s3_2 = pome_State(d2, name="s3_2")
+
+        pome_model_1 = pome_HiddenMarkovModel(name='model_1')
+        pome_model_1.add_states([s1_1, s2_1, s3_1])
+        pome_model_1.add_transition(pome_model_1.start, s1_1, 0.90)
+        pome_model_1.add_transition(pome_model_1.start, s2_1, 0.10)
+        pome_model_1.add_transition(s1_1, s1_1, 0.80)
+        pome_model_1.add_transition(s1_1, s2_1, 0.20)
+        pome_model_1.add_transition(s2_1, s2_1, 0.90)
+        pome_model_1.add_transition(s2_1, s3_1, 0.10)
+        pome_model_1.add_transition(s3_1, s3_1, 0.70)
+        pome_model_1.add_transition(s3_1, pome_model_1.end, 0.30)
+        pome_model_1.bake()
+
+        pome_model_2 = pome_HiddenMarkovModel(name='model_2')
+        pome_model_2.add_states([s1_2, s2_2, s3_2])
+        pome_model_2.add_transition(pome_model_2.start, s1_2, 0.90)
+        pome_model_2.add_transition(pome_model_2.start, s2_2, 0.10)
+        pome_model_2.add_transition(s1_2, s1_2, 0.80)
+        pome_model_2.add_transition(s1_2, s2_2, 0.20)
+        pome_model_2.add_transition(s2_2, s2_2, 0.90)
+        pome_model_2.add_transition(s2_2, s3_2, 0.10)
+        pome_model_2.add_transition(s3_2, s3_2, 0.70)
+        pome_model_2.add_transition(s3_2, pome_model_2.end, 0.30)
+        pome_model_2.bake()
+
+        pome_model_1.concatenate(pome_model_2)
+        pome_model_1.bake()
+
+        answer_pome = pome_model_1.log_probability(list('ACGACTATTCGAT'))
+        print(" > log probability of hmm model for 'ACGACTATTCGAT': ", answer_pome)
+
+        d1 = DiscreteDistribution({'A': 0.35, 'C': 0.20, 'G': 0.05, 'T': 0.40})
+        d2 = DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
+        d3 = DiscreteDistribution({'A': 0.10, 'C': 0.40, 'G': 0.40, 'T': 0.10})
+
+        s1_1 = State(d1, name="s1_1")
+        s2_1 = State(d2, name="s2_1")
+        s3_1 = State(d3, name="s3_1")
+
+        s1_2 = State(d3, name="s1_2")
+        s2_2 = State(d1, name="s2_2")
+        s3_2 = State(d2, name="s3_2")
+
+        model_1 = Model(name='model_1')
+        model_1.add_states([s1_1, s2_1, s3_1])
+        model_1.add_transition(model_1.start, s1_1, 0.90)
+        model_1.add_transition(model_1.start, s2_1, 0.10)
+        model_1.add_transition(s1_1, s1_1, 0.80)
+        model_1.add_transition(s1_1, s2_1, 0.20)
+        model_1.add_transition(s2_1, s2_1, 0.90)
+        model_1.add_transition(s2_1, s3_1, 0.10)
+        model_1.add_transition(s3_1, s3_1, 0.70)
+        model_1.add_transition(s3_1, model_1.end, 0.30)
+        model_1.bake()
+
+        model_2 = Model(name='model_2')
+        model_2.add_states([s1_2, s2_2, s3_2])
+        model_2.add_transition(model_2.start, s1_2, 0.90)
+        model_2.add_transition(model_2.start, s2_2, 0.10)
+        model_2.add_transition(s1_2, s1_2, 0.80)
+        model_2.add_transition(s1_2, s2_2, 0.20)
+        model_2.add_transition(s2_2, s2_2, 0.90)
+        model_2.add_transition(s2_2, s3_2, 0.10)
+        model_2.add_transition(s3_2, s3_2, 0.70)
+        model_2.add_transition(s3_2, model_2.end, 0.30)
+        model_2.bake()
+
+        model_1.concatenate(model_2)
+        model_1.bake()
+
+        answer = model_1.log_probability(list('ACGACTATTCGAT'))
+        print(" > log probability of hmm model for 'ACGACTATTCGAT': ", answer)
+        
     #def test_hmm_add_transition_before_add_state(self):
 
     #    hmm = Model("add transtion test")

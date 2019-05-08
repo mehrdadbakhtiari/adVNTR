@@ -53,6 +53,8 @@ class Model:
         self.edges    = []
         self.n_edges  = 0
 
+        self.start_index = -1     # will be set in bake
+        self.end_index = -1       # will be set in bake
 
         self.dynamic_table = []
 
@@ -95,6 +97,8 @@ class Model:
         prob_mat = np.zeros((N,2))
         for n in range(N):
             state = self.states[n]
+            print("self.start.name: ", self.start.name)
+            print("state.name: ", state.name)
             prob_mat[n,0] = self.transition_map[self.start.name][state.name] * state.distribution[seq[0]]
         for t in range(1,T):
             prob_mat[:,t%2] = 0.0
@@ -262,34 +266,59 @@ class Model:
         model.bake()
         return model
 
-    def concatenate(self, model):
-        pass
-  
+    def concatenate( self, other, suffix='', prefix='' ):
+        """Concatenate this model to another model.
+
+        Concatenate this model to another model in such a way that a single
+        probability 1 edge is added between self.end and other.start. Rename
+        all other states appropriately by adding a suffix or prefix if needed.
+
+        Parameters
+        ----------
+        other : HiddenMarkovModel
+            The other model to concatenate
+
+        suffix : str, optional
+            Add the suffix to the end of all state names in the other model.
+            Default is ''.
+
+        prefix : str, optional
+            Add the prefix to the beginning of all state names in the other
+            model. Default is ''.
+
+        Returns
+        -------
+        None
+        """
+
+        # WARNING: need to figure out what to do with the transition_map of the other.
+        # If we change the names the map may not work unless we change the transition_map too.
+        #other.name = "{}{}{}".format( prefix, other.name, suffix )
+        #for state in other.states:
+        #    state.name = "{}{}{}".format( prefix, state.name, suffix )
+
+        # add states of other 
+        self.add_states(other.states)
+    
+        # set the n_states
+        self.n_states += other.n_states
+ 
+        # set transition map
+        for state in other.states:
+            for key, prob in other.transition_map[state.name].items():
+                if (prob != 0):
+                    self.transition_map[state.name][key] = prob
+
+        # set transitional link
+        self.add_transition( self.end, other.start, 1.00 )
+        self.end = other.end
+
+
     def fit(self, fit_patterns, algorithm='viterbi', transition_pseudocount=1, use_pseudocount=True):
         pass
 
     def viterbi(self):
         pass
-
-    #def from_matrix(self,mat, distributions, starts, ends, name=name, state_names=state_names, merge=None):
-    #    pass
-
-    #def add_edge(self, a, b):
-    #    '''
-
-    #    :param a: state1
-    #    :param b: state2
-    #    :return:
-    #    '''
-    #    self.edges.append( ( a, b ) )
-    #    self.n_edges += 1
-
-    #def add_transition( self, a, b ):
-    #    self.add_edge( a, b )
-
-    #def edge_count(self):
-    #    return self.n_edges
-
 
 if __name__ == "__main__":
     pass
