@@ -327,5 +327,54 @@ class TestMethods(unittest.TestCase):
         self.assertEqual("intron", state1.name)
         self.assertEqual("exon", state2.name)
 
+    def test_ordering_states(self):
+
+        d1 = DiscreteDistribution({'A': 0.35, 'C': 0.20, 'G': 0.05, 'T': 0.40})
+        d2 = DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
+        d3 = DiscreteDistribution({'A': 0.10, 'C': 0.40, 'G': 0.40, 'T': 0.10})
+
+        s0 = State(d1, name="I0")
+        s1 = State(d1, name="I1")
+        s2 = State(d2, name="M1")
+        s3 = State(d3, name="D1")
+
+        model = Model(name='ordering')
+        model.add_states([s0, s1, s2, s3])
+        model.bake()
+
+        names = [state.name for state in model.states]
+        answer = " ".join(names)
+        expected = "ordering-start I0 D1 M1 I1 ordering-end"  # Only in our hmm model
+        self.assertEqual(expected, answer)
+
+    def test_viterbi_path_without_delete_state(self):
+
+        d1 = DiscreteDistribution({'A': 0.35, 'C': 0.20, 'G': 0.05, 'T': 0.40})
+        d2 = DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
+        d3 = DiscreteDistribution({'A': 0.10, 'C': 0.40, 'G': 0.40, 'T': 0.10})
+
+        s1 = State(d1, name="s1")
+        s2 = State(d2, name="s2")
+        s3 = State(d3, name="s3")
+
+        model = Model(name='example')
+        model.add_states([s1, s2, s3])
+        model.add_transition(model.start, s1, 0.90)
+        model.add_transition(model.start, s2, 0.10)
+        model.add_transition(s1, s1, 0.80)
+        model.add_transition(s1, s2, 0.20)
+        model.add_transition(s2, s2, 0.90)
+        model.add_transition(s2, s3, 0.10)
+        model.add_transition(s3, s3, 0.70)
+        model.add_transition(s3, model.end, 0.30)
+        model.bake()
+
+        print(" > Our model viterbi states: ", ", ".join(state.name for i, state in model.viterbi(list('ACGACTATTCGAT'))[1]))
+        # should be example-start, s1, s2, s2, s2, s2, s2, s2, s2, s2, s2, s2, s2, s3, example-end
+        expected = "example-start, s1, s2, s2, s2, s2, s2, s2, s2, s2, s2, s2, s2, s3, example-end"
+        answer = (", ".join(state.name for i, state in model.viterbi(list('ACGACTATTCGAT'))[1]))
+        self.assertEqual(expected, answer)
+
+
 if __name__ == "__main__":
     unittest.main()
