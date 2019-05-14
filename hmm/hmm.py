@@ -65,7 +65,7 @@ class Model:
         self.states.append(state)
         self.n_states += 1
         # initialize transition map
-        self.transition_map[state.name] = defaultdict(lambda: 0, type=float)
+        self.transition_map[state] = defaultdict(lambda: 0, type=float)
 
     def add_states(self, *states):
         for state in states:
@@ -86,7 +86,7 @@ class Model:
             print ("ERROR: No such state named {}".format(to_state.name))
             raise Exception("No such state")
         else:
-            self.transition_map[from_state.name][to_state.name] = probability
+            self.transition_map[from_state][to_state] = probability
 
     def add_transitions(self, transitions):
         pass
@@ -99,18 +99,18 @@ class Model:
             state = self.states[n]
             print("self.start.name: ", self.start.name)
             print("state.name: ", state.name)
-            prob_mat[n,0] = self.transition_map[self.start.name][state.name] * state.distribution[seq[0]]
+            prob_mat[n,0] = self.transition_map[self.start][state] * state.distribution[seq[0]]
         for t in range(1,T):
             prob_mat[:,t%2] = 0.0
             for n in range(N):
                 state = self.states[n]
                 for n_prev in range(N):
                     state_prev = self.states[n_prev]
-                    prob_mat[n,t%2] += prob_mat[n_prev,(t-1)%2] * self.transition_map[state_prev.name][state.name]
+                    prob_mat[n,t%2] += prob_mat[n_prev,(t-1)%2] * self.transition_map[state_prev][state]
                 prob_mat[n,t%2] *= state.distribution[seq[t]]
         for n in range(N):
             state = self.states[n]
-            prob_mat[n,(T-1)%2] *= self.transition_map[state.name][self.end.name]
+            prob_mat[n,(T-1)%2] *= self.transition_map[state][self.end]
         prob = sum(prob_mat[:,(T-1)%2])
         return np.log(prob)
 
@@ -167,8 +167,8 @@ class Model:
             state1 = self.states[i]
             for n in range(m):
                 state2 = self.states[n]
-                if (self.transition_map[state1.name][state2.name] > 0.0):
-                  transition_probabilities[i, n] = self.transition_map[state1.name][state2.name]
+                if (self.transition_map[state1][state2] > 0.0):
+                  transition_probabilities[i, n] = self.transition_map[state1][state2]
 
         return transition_probabilities
 
@@ -305,9 +305,9 @@ class Model:
  
         # set transition map
         for state in other.states:
-            for key, prob in other.transition_map[state.name].items():
+            for key, prob in other.transition_map[state].items():
                 if (prob != 0):
-                    self.transition_map[state.name][key] = prob
+                    self.transition_map[state][key] = prob
 
         # set transitional link
         self.add_transition( self.end, other.start, 1.00 )
