@@ -58,6 +58,9 @@ class Model:
 
         self.dynamic_table = []
 
+        self.subModels = [self]
+        self.n_subModels = 1
+
         self.is_baked = False
 
     def add_model(self, model):
@@ -116,7 +119,7 @@ class Model:
         prob = sum(prob_mat[:,(T-1)%2])
         return np.log(prob)
 
-    def bake(self):
+    def bake(self, merge=None):
         # set the topology and sort by the state name
         """
         In a model, start state comes the first and end state comes the last.
@@ -135,12 +138,15 @@ class Model:
         sorted_states = list(sorted( states_without_start_and_end, key=attrgetter('name')))
 
         self.states = [self.start] + sorted_states + [self.end]
-        self.n_states = len(self.states)
 
         indices = { self.states[i]: i for i in range(self.n_states) }
 
         self.start_index = indices[self.start]
         self.end_index = indices[self.end]
+
+        for i, subModel in enumerate(self.subModels[1:]):
+          subModel_prev = self.subModels[i]
+          self.transition_map[subModel_prev.end][subModel.start] = 1
 
         self.is_baked = True
 
@@ -292,25 +298,31 @@ class Model:
 
         # WARNING: need to figure out what to do with the transition_map of the other.
         # If we change the names the map may not work unless we change the transition_map too.
-        #other.name = "{}{}{}".format( prefix, other.name, suffix )
-        #for state in other.states:
-        #    state.name = "{}{}{}".format( prefix, state.name, suffix )
-
-        # add states of other 
-        self.add_states(other.states)
-    
-        # set the n_states
-        self.n_states += other.n_states
- 
-        # set transition map
+        other.name = "{}{}{}".format( prefix, other.name, suffix )
         for state in other.states:
-            for key, prob in other.transition_map[state].items():
-                if (prob != 0):
-                    self.transition_map[state][key] = prob
+            state.name = "{}{}{}".format( prefix, state.name, suffix )
 
-        # set transitional link
-        self.add_transition( self.end, other.start, 1.00 )
-        self.end = other.end
+        self.subModels.append(other)
+        self.n_subModels += 1
+
+        ## add states of other 
+        #self.add_states(other.states)
+    
+        ## set the n_states
+        #self.n_states += other.n_states
+ 
+        ## set transition map
+        #for state in other.states:
+        #    for key, prob in other.transition_map[state].items():
+        #        if (prob != 0):
+        #            self.transition_map[state][key] = prob
+
+        ## set transitional link
+        #self.add_transition( self.end, other.start, 1.00 )
+        #self.end = other.end
+
+        # when concatenate with another model we need another bake
+        self.is_baked = False 
 
     def viterbi(self, sequence):
         """
@@ -327,24 +339,38 @@ class Model:
         logp = 0  # Log probability of the best path
         vpath = []  # Viterbi path
 
-        state_to_index = dict(zip(self.states, range(self.n_states)))
+        state_to_index = {}
+        n_states = 0
+        states = []
+        transition_map = dict()
+        for subModel in self.subModels:
+          state_to_index.update( dict(zip(subModel.states, range(n_states,n_states+subModel.n_states))) )
+          n_states += subModel.n_states
+          for state in subModel.states:
+            states.append(state)
+          transition_map.update(subModel.transition_map)
 
+        #print("state_to_index: ",state_to_index)
+        #print("n_states: ", n_states)
+        #print("states: ", states)
+        #print("transition_map: ", transition_map)
         # Initialize dynamic table
-        self.dynamic_table = np.zeros((self.n_states, len(sequence) + 1))
+        self.dynamic_table = np.zeros((n_states, len(sequence) + 1))
         self.dynamic_table[state_to_index[self.start]][0] = 1
 
         # Storing previous states (row) and column (Easy version)
-        vpath_table = np.zeros((self.n_states, len(sequence) + 1), dtype=object)
+        vpath_table = np.zeros((n_states, len(sequence) + 1), dtype=object)
 
         for col in range(len(sequence)):
-            for row, state in enumerate(self.states):
-                # print ("state: {}, row: {}, col: {}".format(state.name, row, col))
+            for row, state in enumerate(states):
+                #print ("state: {}, row: {}, col: {}".format(state.name, row, col))
                 # for all neighboring states, update the probability
-                for neighbor_state in self.transition_map[state]:
+                for neighbor_state in transition_map[state]:
+                    #print ("neighbor_state: {}".format(neighbor_state.name))
                     if not state.is_silent():
                         # Emit a character and move to the next column
                         prob = self.dynamic_table[row][col] * \
-                               self.transition_map[state][neighbor_state] * \
+                               transition_map[state][neighbor_state] * \
                                state.distribution[sequence[col]]
                         neighbor_state_index = state_to_index[neighbor_state]
 
@@ -355,7 +381,7 @@ class Model:
 
                     else:  # Silent state: Stay in the same column
                         prob = self.dynamic_table[row][col] * \
-                               self.transition_map[state][neighbor_state]
+                               transition_map[state][neighbor_state]
                         neighbor_state_index = state_to_index[neighbor_state]
 
                         if self.dynamic_table[neighbor_state_index][col] < prob:
@@ -367,21 +393,21 @@ class Model:
         # Back tracking viterbi path
         # Start from end_state
         # NOTE This should be changed when there are many end state
-        vpath.append((state_to_index[self.end], self.end))
-        end_index = state_to_index[self.end]
+        vpath.append((state_to_index[self.subModels[-1].end], self.subModels[-1].end))
+        end_index = state_to_index[self.subModels[-1].end]
         previous_pointer = vpath_table[end_index][-1]
         row = previous_pointer[0]
         col = previous_pointer[1]
 
         while True:
-            vpath.append((state_to_index[self.states[row]], self.states[row]))
+            vpath.append((state_to_index[states[row]], states[row]))
             previous_pointer = vpath_table[row][col]
             if previous_pointer == 0:
                 break
             row = previous_pointer[0]
             col = previous_pointer[1]
 
-        logp = np.log(self.dynamic_table[end_index][-1])
+        logp = np.log(self.dynamic_table[state_to_index[self.subModels[-1].end]][-1])
         vpath = vpath[::-1]
 
         return logp, vpath
