@@ -215,7 +215,9 @@ class TestMethods(unittest.TestCase):
         #pome_model_1.concatenate(pome_model_2)
         #pome_model_1.bake()
 
-        #print(" > Pomegranate model viterbi states: ", " ".join(state.name for i, state in pome_model_1.viterbi(list('ACGACTATTCGAT'))[1]))
+        #pome_log_prob, pome_vpath = pome_model_1.viterbi(list('ACGACTATTCGAT'))
+        #print(" > Pomegranate model viterbi states: ", " ".join(state.name for i, state in pome_vpath))
+        #print(" > Pomegranate model log probability: ", pome_log_prob)
         ##expected = "model_1-start s1_1 s2_1 s2_1 s2_1 s2_1 s2_1 s2_1 s2_1 s2_1 s3_1 model_2-start s1_2 s2_2 s3_2 model_2-end"
 
         d1 = DiscreteDistribution({'A': 0.35, 'C': 0.20, 'G': 0.05, 'T': 0.40})
@@ -242,8 +244,6 @@ class TestMethods(unittest.TestCase):
         model_1.add_transition(s3_1, model_1.end, 0.30)
         model_1.bake()
 
-        #print(" > Our model viterbi states: ", " ".join(state.name for i, state in model_1.viterbi(list('ACGACTATTCGAT'))[1]))
-
         model_2 = Model(name='model_2')
         model_2.add_states([s1_2, s2_2, s3_2])
         model_2.add_transition(model_2.start, s1_2, 0.90)
@@ -259,10 +259,15 @@ class TestMethods(unittest.TestCase):
         model_1.concatenate(model_2)
         model_1.bake()
 
-        answer = " ".join(state.name for i, state in model_1.viterbi(list('ACGACTATTCGAT'))[1])
-        print(" > Our model viterbi states: ", answer)
-        expected = "model_1-start s1_1 s2_1 s2_1 s2_1 s2_1 s2_1 s2_1 s2_1 s2_1 s3_1 model_1-end model_2-start s1_2 s2_2 s3_2 model_2-end"
-        self.assertEqual(expected, answer)
+        log_prob, vpath = model_1.viterbi(list('ACGACTATTCGAT'))
+        answer_vpath = " ".join(state.name for i, state in vpath)
+        print(" > Our model viterbi states: ", answer_vpath)
+        print(" > Our model log probability: ", log_prob)
+        expected_vpath = "model_1-start s1_1 s2_1 s2_1 s2_1 s2_1 s2_1 s2_1 s2_1 s2_1 s3_1 model_1-end model_2-start s1_2 s2_2 s3_2 model_2-end"
+        expected_logProb = -27.589111223253287
+
+        self.assertEqual(expected_vpath, answer_vpath)
+        self.assertAlmostEqual(expected_logProb, log_prob)
         
     #def test_hmm_add_transition_before_add_state(self):
 

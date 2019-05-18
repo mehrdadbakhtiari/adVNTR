@@ -128,25 +128,29 @@ class Model:
         start - I0 - D1 - M1, I1 - D2 - M2 - I2, ... D10 - M10 - I10 - end
 
         setting start_index and end_index
-        setting n_states
+
+        setting connections between subModels
         """
         np.random.seed(0)
         #random.seed(0)
 
-        # Ordering states
-        states_without_start_and_end = [state for state in self.states if state is not self.start and state is not self.end ]
-        sorted_states = list(sorted( states_without_start_and_end, key=attrgetter('name')))
+        # baking for the first time
+        if (self.n_subModels == 1):
+            # Ordering states
+            states_without_start_and_end = [state for state in self.states if state is not self.start and state is not self.end ]
+            sorted_states = list(sorted( states_without_start_and_end, key=attrgetter('name')))
 
-        self.states = [self.start] + sorted_states + [self.end]
+            self.states = [self.start] + sorted_states + [self.end]
 
-        indices = { self.states[i]: i for i in range(self.n_states) }
+            indices = { self.states[i]: i for i in range(self.n_states) }
 
-        self.start_index = indices[self.start]
-        self.end_index = indices[self.end]
+            self.start_index = indices[self.start]
+            self.end_index = indices[self.end]
 
+        # setting connections between subModels if they exist
         for i, subModel in enumerate(self.subModels[1:]):
-          subModel_prev = self.subModels[i]
-          self.transition_map[subModel_prev.end][subModel.start] = 1
+            subModel_prev = self.subModels[i]
+            self.transition_map[subModel_prev.end][subModel.start] = 1
 
         self.is_baked = True
 
@@ -296,14 +300,25 @@ class Model:
         None
         """
 
-        # WARNING: need to figure out what to do with the transition_map of the other.
-        # If we change the names the map may not work unless we change the transition_map too.
+        # "self" must be baked
+        if (not self.is_baked):
+            print("ERROR: to call concatenate,the my model must be baked.")
+            raise ValueError
+
+        # "other" must be baked
+        if (not other.is_baked):
+            print("ERROR: to call concatenate,the other model must be baked.")
+            raise ValueError
+
         other.name = "{}{}{}".format( prefix, other.name, suffix )
         for state in other.states:
             state.name = "{}{}{}".format( prefix, state.name, suffix )
 
         self.subModels.append(other)
         self.n_subModels += 1
+
+        # when concatenate with another model we need another bake
+        self.is_baked = False 
 
         ## add states of other 
         #self.add_states(other.states)
@@ -321,9 +336,6 @@ class Model:
         #self.add_transition( self.end, other.start, 1.00 )
         #self.end = other.end
 
-        # when concatenate with another model we need another bake
-        self.is_baked = False 
-
     def viterbi(self, sequence):
         """
         
@@ -339,21 +351,18 @@ class Model:
         logp = 0  # Log probability of the best path
         vpath = []  # Viterbi path
 
+        # build aggregate states and transition map from subModels
         state_to_index = {}
         n_states = 0
         states = []
         transition_map = dict()
         for subModel in self.subModels:
-          state_to_index.update( dict(zip(subModel.states, range(n_states,n_states+subModel.n_states))) )
-          n_states += subModel.n_states
-          for state in subModel.states:
-            states.append(state)
-          transition_map.update(subModel.transition_map)
+            state_to_index.update( dict(zip(subModel.states, range(n_states,n_states+subModel.n_states))) )
+            n_states += subModel.n_states
+            for state in subModel.states:
+                states.append(state)
+            transition_map.update(subModel.transition_map)
 
-        #print("state_to_index: ",state_to_index)
-        #print("n_states: ", n_states)
-        #print("states: ", states)
-        #print("transition_map: ", transition_map)
         # Initialize dynamic table
         self.dynamic_table = np.zeros((n_states, len(sequence) + 1))
         self.dynamic_table[state_to_index[self.start]][0] = 1
@@ -388,7 +397,6 @@ class Model:
                             self.dynamic_table[neighbor_state_index][col] = prob
                             # update path table
                             vpath_table[neighbor_state_index][col] = [row, col]
-            # print self.dynamic_table
 
         # Back tracking viterbi path
         # Start from end_state
