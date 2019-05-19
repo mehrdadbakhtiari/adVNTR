@@ -134,23 +134,18 @@ class Model:
         np.random.seed(0)
         #random.seed(0)
 
-        # baking for the first time
-        if (self.n_subModels == 1):
+        # bake all the subModels
+        for subModel in self.subModels:
             # Ordering states
-            states_without_start_and_end = [state for state in self.states if state is not self.start and state is not self.end ]
+            states_without_start_and_end = [state for state in subModel.states if state is not subModel.start and state is not subModel.end ]
             sorted_states = list(sorted( states_without_start_and_end, key=attrgetter('name')))
 
-            self.states = [self.start] + sorted_states + [self.end]
+            subModel.states = [subModel.start] + sorted_states + [subModel.end]
 
-            indices = { self.states[i]: i for i in range(self.n_states) }
+            indices = { subModel.states[i]: i for i in range(subModel.n_states) }
 
-            self.start_index = indices[self.start]
-            self.end_index = indices[self.end]
-
-        # setting connections between subModels if they exist
-        for i, subModel in enumerate(self.subModels[1:]):
-            subModel_prev = self.subModels[i]
-            self.transition_map[subModel_prev.end][subModel.start] = 1
+            subModel.start_index = indices[subModel.start]
+            subModel.end_index = indices[subModel.end]
 
         self.is_baked = True
 
@@ -275,7 +270,7 @@ class Model:
         model.bake()
         return model
 
-    def concatenate( self, other, suffix='', prefix='' ):
+    def concatenate( self, other, suffix='', prefix='', transition_probability=1.0 ):
         """Concatenate this model to another model.
 
         Concatenate this model to another model in such a way that a single
@@ -300,15 +295,15 @@ class Model:
         None
         """
 
-        # "self" must be baked
-        if (not self.is_baked):
-            print("ERROR: to call concatenate,the my model must be baked.")
-            raise ValueError
+        ## "self" must be baked
+        #if (not self.is_baked):
+        #    print("ERROR: to call concatenate,the my model must be baked.")
+        #    raise ValueError
 
-        # "other" must be baked
-        if (not other.is_baked):
-            print("ERROR: to call concatenate,the other model must be baked.")
-            raise ValueError
+        ## "other" must be baked
+        #if (not other.is_baked):
+        #    print("ERROR: to call concatenate,the other model must be baked.")
+        #    raise ValueError
 
         other.name = "{}{}{}".format( prefix, other.name, suffix )
         for state in other.states:
@@ -316,6 +311,11 @@ class Model:
 
         self.subModels.append(other)
         self.n_subModels += 1
+
+        # setting connections between subModels if they exist
+        subModel = self.subModels[-1]
+        subModel_prev = self.subModels[-2]
+        subModel_prev.transition_map[subModel_prev.end][subModel.start] = transition_probability
 
         # when concatenate with another model we need another bake
         self.is_baked = False 
