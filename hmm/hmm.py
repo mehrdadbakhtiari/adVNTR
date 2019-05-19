@@ -149,6 +149,96 @@ class Model:
 
         self.is_baked = True
 
+    def _sort_states(self):
+        """
+        Sort states in pre-defined (topology of our hmm model) order.
+
+        State naming rule:
+        There should be three types of state except start and end
+        1. Insert
+        2. Match
+        3. Delete
+        Insertion states start with I
+        Match states start with M
+        Delete states start with D
+
+        Format:
+        I/M/D[index]_[repeating_unit_index]
+
+        Example:
+
+        total_hmm_start
+        --------------------------
+        suffix_matcher_hmm_start
+        ...
+        suffix_matcher_hmm_end
+        --------------------------
+        unit_start (repeating unit matcher hmm)
+        --------------------------
+        repeat_start_1
+        I0_1
+        D1_1
+        M1_1
+        I1_1
+        ...
+        repeat_end_1
+        --------------------------
+        repeat_start_2
+        I0_2
+        D1_2
+        M1_2
+        I1_2
+        ...
+        repeat_end_2
+        --------------------------
+        unit_end (repeating unit matcher hmm)
+        --------------------------
+        prefix_matcher_hmm_start
+        ...
+        prefix_matcher_hmm_end
+        --------------------------
+        total_hmm_end
+
+        :return: None
+        """
+
+        sorted_states = []
+
+        insert_states = []
+        match_states = []
+        delete_states = []
+
+        for state in self.states:
+            if state.name.startswith("I"):
+                insert_states.append(state)
+            elif state.name.startswith("M"):
+                match_states.append(state)
+            elif state.name.startswith("D"):
+                delete_states.append(state)
+            else:
+                assert (state != self.start or state != self.end), "Should be either start or end"
+
+        insert_states.sort(key=lambda x: x.name)
+        match_states.sort(key=lambda x: x.name)
+        delete_states.sort(key=lambda x: x.name)
+
+        # 1. Start state
+        sorted_states.append(self.start)
+        # 2. Insert 0 state (number of repeating units)
+        sorted_states.append(insert_states.pop(0))
+
+        # 3. Delete, Match, Insert states
+        assert (len(match_states) == len(delete_states))
+
+        for i in range(len(match_states)):
+            sorted_states.append(delete_states[i])
+            sorted_states.append(match_states[i])
+            sorted_states.append(insert_states[i])
+
+        # 4. End state
+        sorted_states.append(self.end)
+
+        self.states = sorted_states
 
     def dense_transition_matrix( self ):
         """Returns the dense transition matrix.
