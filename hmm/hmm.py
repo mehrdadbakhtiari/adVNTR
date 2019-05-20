@@ -141,7 +141,7 @@ class Model:
             sorted_states = list(sorted( states_without_start_and_end, key=attrgetter('name')))
 
             subModel.states = [subModel.start] + sorted_states + [subModel.end]
-
+            subModel._sort_states()
             indices = { subModel.states[i]: i for i in range(subModel.n_states) }
 
             subModel.start_index = indices[subModel.start]
@@ -216,7 +216,7 @@ class Model:
             elif state.name.startswith("D"):
                 delete_states.append(state)
             else:
-                assert (state != self.start or state != self.end), "Should be either start or end"
+                assert (state == self.start or state == self.end), "State type should be in {I, M, D, start, end}"
 
         insert_states.sort(key=lambda x: x.name)
         match_states.sort(key=lambda x: x.name)
