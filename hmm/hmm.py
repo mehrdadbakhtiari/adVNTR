@@ -137,11 +137,23 @@ class Model:
         # bake all the subModels
         for subModel in self.subModels:
             # Ordering states
-            states_without_start_and_end = [state for state in subModel.states if state is not subModel.start and state is not subModel.end ]
-            sorted_states = list(sorted( states_without_start_and_end, key=attrgetter('name')))
+            sort_by_name = False
+            for state in subModel.states:
+                if not state.name.startswith("I") and \
+                        not state.name.startswith("M") and \
+                        not state.name.startswith("D") and \
+                        not state == subModel.start and \
+                        not state == subModel.end:
+                    sort_by_name = True
+                    break
 
-            subModel.states = [subModel.start] + sorted_states + [subModel.end]
-            subModel._sort_states()
+            if sort_by_name:
+                states_without_start_and_end = [state for state in subModel.states if state is not subModel.start and state is not subModel.end ]
+                sorted_states = list(sorted( states_without_start_and_end, key=attrgetter('name')))
+                subModel.states = [subModel.start] + sorted_states + [subModel.end]
+            else:
+                subModel._sort_states()
+
             indices = { subModel.states[i]: i for i in range(subModel.n_states) }
 
             subModel.start_index = indices[subModel.start]

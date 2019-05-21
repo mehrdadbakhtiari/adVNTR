@@ -342,18 +342,21 @@ class TestMethods(unittest.TestCase):
         d2 = DiscreteDistribution({'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25})
         d3 = DiscreteDistribution({'A': 0.10, 'C': 0.40, 'G': 0.40, 'T': 0.10})
 
-        s0 = State(d1, name="I0")
-        s1 = State(d1, name="I1")
-        s2 = State(d2, name="M1")
-        s3 = State(d3, name="D1")
+        s0 = State(d1, name="I0_1")
+        s1 = State(d1, name="I1_1")
+        s2 = State(d2, name="M1_1")
+        s3 = State(d3, name="D1_1")
+        s4 = State(d1, name="I2_1")
+        s5 = State(d2, name="M2_1")
+        s6 = State(d3, name="D2_1")
 
         model = Model(name='ordering')
-        model.add_states([s0, s1, s2, s3])
+        model.add_states([s0, s1, s2, s3, s4, s5, s6])
         model.bake()
 
         names = [state.name for state in model.states]
         answer = " ".join(names)
-        expected = "ordering-start I0 D1 M1 I1 ordering-end"  # Only in our hmm model
+        expected = "ordering-start I0_1 D1_1 M1_1 I1_1 D2_1 M2_1 I2_1 ordering-end"  # Only in our hmm model
         self.assertEqual(expected, answer)
 
     def test_viterbi_path_without_delete_state(self):
