@@ -674,7 +674,7 @@ class VNTRFinder:
         else:
             exact_genotype_log = 'None'
         logging.info('RU count lower bounds: %s' % exact_genotype_log)
-        if self.reference_vntr.id not in settings.LONG_VNTRS and average_coverage is None:
+        if average_coverage is None:
             return exact_genotype
 
         pattern_occurrences = sum(flanking_repeats) + sum(covered_repeats)
