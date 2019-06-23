@@ -512,7 +512,7 @@ def get_read_matcher_model(left_flanking_region, right_flanking_region, patterns
         for next_state in range(len(mat[match_state])):
             if mat[match_state][next_state] != 0:
                 mat[match_state][next_state] /= total
-        mat[match_state][model.end_index] = to_end
+        mat[match_state][model.end_index] = to_end / total
 
     starts = np.zeros(len(model.states))
     starts[model.start_index] = 1.0
