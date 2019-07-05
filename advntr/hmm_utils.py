@@ -317,7 +317,7 @@ def get_suffix_matcher_hmm(pattern):
     model.add_transition(unit_start, delete_states[0], delete_error)
     model.add_transition(unit_start, insert_states[0], insert_error)
     for i in range(len(pattern)):
-        model.add_transition(unit_start, match_states[i], 0.98 / len(pattern))
+        model.add_transition(unit_start, match_states[i], (1 - insert_error - delete_error) / len(pattern))
 
     model.add_transition(insert_states[0], insert_states[0], insert_error)
     model.add_transition(insert_states[0], delete_states[0], delete_error)
