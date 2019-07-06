@@ -218,6 +218,13 @@ class VNTRFinder:
     def read_flanks_repeats_with_confidence(self, vpath):
         minimum_left_flanking = 5
         minimum_right_flanking = 5
+        end = len(self.reference_vntr.pattern) - 1
+        flank_end = len(self.reference_vntr.left_flanking_region) - 1
+        for i in range(min(len(self.reference_vntr.pattern), 5)):
+            if self.reference_vntr.pattern[i] != self.reference_vntr.right_flanking_region[i]:
+                minimum_right_flanking = min(minimum_right_flanking, i+2)
+            if self.reference_vntr.pattern[end-i] != self.reference_vntr.left_flanking_region[flank_end - i]:
+                minimum_left_flanking = min(minimum_left_flanking, i+2)
         if self.reference_vntr.id in self.minimum_left_flanking_size:
             minimum_left_flanking = self.minimum_left_flanking_size[self.reference_vntr.id]
         if self.reference_vntr.id in self.minimum_right_flanking_size:
