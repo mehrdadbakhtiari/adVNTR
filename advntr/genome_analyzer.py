@@ -11,7 +11,7 @@ from advntr.vntr_finder import VNTRFinder
 class GenomeAnalyzer:
     def __init__(self, ref_vntrs, target_vntr_ids, working_dir='./', outfmt='text', is_haploid=False, ref_filename=None):
         self.reference_vntrs = ref_vntrs
-        self.target_vntr_ids = target_vntr_ids
+        self.target_vntr_ids = set(target_vntr_ids)
         self.working_dir = working_dir
         self.outfmt = outfmt
         self.is_haploid = is_haploid
