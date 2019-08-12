@@ -158,7 +158,8 @@ class VNTRFinder:
                     vntr_bp_in_unmapped_reads.value += repeat_bps
                 if repeat_bps > self.min_repeat_bp_to_add_read:
                     selected_reads.append(SelectedRead(sequence, logp, vpath))
-        sema.release()
+        if sema is not None:
+            sema.release()
 
     def identify_frameshift(self, location_coverage, observed_indel_transitions, expected_indels, error_rate=0.01):
         if observed_indel_transitions >= location_coverage:
@@ -705,23 +706,15 @@ class VNTRFinder:
     @time_usage
     def find_hmm_score_of_simulated_reads(self, hmm, reads):
         initial_recruitment_score = -10000
-        process_list = []
-        sema = Semaphore(settings.CORES)
         manager = Manager()
         processed_reads = manager.list([])
         vntr_bp_in_reads = Value('d', 0.0)
         for read_segment in reads:
-            sema.acquire()
-            p = Process(target=self.process_unmapped_read, args=(sema, read_segment, hmm, initial_recruitment_score,
-                                                                 vntr_bp_in_reads, processed_reads, False))
-            process_list.append(p)
-            p.start()
-        for p in process_list:
-            p.join()
+            self.process_unmapped_read(None, read_segment, hmm, initial_recruitment_score, vntr_bp_in_reads, processed_reads, False)
         return processed_reads
 
     @time_usage
-    def simulate_false_filtered_reads(self, reference_file, min_match=4):
+    def simulate_false_filtered_reads(self, reference_file, min_match=3):
         alphabet = {'A': 0, 'C': 1, 'G': 2, 'T': 3}
         m = 4194301
 
@@ -775,17 +768,23 @@ class VNTRFinder:
         right_flank = self.reference_vntr.right_flanking_region
         left_flank = self.reference_vntr.left_flanking_region
         locus = left_flank[-read_length:] + vntr + right_flank[:read_length]
-        step_size = 10
+        step_size = 1
         alphabet = ['A', 'C', 'G', 'T']
         sim_reads = []
         for i in range(0, len(locus) - read_length + 1, step_size):
             sim_reads.append(locus[i:i+read_length].upper())
         # add 4 special reads to sim_read
-        sim_reads.append((left_flank[-10:] + self.reference_vntr.pattern + right_flank)[:read_length])
-        sim_reads.append((left_flank + self.reference_vntr.pattern + right_flank[:10])[-read_length:])
+        for copies in range(1, len(self.reference_vntr.get_repeat_segments()) - 1):
+            vntr_section = ''.join(self.reference_vntr.get_repeat_segments()[:copies])
+            for i in range(1, 11):
+                sim_reads.append((left_flank[-i:] + vntr_section + right_flank)[:read_length])
+                sim_reads.append((left_flank + vntr_section + right_flank[:i])[-read_length:])
         min_copies = int(read_length / len(vntr)) + 1
-        sim_reads.append((vntr * min_copies)[:read_length])
-        sim_reads.append((vntr * min_copies)[-read_length:])
+        for i in range(1, 21):
+            # print(len((vntr * min_copies)[i:read_length+i]))
+            sim_reads.append((vntr * min_copies)[i:read_length+i])
+            # print(len((vntr * min_copies)[-read_length-i:-i]))
+            sim_reads.append((vntr * min_copies)[-read_length-i:-i])
         simulated_true_reads = []
         for sim_read in sim_reads:
             from random import randint
