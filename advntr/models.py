@@ -41,6 +41,9 @@ def find_non_overlapping_vntrs(vntrs, result, chrom=None, sema=None):
         print(i, estimated_end - vntrs[i].start_point)
         if i < len(vntrs)-1 and vntrs[i].chromosome == vntrs[i+1].chromosome and estimated_end > vntrs[i+1].start_point:
             vntrs[i].estimated_repeats += vntrs[i+1].estimated_repeats
+        if len(vntrs[i].pattern) * vntrs[i].estimated_repeats > 14000:
+            vntrs[i].non_overlapping = False
+            continue
         vntrs[i].init_from_vntrseek_data()
         repeat_segments = vntrs[i].get_repeat_segments()
         if i in skipped_vntrs:
@@ -307,8 +310,8 @@ def extend_flanking_regions_in_processed_vntrs(flanking_size=500, output_file='v
 
 def fill_vntr_database():
     for chrom in settings.CHROMOSOMES:
-        processed_vntrs = 'vntr_data/VNTRs_%s.txt' % chrom
-        database_file = 'vntr_data/hg19_VNTRs.db'
+        processed_vntrs = 'results/training_for_hg38/VNTRs_%s.txt' % chrom
+        database_file = 'vntr_data/hg38_genic_VNTRs.db'
         save_vntrs_to_database(processed_vntrs, database_file)
 
 if __name__ == "__main__":
