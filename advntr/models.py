@@ -108,8 +108,8 @@ def identify_homologous_vntrs(vntrs, chromosome=None):
 
 
 def create_vntrs_database(db_file):
-    if not os.path.exists(os.path.basename(db_file)):
-        os.makedirs(os.path.basename(db_file))
+    if not os.path.exists(os.path.dirname(db_file)):
+        os.makedirs(os.path.dirname(db_file))
     db = sqlite3.connect(db_file)
     cursor = db.cursor()
     cursor.execute('''
