@@ -536,15 +536,11 @@ class VNTRFinder:
     @time_usage
     def select_illumina_reads(self, alignment_file, unmapped_filtered_reads, update=False, hmm=None):
         recruitment_score = None
-        sema = Semaphore(settings.CORES)
-        manager = Manager()
-        selected_reads = manager.list()
+        selected_reads = []
         vntr_bp_in_unmapped_reads = Value('d', 0.0)
 
         number_of_reads = 0
         read_length = 150
-
-        process_list = []
 
         for read_segment in unmapped_filtered_reads:
             if number_of_reads == 0:
@@ -558,13 +554,8 @@ class VNTRFinder:
             if len(read_segment.seq) < read_length:
                 continue
 
-            sema.acquire()
-            p = Process(target=self.process_unmapped_read, args=(sema, str(read_segment.seq), hmm, recruitment_score,
-                                                                 vntr_bp_in_unmapped_reads, selected_reads))
-            process_list.append(p)
-            p.start()
-        for p in process_list:
-            p.join()
+            self.process_unmapped_read(None, str(read_segment.seq), hmm, recruitment_score, vntr_bp_in_unmapped_reads,
+                                       selected_reads)
 
         logging.debug('vntr base pairs in unmapped reads: %s' % vntr_bp_in_unmapped_reads.value)
 
