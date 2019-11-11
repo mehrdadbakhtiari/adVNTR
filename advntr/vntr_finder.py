@@ -20,6 +20,15 @@ from advntr.utils import is_low_quality_read
 from pomegranate import HiddenMarkovModel as Model
 
 
+class GenotypeResult:
+    def __init__(self, copy_numbers, recruited_reads_count, spanning_reads_count, flanking_reads_count, max_likelihood):
+        self.copy_numbers = copy_numbers
+        self.recruited_reads_count = recruited_reads_count
+        self.spanning_reads_count = spanning_reads_count
+        self.flanking_reads_count = flanking_reads_count
+        self.maximum_likelihood = max_likelihood
+
+
 class SelectedRead:
     def __init__(self, sequence, logp, vpath, mapq=None, reference_start=None):
         self.sequence = sequence
@@ -403,7 +412,7 @@ class VNTRFinder:
                 result = key
 
         logging.info('Maximum probability for genotyping: %s' % max_prob)
-        return result
+        return result, max_prob
 
     def get_dominant_copy_numbers_from_spanning_reads(self, spanning_reads):
         if len(spanning_reads) < 1:
@@ -660,14 +669,15 @@ class VNTRFinder:
         if len(max_flanking_repeat) < 5:
             max_flanking_repeat = []
 
-        exact_genotype = self.find_genotype_based_on_observed_repeats(covered_repeats + max_flanking_repeat)
+            exact_genotype, max_prob = self.find_genotype_based_on_observed_repeats(covered_repeats + max_flanking_repeat)
         if exact_genotype is not None:
             exact_genotype_log = '/'.join([str(cn) for cn in sorted(exact_genotype)])
         else:
             exact_genotype_log = 'None'
         logging.info('RU count lower bounds: %s' % exact_genotype_log)
         if average_coverage is None:
-            return exact_genotype
+            return GenotypeResult(exact_genotype, len(selected_reads), len(covered_repeats), len(flanking_repeats),
+                                  max_prob)
 
         pattern_occurrences = sum(flanking_repeats) + sum(covered_repeats)
         return self.get_ru_count_with_coverage_method(pattern_occurrences, total_counted_vntr_bp, average_coverage)
