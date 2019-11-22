@@ -7,7 +7,6 @@ from advntr.profiler import time_usage
 from advntr.sam_utils import extract_unmapped_reads_to_fasta_file
 from advntr.vntr_finder import VNTRFinder
 
-from sys import stdout
 
 class GenomeAnalyzer:
     def __init__(self, ref_vntrs, target_vntr_ids, working_dir='./', outfmt='text', is_haploid=False, ref_filename=None,
@@ -128,17 +127,18 @@ class GenomeAnalyzer:
         format_cols = "GT:DP:SR:FR:ML\t"
         print(format_cols),
 
+        format_string = ""
         # GT
-        assert len(GT) == 2
-        print(str(GT[0]) + "/" + str(GT[1]) + ":"),  # '/' for unphased, '|' for phased.
+        format_string += str(GT[0]) + "/" + str(GT[1]) + ":"  # '/' for unphased, '|' for phased.
         # DP
-        stdout.write(str(genotype_result.recruited_reads_count) + ":"),
+        format_string += str(genotype_result.recruited_reads_count) + ":"
         # SR
-        stdout.write(str(genotype_result.spanning_reads_count) + ":"),
+        format_string += str(genotype_result.spanning_reads_count) + ":"
         # FR
-        stdout.write(str(genotype_result.flanking_reads_count) + ":"),
+        format_string += str(genotype_result.flanking_reads_count) + ":"
         # ML
-        stdout.write(str(genotype_result.maximum_likelihood))
+        format_string += str(genotype_result.maximum_likelihood)
+        print(format_string)
 
     def print_genotype_in_text_format(self, vntr_id, copy_numbers):
         print(vntr_id)
