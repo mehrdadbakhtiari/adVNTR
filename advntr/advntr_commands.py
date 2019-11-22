@@ -105,7 +105,7 @@ def genotype(args, genotype_parser):
     if args.vntr_id is not None:
         target_vntrs = [int(vid) for vid in args.vntr_id.split(',')]
     genome_analyzier = GenomeAnalyzer(reference_vntrs, target_vntrs, working_directory, args.outfmt, args.haploid,
-                                      args.reference_filename)
+                                      args.reference_filename, input_file)
     if args.pacbio:
         if input_is_alignment_file:
             genome_analyzier.find_repeat_counts_from_pacbio_alignment_file(input_file)
