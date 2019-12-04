@@ -1237,14 +1237,19 @@ def plot_vntr_length_distribution(max_len=1000):
     plt.gca().spines['bottom'].set_color('black')
     plt.gca().spines['left'].set_color('black')
 
+    import seaborn as sns
+    sns.set()
+    sns.set_style("whitegrid")
+    sns.set_context("talk")
+
     from advntr.models import load_unique_vntrs_data
-    vntrs = load_unique_vntrs_data()
+    vntrs = load_unique_vntrs_data('vntr_data/hg38_genic_VNTRs.db')
     lengths = []
     for vntr in vntrs:
         length = vntr.get_length()
         if length < max_len:
             lengths.append(length)
-    plt.xlabel('VNTR Length in HG19')
+    plt.xlabel('VNTR Length in GRCh38')
     plt.ylabel('Number of VNTRs')
 
     # plt.hist(lengths, 100)
@@ -1252,7 +1257,12 @@ def plot_vntr_length_distribution(max_len=1000):
     import numpy as np
     values, base = np.histogram(lengths, bins=80)
     cumulative = np.cumsum(values)
-    plt.plot(base[:-1], cumulative, c='blue')
+    plt.plot(base[:-1], cumulative)
+    # plt.plot([140, 140], [333000, 361464])
+
+    plt.arrow(340, 325618, -200, 0, width=2000, alpha=1, length_includes_head=True, head_width=10000, head_length=40)#fc='r', ec='r'
+    plt.annotate('321718 VNTRs shorter than 140bp', (350, 320618))
+
 
     plt.show()
 
@@ -1284,8 +1294,9 @@ for a, b in edges:
 # plot_read_recruitment_results()
 # plot_inconsistency_difference()
 
-plot_pacbio_ru_length_result('../pacbio_simulations/')
+# plot_pacbio_ru_length_result('../pacbio_simulations/')
 # plot_pedigree_tree()
 # plot_lr_pcr()
 
 # plot_coverage_confidence_violin()
+plot_vntr_length_distribution()
