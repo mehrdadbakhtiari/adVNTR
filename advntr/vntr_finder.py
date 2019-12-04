@@ -5,6 +5,7 @@ import os
 from multiprocessing import Process, Manager, Value, Semaphore
 from random import random
 
+from keras.models import Sequential, load_model
 import pysam
 from Bio import pairwise2
 from Bio.Seq import Seq
@@ -18,6 +19,8 @@ from advntr.sam_utils import get_reference_genome_of_alignment_file, get_related
 from advntr import settings
 from advntr.utils import is_low_quality_read
 from pomegranate import HiddenMarkovModel as Model
+
+from deep_recruitment import get_embedding_of_string, input_dim
 
 
 class SelectedRead:
@@ -139,6 +142,49 @@ class VNTRFinder:
         if min_score_to_count_read is None and matches >= 0.9 * read_length and logp > -read_length:
             return True
         return False
+
+    def process_unmapped_read_with_dnn(self, read_segment, hmm, recruitment_score, vntr_bp_in_unmapped_reads, selected_reads, compute_reverse, dnn_model):
+        logging.info('process unmapped read with DNN')
+        if read_segment.count('N') <= 0:
+            sequence = read_segment.upper()
+            forward_dnn_read = False
+            reverse_dnn_read = False
+
+            logp = 0
+            vpath = []
+            rev_logp = 0
+            rev_vpath = []
+            embedding = get_embedding_of_string(sequence)
+            selected = dnn_model.predict(numpy.array([embedding]), batch_size=1)[0]
+            if selected[0] > selected[1]:
+                logging.info('%s and %s' % (selected[0], selected[1]))
+                forward_dnn_read = True
+            if compute_reverse:
+                reverse_sequence = str(Seq(sequence).reverse_complement())
+                embedding = get_embedding_of_string(reverse_sequence)
+                selected = dnn_model.predict(numpy.array([embedding]), batch_size=1)[0]
+                if selected[0] > selected[1]:
+                    reverse_dnn_read = True
+
+            if forward_dnn_read or reverse_dnn_read:
+                logging.info('computing HMM viterbi')
+                if forward_dnn_read:
+                    logp, vpath = hmm.viterbi(sequence)
+                if reverse_dnn_read:
+                    rev_logp, rev_vpath = hmm.viterbi(reverse_sequence)
+                    if logp < rev_logp:
+                        logging.info('using reversed read')
+                        sequence = reverse_sequence
+                        logp = rev_logp
+                        vpath = rev_vpath
+
+                logging.info('this is a VNTR read')
+                repeat_bps = get_number_of_repeat_bp_matches_in_vpath(vpath)
+                if self.recruit_read(logp, vpath, recruitment_score, len(sequence)):
+                    if repeat_bps > self.min_repeat_bp_to_count_repeats:
+                        vntr_bp_in_unmapped_reads.value += repeat_bps
+                    if repeat_bps > self.min_repeat_bp_to_add_read:
+                        selected_reads.append(SelectedRead(sequence, logp, vpath))
 
     def process_unmapped_read(self, sema, read_segment, hmm, recruitment_score, vntr_bp_in_unmapped_reads,
                               selected_reads, compute_reverse=True):
