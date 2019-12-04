@@ -9,24 +9,28 @@ from advntr.vntr_finder import VNTRFinder
 
 
 class GenomeAnalyzer:
-    def __init__(self, ref_vntrs, target_vntr_ids, working_dir='./', outfmt='text', is_haploid=False, ref_filename=None):
+    def __init__(self, ref_vntrs, target_vntr_ids, working_dir='./', outfmt='text', is_haploid=False, ref_filename=None,
+                 input_file=None):
         self.reference_vntrs = ref_vntrs
         self.target_vntr_ids = target_vntr_ids
         self.working_dir = working_dir
         self.outfmt = outfmt
         self.is_haploid = is_haploid
         self.ref_filename = ref_filename
+        self.input_file = input_file
 
         self.vntr_finder = {}
         for ref_vntr in self.reference_vntrs:
             if ref_vntr.id in target_vntr_ids:
                 self.vntr_finder[ref_vntr.id] = VNTRFinder(ref_vntr, is_haploid, ref_filename)
 
-    def print_genotype(self, vntr_id, copy_numbers):
+    def print_genotype(self, vntr_id, genotype_result):
         if self.outfmt == 'bed':
-            self.print_genotype_in_bed_format(vntr_id, copy_numbers)
+            self.print_genotype_in_bed_format(vntr_id, genotype_result.copy_numbers)
+        elif self.outfmt == 'vcf':
+            self.print_genotype_in_vcf(vntr_id, genotype_result)
         else:
-            self.print_genotype_in_text_format(vntr_id, copy_numbers)
+            self.print_genotype_in_text_format(vntr_id, genotype_result.copy_numbers)
 
     def print_bed_header(self):
         repeats = 'R' if self.is_haploid else 'R1\tR2'
@@ -44,6 +48,97 @@ class GenomeAnalyzer:
         else:
             repeats = str(copy_numbers[0]) if self.is_haploid else '\t'.join([str(cn) for cn in sorted(copy_numbers)])
         print('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s' % (chromosome, start, end, vntr_id, gene, motif, ref_copy, repeats))
+
+    def print_vcf_header(self):
+        vcf_version = "VCFv4.3"
+        from advntr import __version__
+        print("##fileformat={}".format(vcf_version))
+        print("##source=adVNTR ver. {}".format(__version__))
+
+        print('##INFO=<ID=END,Number=1,Type=Integer,Description="End position of variant"')
+        print('##INFO=<ID=VID,Number=1,Type=Integer,Description="VNTR ID"')
+        print('##INFO=<ID=RU,Number=1,Type=String,Description="Repeat motif"')
+        print('##INFO=<ID=RC,Number=1,Type=Integer,Description="Reference repeat unit count"')
+
+        print('##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype"')
+        print('##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read depth"')
+        print('##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Spanning read count"')
+        print('##FORMAT=<ID=FR,Number=1,Type=Integer,Description="Flanking read count"')
+        print('##FORMAT=<ID=ML,Number=1,Type=Float,Description="Maximum likelihood"')
+
+        print("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" + self.input_file)
+
+    def print_genotype_in_vcf(self, vntr_id, genotype_result):
+        vntr = self.vntr_finder[vntr_id].reference_vntr
+
+        # CHROM
+        print(vntr.chromosome + "\t"),
+        # POS
+        start = vntr.start_point
+        end = start + vntr.get_length()
+        print(str(vntr.start_point) + "\t"),
+        # ID
+        id = '.'
+        print(id + "\t"),
+        # REF
+        ref = vntr.get_corresponding_region_in_ref()
+        print(ref + "\t"),
+        # ALT
+        consensus_seq = vntr.pattern  # TODO use consensus and confidence
+        GT = []
+        diff_count = 0
+        diff_copy_number = -1
+
+        if genotype_result.copy_numbers is None:
+            GT.append('.').append('.')
+        else:
+            for copy_number in genotype_result.copy_numbers:
+                if copy_number != vntr.estimated_repeats:
+                    diff_copy_number = copy_number
+                    diff_count += 1
+                    GT.append(diff_count)
+                else:
+                    GT.append(0)
+
+        if diff_count == 2:
+            print(consensus_seq * genotype_result.copy_numbers[0] + "," + consensus_seq * genotype_result.copy_numbers[1] + "\t"),
+        elif diff_count == 1:
+            print(consensus_seq * genotype_result.copy_numbers.index(diff_copy_number) + "\t"),
+        else:
+            print('.' + "\t"),
+
+        # QUAL
+        qual = '.'
+        print(qual + "\t"),
+        # FILTER
+        filter = '.'
+        print(filter + "\t"),
+
+        # INFO
+        advntr_vntr_ID = vntr_id  # ID
+        reference_repeat_pattern = vntr.pattern  # RU
+        reference_repeat_count = vntr.estimated_repeats  # RC
+
+        info_cols = "END=" + str(end) + ";VID=" + str(advntr_vntr_ID) + ";RU=" + reference_repeat_pattern +\
+                    ";RC=" + str(reference_repeat_count) + "\t"
+        print(info_cols),
+
+        # FORMAT
+        format_cols = "GT:DP:SR:FR:ML\t"
+        print(format_cols),
+
+        format_string = ""
+        # GT
+        format_string += str(GT[0]) + "/" + str(GT[1]) + ":"  # '/' for unphased, '|' for phased.
+        # DP
+        format_string += str(genotype_result.recruited_reads_count) + ":"
+        # SR
+        format_string += str(genotype_result.spanning_reads_count) + ":"
+        # FR
+        format_string += str(genotype_result.flanking_reads_count) + ":"
+        # ML
+        format_string += str(genotype_result.maximum_likelihood)
+        print(format_string)
 
     def print_genotype_in_text_format(self, vntr_id, copy_numbers):
         print(vntr_id)
@@ -124,15 +219,19 @@ class GenomeAnalyzer:
         filtered_reads, vntr_reads_ids = self.get_vntr_filtered_reads_map(unmapped_reads_file)
         if self.outfmt == 'bed':
             self.print_bed_header()
+        if self.outfmt == 'vcf':
+            self.print_vcf_header()
         for vid in self.target_vntr_ids:
             unmapped_reads = [read for read in filtered_reads if read.id in vntr_reads_ids[vid]]
-            copy_number = self.vntr_finder[vid].find_repeat_count_from_alignment_file(alignment_file, unmapped_reads,
+            genotype_result = self.vntr_finder[vid].find_repeat_count_from_alignment_file(alignment_file, unmapped_reads,
                                                                                       average_coverage, update)
-            self.print_genotype(vid, copy_number)
+            self.print_genotype(vid, genotype_result)
 
     def find_repeat_counts_from_short_reads(self, read_file):
         if self.outfmt == 'bed':
             self.print_bed_header()
+        if self.outfmt == 'vcf':
+            self.print_vcf_header()
         for vid in self.target_vntr_ids:
             copy_number = self.vntr_finder[vid].find_repeat_count_from_short_reads(read_file)
             self.print_genotype(vid, copy_number)

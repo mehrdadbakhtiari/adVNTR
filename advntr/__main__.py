@@ -52,7 +52,7 @@ def main():
     genotype_io_group.add_argument('-o', '--outfile', metavar='<file>', default=None,
                                    help='file to write results. '
                                         'adVNTR writes output to stdout if oufile is not specified.')
-    outfmt_choices = ['text', 'bed']
+    outfmt_choices = ['text', 'bed', 'vcf']
     genotype_io_group.add_argument('-of', '--outfmt', metavar='<format>', default='text', choices=outfmt_choices,
                                    help='output format. Allowed values are {'+', '.join(outfmt_choices)+'} [%(default)s]')
 
