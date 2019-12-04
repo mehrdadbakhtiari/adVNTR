@@ -127,6 +127,7 @@ def get_translate_ranges(exons, gene_reference='refseq'):
 
 def get_exons_info(annotation_file=EXONS, gene_reference='refseq'):
     exons_info = {}
+    number_of_segments = {}
     with open(annotation_file % gene_reference) as infile:
         lines = infile.readlines()
         for line in lines:
@@ -135,11 +136,13 @@ def get_exons_info(annotation_file=EXONS, gene_reference='refseq'):
             end = int(end)
             if chromosome not in exons_info.keys():
                 exons_info[chromosome] = []
-            exons_info[chromosome].append((start, end, identifier, direction))
+            segment_number = int(identifier.split('.')[1].split('_')[2])
+            exons_info[chromosome].append((start, end, identifier, direction, segment_number))
+            number_of_segments[identifier.split('.')[0]] = int(segment_number)
     results = {}
     for chromosome, coordinates in exons_info.items():
         results[chromosome] = sorted(coordinates)
-    return results
+    return results, number_of_segments
 
 
 def get_genes_info(gene_reference='refseq'):
@@ -174,6 +177,39 @@ def sort_file(filename):
                 outfile.write('%s\t' % line[i])
             outfile.write('\n')
 
+
+def get_introns_count(introns_info):
+    introns_count = {}
+    found_genes = set()
+    for c in introns_info.keys():
+        for start, end, id, dir in introns_info[c]:
+            id = id.split('.')[0]
+            if id not in found_genes:
+                found_genes.add(id)
+                introns_count[id] = 0
+            introns_count[id] += 1
+    return introns_count
+
+def get_introns(identifier, chromosome, introns_count=None):
+    return introns_count[identifier]
+
+def get_intron_count(vntr_start, vntr_end, chromosome, regions):
+    index = 0
+    res = None
+    for start, end, identifier, direction in regions[chromosome]:
+        if intersect(start, end, vntr_start, vntr_end):
+            if gene_reference == 'ucsc':
+                gene_name = get_gene_name_from_ucsc_id(identifier.split('_')[0])
+            else:
+                gene_name = get_gene_name_from_refseq_id(identifier.split('.')[0], name_mapping)
+            if direction == '+':
+                res = index + 1
+            else:
+                res = get_introns(identifier.split('.')[0], chromosome) - index
+            break
+        if start > vntr_end:
+            break
+    return res
 
 if __name__ == '__main__':
     from models import update_gene_name_and_annotation_in_database, load_unique_vntrs_data
