@@ -3,7 +3,7 @@ from Cython.Build import cythonize
 import numpy
 
 from advntr import __version__
-
+from setuptools import setup, find_packages
 
 setup(name='advntr',
       version=__version__,
@@ -13,7 +13,8 @@ setup(name='advntr',
       license='BSD-3-Clause',
       url='https://github.com/mehrdadbakhtiari/adVNTR',
       test_suite='tests',
-      packages=['advntr', 'pomegranate'],
+      # packages=['advntr', 'pomegranate'],
+      packages=find_packages(),
       package_dir={'advntr': 'advntr', 'advntr.pomegranate': 'pomegranate'},
       install_requires=['networkx==1.11', 'scipy', 'biopython', 'cython', 'scikit-learn'],
       provides=["advntr"],
