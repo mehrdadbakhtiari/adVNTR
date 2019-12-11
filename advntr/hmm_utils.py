@@ -1,10 +1,17 @@
 import numpy as np
 
-from pomegranate import DiscreteDistribution, State
-from pomegranate import HiddenMarkovModel as Model
+from advntr.pattern_clustering import get_pattern_clusters
 from advntr.profile_hmm import build_profile_hmm_for_repeats, build_profile_hmm_pseudocounts_for_alignment
 from advntr.profiler import time_usage
 from advntr import settings
+
+if settings.USE_ENHANCED_HMM:
+    from hmm.hmm import Model
+    from hmm.hmm import State
+    from hmm.hmm import DiscreteDistribution
+else:
+    from pomegranate import DiscreteDistribution, State
+    from pomegranate import HiddenMarkovModel as Model
 
 
 def path_to_alignment(x, y, path):
@@ -480,6 +487,88 @@ def get_variable_number_of_repeats_matcher_hmm(patterns, copies=1, vpaths=None):
     return new_model
 
 
+def get_repeat_matcher_enhanced_hmm(pattern_clusters, copies, vpaths):
+    model = Model(name="Repeating Pattern Matcher HMM Model")
+    # Equally distributed from model start to each unique repeating unit
+    repeating_unit_transition_prob = 1.0 / len(pattern_clusters)
+
+    pattern_count = 0
+    for pattern_cluster in pattern_clusters:
+        pattern_count += 1
+        if vpaths:
+            alignment = get_multiple_alignment_of_repeats_from_reads(vpaths)
+            transitions, emissions = build_profile_hmm_pseudocounts_for_alignment(settings.MAX_ERROR_RATE, alignment)
+        else:
+            transitions, emissions = build_profile_hmm_for_repeats(pattern_cluster, settings.MAX_ERROR_RATE)
+        matches = [m for m in emissions.keys() if m.startswith('M')]
+
+        insert_states = []
+        match_states = []
+        delete_states = []
+        for i in range(len(matches) + 1):
+            insert_distribution = DiscreteDistribution(emissions['I%s' % i])
+            insert_states.append(State(insert_distribution, name='I%s_%s' % (str(i), pattern_count)))
+
+        for i in range(1, len(matches) + 1):
+            match_distribution = DiscreteDistribution(emissions['M%s' % i])
+            match_states.append(State(match_distribution, name='M%s_%s' % (str(i), pattern_count)))
+
+        for i in range(1, len(matches) + 1):
+            delete_states.append(State(None, name='D%s_%s' % (str(i), pattern_count)))
+
+        unit_start = State(None, name='unit_start_%s' % str(pattern_count))
+        unit_end = State(None, name='unit_end_%s' % str(pattern_count))
+        model.add_states(insert_states + match_states + delete_states + [unit_start, unit_end])
+        n = len(delete_states) - 1
+
+        # From model.start to unit_starts
+        model.add_transition(model.start, unit_start, repeating_unit_transition_prob)
+        model.add_transition(unit_end, model.end, 1)
+
+        # From unit start to first 3 states
+        model.add_transition(unit_start, match_states[0], transitions['unit_start']['M1'])
+        model.add_transition(unit_start, delete_states[0], transitions['unit_start']['D1'])
+        model.add_transition(unit_start, insert_states[0], transitions['unit_start']['I0'])
+
+        # From I0 to (I0, D1, M1)
+        model.add_transition(insert_states[0], insert_states[0], transitions['I0']['I0'])
+        model.add_transition(insert_states[0], delete_states[0], transitions['I0']['D1'])
+        model.add_transition(insert_states[0], match_states[0], transitions['I0']['M1'])
+
+        # From DN to (unit_end, IN)
+        model.add_transition(delete_states[n], unit_end, transitions['D%s' % (n + 1)]['unit_end'])
+        model.add_transition(delete_states[n], insert_states[n + 1], transitions['D%s' % (n + 1)]['I%s' % (n + 1)])
+
+        # From MN to (unit_end, IN)
+        model.add_transition(match_states[n], unit_end, transitions['M%s' % (n + 1)]['unit_end'])
+        model.add_transition(match_states[n], insert_states[n + 1], transitions['M%s' % (n + 1)]['I%s' % (n + 1)])
+
+        # From IN to (IN, unit_end)
+        model.add_transition(insert_states[n + 1], insert_states[n + 1], transitions['I%s' % (n + 1)]['I%s' % (n + 1)])
+        model.add_transition(insert_states[n + 1], unit_end, transitions['I%s' % (n + 1)]['unit_end'])
+
+        for i in range(1, len(matches) + 1):
+            model.add_transition(match_states[i - 1], insert_states[i], transitions['M%s' % i]['I%s' % i])
+            model.add_transition(delete_states[i - 1], insert_states[i], transitions['D%s' % i]['I%s' % i])
+            model.add_transition(insert_states[i], insert_states[i], transitions['I%s' % i]['I%s' % i])
+            if i < len(matches):
+                model.add_transition(insert_states[i], match_states[i], transitions['I%s' % i]['M%s' % (i + 1)])
+                model.add_transition(insert_states[i], delete_states[i], transitions['I%s' % i]['D%s' % (i + 1)])
+
+                model.add_transition(match_states[i - 1], match_states[i], transitions['M%s' % i]['M%s' % (i + 1)])
+                model.add_transition(match_states[i - 1], delete_states[i], transitions['M%s' % i]['D%s' % (i + 1)])
+
+                model.add_transition(delete_states[i - 1], match_states[i], transitions['D%s' % i]['M%s' % (i + 1)])
+                model.add_transition(delete_states[i - 1], delete_states[i], transitions['D%s' % i]['D%s' % (i + 1)])
+
+    # The transition probability from Model.end to Model.start (RU loop)
+    repeat_prob = len(pattern_clusters) / (1.0 + len(pattern_clusters))
+    model.add_transition(model.end, model.start, repeat_prob)
+
+    model.bake(merge=None)
+    return model
+
+
 @time_usage
 def get_read_matcher_model(left_flanking_region, right_flanking_region, patterns, copies=1, vpaths=None):
     model = get_suffix_matcher_hmm(left_flanking_region)
@@ -524,6 +613,50 @@ def get_read_matcher_model(left_flanking_region, right_flanking_region, patterns
     new_model = Model.from_matrix(mat, distributions, starts, ends, name=name, state_names=state_names, merge=None)
     new_model.bake(merge=None)
     return new_model
+
+
+@time_usage
+def get_read_matcher_model_enhanced(left_flanking_region, right_flanking_region, patterns, copies=1, vpaths=None):
+    model = get_suffix_matcher_hmm(left_flanking_region)
+    # pattern_clusters = [[pattern]*patterns.count(pattern) for pattern in set(patterns)]  # Naive approach
+    pattern_clusters = get_pattern_clusters(patterns)
+    repeats_matcher = get_repeat_matcher_enhanced_hmm(pattern_clusters, copies, vpaths)
+    right_flanking_matcher = get_prefix_matcher_hmm(right_flanking_region)
+
+    # Connect suffix matcher with repeat matcher
+    model.concatenate(repeats_matcher, transition_probability=1.0)
+    # Connect repeat matcher with prefix matcher
+    model.concatenate(right_flanking_matcher, transition_probability=1.0/(1.0+len(pattern_clusters)))
+
+    # 1. Setting start to matches
+    repeats_matcher_model = model.subModels[1]
+    repeat_match_states = []
+    for state in repeats_matcher_model.states:
+        if state.name[0] == 'M':
+            repeat_match_states.append(state)
+
+    suffix_matcher_model = model.subModels[0]
+    suffix_start = suffix_matcher_model.states[1]
+
+    model.set_transition(model.start, suffix_start, 0.3)  # overwriting
+    for repeat_match_state in repeat_match_states:
+        model.set_transition(model.start, repeat_match_state, 0.7 / len(repeat_match_states))
+
+    # 2. Setting Match to end
+    to_end = 0.7 / (len(repeat_match_states) * copies)
+    total = 1 + to_end
+
+    for match_state in repeat_match_states:
+        for next_state in repeats_matcher_model.transition_map[match_state]:
+            if repeats_matcher_model.transition_map[match_state][next_state] != 0:
+                prob = repeats_matcher_model.transition_map[match_state][next_state]
+                repeats_matcher_model.set_transition(match_state, next_state, prob/total)
+
+        repeats_matcher_model.set_transition(match_state, right_flanking_matcher.end, to_end/total)
+
+    model.bake(merge=None)
+
+    return model
 
 
 def build_reference_repeat_finder_hmm(patterns, copies=1):

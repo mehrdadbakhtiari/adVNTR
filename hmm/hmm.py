@@ -11,6 +11,7 @@ class DiscreteDistribution:
     def __getitem__(self, key):
         return self.emission[key]
 
+
 class State:
 
     def __init__(self, distribution=None, name=None):
@@ -18,15 +19,15 @@ class State:
         self.name = name or str(id(self))
 
     def is_silent(self):
-        return (self.distribution == None)
+        return self.distribution is None
+
 
 class Model:
-    """ Hidden Markov Model 
-        start: a State representing the model start 
+    """ Hidden Markov Model
+        start: a State representing the model start
         end:   a State representing the model end
         states: a list of states
         edges:  a list of edges represented by tuples of (from-state, to-state)
-
 
     """
 
@@ -36,22 +37,23 @@ class Model:
         self.model = "HiddenMarkovModel"
 
         # states
-        self.states   = []
+        self.states = []
         self.n_states = 0
-        self.start    = start or State(name=self.name + "-start")
-        self.end      = end or State(name=self.name + "-end")
+        self.start = start or State(None, name=self.name + "-start")
+        self.end = end or State(None, name=self.name + "-end")
 
         # store transitions as a map
         self.transition_map = dict()
         # 2D matrix (After conforming the topology, create one matrix for visualization)
         self.transition_matrix = None
+        self.state_to_index = {}
 
         # Put start and end in the states
         self.add_states(self.start, self.end)
 
         # edges
-        self.edges    = []
-        self.n_edges  = 0
+        self.edges = []
+        self.n_edges = 0
 
         self.start_index = -1     # will be set in bake
         self.end_index = -1       # will be set in bake
@@ -83,12 +85,15 @@ class Model:
     def state_count(self):
         return self.n_states
 
+    def set_transition(self, from_state, to_state, probability):
+        self.transition_map[from_state][to_state] = probability
+
     def add_transition(self, from_state, to_state, probability, pseudocount=None):
         if from_state not in self.states:
-            print ("ERROR: No such state named {}".format(from_state.name))
+            print("ERROR: No such state named {}".format(from_state.name))
             raise Exception("No such state")
         elif to_state not in self.states:
-            print ("ERROR: No such state named {}".format(to_state.name))
+            print("ERROR: No such state named {}".format(to_state.name))
             raise Exception("No such state")
         else:
             self.transition_map[from_state][to_state] = probability
@@ -102,8 +107,6 @@ class Model:
         prob_mat = np.zeros((N,2))
         for n in range(N):
             state = self.states[n]
-            print("self.start.name: ", self.start.name)
-            print("state.name: ", state.name)
             prob_mat[n,0] = self.transition_map[self.start][state] * state.distribution[seq[0]]
         for t in range(1,T):
             prob_mat[:,t%2] = 0.0
@@ -119,8 +122,7 @@ class Model:
         prob = sum(prob_mat[:,(T-1)%2])
         return np.log(prob)
 
-    def bake(self, merge=None):
-        # set the topology and sort by the state name
+    def bake(self, merge=None, sort_by_name=False):
         """
         In a model, start state comes the first and end state comes the last.
         Other states are in the middle, and they are sorted by their name.
@@ -131,33 +133,40 @@ class Model:
 
         setting connections between subModels
         """
-        np.random.seed(0)
-        #random.seed(0)
-
-        # bake all the subModels
+        # Bake all the subModels
         for subModel in self.subModels:
             # Ordering states
-            sort_by_name = False
-            for state in subModel.states:
-                if not state.name.startswith("I") and \
-                        not state.name.startswith("M") and \
-                        not state.name.startswith("D") and \
-                        not state == subModel.start and \
-                        not state == subModel.end:
-                    sort_by_name = True
-                    break
-
             if sort_by_name:
                 states_without_start_and_end = [state for state in subModel.states if state is not subModel.start and state is not subModel.end ]
-                sorted_states = list(sorted( states_without_start_and_end, key=attrgetter('name')))
+                sorted_states = list(sorted(states_without_start_and_end, key=attrgetter('name')))
                 subModel.states = [subModel.start] + sorted_states + [subModel.end]
             else:
                 subModel._sort_states()
 
-            indices = { subModel.states[i]: i for i in range(subModel.n_states) }
+            indices = {subModel.states[i]: i for i in range(subModel.n_states)}
 
             subModel.start_index = indices[subModel.start]
             subModel.end_index = indices[subModel.end]
+
+        # Start is the start state of the very fist sub-model
+        self.start = self.subModels[0].start
+        # End is the end state of the very last sub-model
+        self.end = self.subModels[-1].end
+
+        # Build aggregate states and transition map from subModels
+        n_states = 0
+        states = []
+        transition_map = dict()
+        for subModel in self.subModels:
+            self.state_to_index.update(dict(zip(subModel.states, range(n_states, n_states+subModel.n_states))))
+            n_states += subModel.n_states
+            for state in subModel.states:
+                states.append(state)
+            transition_map.update(subModel.transition_map)
+
+        self.states = states
+        self.n_states = n_states
+        self.transition_map = transition_map
 
         self.is_baked = True
 
@@ -202,6 +211,7 @@ class Model:
         I1_2
         ...
         repeat_end_2
+
         --------------------------
         unit_end (repeating unit matcher hmm)
         --------------------------
@@ -213,12 +223,17 @@ class Model:
 
         :return: None
         """
+        if self.n_states == 2:
+            return
 
         sorted_states = []
 
         insert_states = []
         match_states = []
         delete_states = []
+
+        dummy_start_states = []
+        dummy_end_states = []
 
         for state in self.states:
             if state.name.startswith("I"):
@@ -228,16 +243,25 @@ class Model:
             elif state.name.startswith("D"):
                 delete_states.append(state)
             else:
-                assert (state == self.start or state == self.end), "State type should be in {I, M, D, start, end}"
+                if "_start_" in state.name:
+                    dummy_start_states.append(state)
+                if "_end_" in state.name:
+                    dummy_end_states.append(state)
+                assert ("start" in state.name or "end" in state.name), "State type should be in {I, M, D, start, end}"
 
-        insert_states.sort(key=lambda x: x.name)
-        match_states.sort(key=lambda x: x.name)
-        delete_states.sort(key=lambda x: x.name)
+        insert_states.sort(key=lambda x: int(x.name[1:x.name.find("_")]))
+        match_states.sort(key=lambda x: int(x.name[1:x.name.find("_")]))
+        delete_states.sort(key=lambda x: int(x.name[1:x.name.find("_")]))
 
         # 1. Start state
         sorted_states.append(self.start)
+        # 1.1 Dummy start state
+        for dummy_start in dummy_start_states:
+            sorted_states.append(dummy_start)
+
         # 2. Insert 0 state (number of repeating units)
-        sorted_states.append(insert_states.pop(0))
+        for i in range(len(dummy_start_states)):
+            sorted_states.append(insert_states.pop(0))
 
         # 3. Delete, Match, Insert states
         assert (len(match_states) == len(delete_states))
@@ -246,6 +270,10 @@ class Model:
             sorted_states.append(delete_states[i])
             sorted_states.append(match_states[i])
             sorted_states.append(insert_states[i])
+
+        # 4.0 Dummy end state
+        for dummy_end in dummy_end_states:
+            sorted_states.append(dummy_end)
 
         # 4. End state
         sorted_states.append(self.end)
@@ -267,7 +295,7 @@ class Model:
         """
 
         m = len(self.states)
-        transition_probabilities = np.zeros( (m, m) ) 
+        transition_probabilities = np.zeros( (m, m) )
 
         for i in range(m):
             state1 = self.states[i]
@@ -372,7 +400,7 @@ class Model:
         model.bake()
         return model
 
-    def concatenate( self, other, suffix='', prefix='', transition_probability=1.0 ):
+    def concatenate( self, other, suffix='', prefix='', transition_probability=1.0):
         """Concatenate this model to another model.
 
         Concatenate this model to another model in such a way that a single
@@ -392,24 +420,17 @@ class Model:
             Add the prefix to the beginning of all state names in the other
             model. Default is ''.
 
+        transition_probability :
+            The transition probability from the last model and the other model
+
         Returns
         -------
         None
         """
 
-        ## "self" must be baked
-        #if (not self.is_baked):
-        #    print("ERROR: to call concatenate,the my model must be baked.")
-        #    raise ValueError
-
-        ## "other" must be baked
-        #if (not other.is_baked):
-        #    print("ERROR: to call concatenate,the other model must be baked.")
-        #    raise ValueError
-
-        other.name = "{}{}{}".format( prefix, other.name, suffix )
+        other.name = "{}{}{}".format(prefix, other.name, suffix)
         for state in other.states:
-            state.name = "{}{}{}".format( prefix, state.name, suffix )
+            state.name = "{}{}{}".format(prefix, state.name, suffix)
 
         self.subModels.append(other)
         self.n_subModels += 1
@@ -419,108 +440,114 @@ class Model:
         subModel_prev = self.subModels[-2]
         subModel_prev.transition_map[subModel_prev.end][subModel.start] = transition_probability
 
-        # when concatenate with another model we need another bake
-        self.is_baked = False 
-
-        ## add states of other 
-        #self.add_states(other.states)
-    
-        ## set the n_states
-        #self.n_states += other.n_states
- 
-        ## set transition map
-        #for state in other.states:
-        #    for key, prob in other.transition_map[state].items():
-        #        if (prob != 0):
-        #            self.transition_map[state][key] = prob
-
-        ## set transitional link
-        #self.add_transition( self.end, other.start, 1.00 )
-        #self.end = other.end
+        # Once concatenation happened, it should be baked again
+        self.is_baked = False
 
     def viterbi(self, sequence):
         """
-        
-        :param sequence:
+        :param sequence: a sequence
         :return: log probability and viterbi path
-        """
 
+        """
         if not self.is_baked:
-            print ("ERROR: To call viterbi, the model must have been baked")
+            print("ERROR: To call viterbi, the model must have been baked")
             raise ValueError
 
-        # Return variables
-        logp = 0  # Log probability of the best path
-        vpath = []  # Viterbi path
-
-        # build aggregate states and transition map from subModels
-        state_to_index = {}
-        n_states = 0
-        states = []
-        transition_map = dict()
-        for subModel in self.subModels:
-            state_to_index.update( dict(zip(subModel.states, range(n_states,n_states+subModel.n_states))) )
-            n_states += subModel.n_states
-            for state in subModel.states:
-                states.append(state)
-            transition_map.update(subModel.transition_map)
+        # Find start and end index of repeats matcher
+        repeat_matcher_model = self.subModels[1]
+        repeat_start_index = self.state_to_index[repeat_matcher_model.start]
+        repeat_end_index = self.state_to_index[repeat_matcher_model.end]
 
         # Initialize dynamic table
-        self.dynamic_table = np.zeros((n_states, len(sequence) + 1))
-        self.dynamic_table[state_to_index[self.start]][0] = 1
+        # Rows represent states and Columns represent sequence
+        self.dynamic_table = np.ones((self.n_states, len(sequence) + 1)) * (-np.inf)
+        self.dynamic_table[self.state_to_index[self.start]][0] = np.log(1)
 
-        # Storing previous states (row) and column (Easy version)
-        vpath_table = np.zeros((n_states, len(sequence) + 1), dtype=object)
+        # Storing previous states row and column separately (Naive version)
+        vpath_table_row = np.zeros((self.n_states, len(sequence) + 1), dtype=int)
+        vpath_table_col = np.zeros((self.n_states, len(sequence) + 1), dtype=int)
 
         for col in range(len(sequence)):
-            for row, state in enumerate(states):
-                #print ("state: {}, row: {}, col: {}".format(state.name, row, col))
-                # for all neighboring states, update the probability
-                for neighbor_state in transition_map[state]:
-                    #print ("neighbor_state: {}".format(neighbor_state.name))
-                    if not state.is_silent():
-                        # Emit a character and move to the next column
-                        prob = self.dynamic_table[row][col] * \
-                               transition_map[state][neighbor_state] * \
-                               state.distribution[sequence[col]]
-                        neighbor_state_index = state_to_index[neighbor_state]
+            # Filling out suffix matcher table once
+            for row in range(0, repeat_start_index):
+                state = self.states[row]
+                self._update_dynamic_table(row, col, sequence, state, vpath_table_row, vpath_table_col)
 
-                        if self.dynamic_table[neighbor_state_index][col + 1] < prob:
-                            self.dynamic_table[neighbor_state_index][col + 1] = prob
-                            # update path table
-                            vpath_table[neighbor_state_index][col + 1] = [row, col]
+            # Filling out repeat matcher table twice
+            for iteration in range(2):
+                for row in range(repeat_start_index, repeat_end_index+1):
+                    state = self.states[row]
+                    self._update_dynamic_table(row, col, sequence, state, vpath_table_row, vpath_table_col)
 
-                    else:  # Silent state: Stay in the same column
-                        prob = self.dynamic_table[row][col] * \
-                               transition_map[state][neighbor_state]
-                        neighbor_state_index = state_to_index[neighbor_state]
+            # Filling out prefix matcher table once
+            for row in range(repeat_end_index+1, len(self.states)):
+                state = self.states[row]
+                self._update_dynamic_table(row, col, sequence, state, vpath_table_row, vpath_table_col)
 
-                        if self.dynamic_table[neighbor_state_index][col] < prob:
-                            self.dynamic_table[neighbor_state_index][col] = prob
-                            # update path table
-                            vpath_table[neighbor_state_index][col] = [row, col]
+        # For the last update
+        col = len(sequence)
+        state = self.states[-2]
+        row = self.state_to_index[state]
+        for neighbor_state in self.transition_map[state]:
+            prob = self.dynamic_table[row][col] + np.log(self.transition_map[state][neighbor_state])
+            neighbor_state_index = self.state_to_index[neighbor_state]
 
-        # Back tracking viterbi path
-        # Start from end_state
-        # NOTE This should be changed when there are many end state
-        vpath.append((state_to_index[self.subModels[-1].end], self.subModels[-1].end))
-        end_index = state_to_index[self.subModels[-1].end]
-        previous_pointer = vpath_table[end_index][-1]
-        row = previous_pointer[0]
-        col = previous_pointer[1]
+            if self.dynamic_table[neighbor_state_index][col] < prob:
+                self.dynamic_table[neighbor_state_index][col] = prob
+                # update path table
+                vpath_table_row[neighbor_state_index][col] = row
+                vpath_table_col[neighbor_state_index][col] = col
 
-        while True:
-            vpath.append((state_to_index[states[row]], states[row]))
-            previous_pointer = vpath_table[row][col]
-            if previous_pointer == 0:
-                break
-            row = previous_pointer[0]
-            col = previous_pointer[1]
+        # Back tracking viterbi path from the Prefix Matcher End
+        vpath = []
+        end_index = self.state_to_index[self.subModels[-1].end]
 
-        logp = np.log(self.dynamic_table[state_to_index[self.subModels[-1].end]][-1])
-        vpath = vpath[::-1]
+        vpath.insert(0, (end_index, self.subModels[-1].end))
+        row = vpath_table_row[end_index][-1]
+        col = vpath_table_col[end_index][-1]
+
+        while row != 0 or col != 0:
+            vpath.insert(0, (self.state_to_index[self.states[row]], self.states[row]))
+            new_row = vpath_table_row[row][col]
+            new_col = vpath_table_col[row][col]
+            row = new_row
+            col = new_col
+        vpath.insert(0, (self.state_to_index[self.states[row]], self.states[row]))
+
+        logp = self.dynamic_table[self.state_to_index[self.subModels[-1].end]][-1]
 
         return logp, vpath
+
+    def _update_dynamic_table(self, row, col, sequence, state, vpath_table_row, vpath_table_col):
+        neighbor_states = self.transition_map[state]
+        if state.is_silent():  # Silent state: Stay in the same column
+            for neighbor_state in neighbor_states:
+                neighbor_state_index = self.state_to_index[neighbor_state]
+                prob = self.dynamic_table[row][col] + np.log(self.transition_map[state][neighbor_state])
+
+                if self.dynamic_table[neighbor_state_index][col] < prob:
+                    self.dynamic_table[neighbor_state_index][col] = prob
+                    vpath_table_row[neighbor_state_index][col] = row
+                    vpath_table_col[neighbor_state_index][col] = col
+        else:  # Not a silent state: Emit a character and move to the next column
+            for neighbor_state in neighbor_states:
+                neighbor_state_index = self.state_to_index[neighbor_state]
+                prob = self.dynamic_table[row][col] + np.log(self.transition_map[state][neighbor_state]) + np.log(state.distribution[sequence[col]])
+
+                if self.dynamic_table[neighbor_state_index][col + 1] < prob:
+                    self.dynamic_table[neighbor_state_index][col + 1] = prob
+                    vpath_table_row[neighbor_state_index][col + 1] = row
+                    vpath_table_col[neighbor_state_index][col + 1] = col
+
+    def check_sanity_of_transition_prob(self, verbose):
+        for subModel in self.subModels:
+            for state in subModel.states:
+                print("State {}".format(state.name))
+                if abs(sum(subModel.transition_map[state].values()) - 1) > 0.0001:
+                    if verbose:
+                        print([(key.name, value) for key, value in subModel.transition_map[state].items()])
+                    print("Transition prob of {} is not sum up to 1".format(state.name))
+                    print("Sum: {}".format(sum(subModel.transition_map[state].values())))
 
 
 if __name__ == "__main__":

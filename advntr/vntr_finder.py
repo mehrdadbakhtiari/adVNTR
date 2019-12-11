@@ -18,10 +18,15 @@ from advntr.profiler import time_usage
 from advntr.sam_utils import get_reference_genome_of_alignment_file, get_related_reads_and_read_count_in_samfile
 from advntr import settings
 from advntr.utils import is_low_quality_read
-from pomegranate import HiddenMarkovModel as Model
+
+if settings.USE_ENHANCED_HMM:
+    from hmm.hmm import Model
+    from hmm.hmm import State
+    from hmm.hmm import DiscreteDistribution
+else:
+    from pomegranate import HiddenMarkovModel as Model
 
 from deep_recruitment import get_embedding_of_string, input_dim
-
 
 class GenotypeResult:
     def __init__(self, copy_numbers, recruited_reads_count, spanning_reads_count, flanking_reads_count, max_likelihood):
@@ -78,7 +83,10 @@ class VNTRFinder:
         left_flanking_region = self.reference_vntr.left_flanking_region[-flanking_region_size:]
         right_flanking_region = self.reference_vntr.right_flanking_region[:flanking_region_size]
 
-        vntr_matcher = get_read_matcher_model(left_flanking_region, right_flanking_region, patterns, copies)
+        if settings.USE_ENHANCED_HMM:
+            vntr_matcher = get_read_matcher_model_enhanced(left_flanking_region, right_flanking_region, patterns, copies)
+        else:
+            vntr_matcher = get_read_matcher_model(left_flanking_region, right_flanking_region, patterns, copies)
         return vntr_matcher
 
     def get_vntr_matcher_hmm(self, read_length):
