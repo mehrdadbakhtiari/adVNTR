@@ -5,6 +5,7 @@ import os
 from multiprocessing import Process, Manager, Value, Semaphore
 from random import random
 
+from keras.models import Sequential, load_model
 import pysam
 from Bio import pairwise2
 from Bio.Seq import Seq
@@ -17,7 +18,23 @@ from advntr.profiler import time_usage
 from advntr.sam_utils import get_reference_genome_of_alignment_file, get_related_reads_and_read_count_in_samfile
 from advntr import settings
 from advntr.utils import is_low_quality_read
-from pomegranate import HiddenMarkovModel as Model
+
+if settings.USE_ENHANCED_HMM:
+    from hmm.hmm import Model
+    from hmm.hmm import State
+    from hmm.hmm import DiscreteDistribution
+else:
+    from pomegranate import HiddenMarkovModel as Model
+
+from deep_recruitment import get_embedding_of_string, input_dim
+
+class GenotypeResult:
+    def __init__(self, copy_numbers, recruited_reads_count, spanning_reads_count, flanking_reads_count, max_likelihood):
+        self.copy_numbers = copy_numbers
+        self.recruited_reads_count = recruited_reads_count
+        self.spanning_reads_count = spanning_reads_count
+        self.flanking_reads_count = flanking_reads_count
+        self.maximum_likelihood = max_likelihood
 
 
 class SelectedRead:
@@ -66,7 +83,10 @@ class VNTRFinder:
         left_flanking_region = self.reference_vntr.left_flanking_region[-flanking_region_size:]
         right_flanking_region = self.reference_vntr.right_flanking_region[:flanking_region_size]
 
-        vntr_matcher = get_read_matcher_model(left_flanking_region, right_flanking_region, patterns, copies)
+        if settings.USE_ENHANCED_HMM:
+            vntr_matcher = get_read_matcher_model_enhanced(left_flanking_region, right_flanking_region, patterns, copies)
+        else:
+            vntr_matcher = get_read_matcher_model(left_flanking_region, right_flanking_region, patterns, copies)
         return vntr_matcher
 
     def get_vntr_matcher_hmm(self, read_length):
@@ -140,6 +160,49 @@ class VNTRFinder:
             return True
         return False
 
+    def process_unmapped_read_with_dnn(self, read_segment, hmm, recruitment_score, vntr_bp_in_unmapped_reads, selected_reads, compute_reverse, dnn_model):
+        logging.info('process unmapped read with DNN')
+        if read_segment.count('N') <= 0:
+            sequence = read_segment.upper()
+            forward_dnn_read = False
+            reverse_dnn_read = False
+
+            logp = 0
+            vpath = []
+            rev_logp = 0
+            rev_vpath = []
+            embedding = get_embedding_of_string(sequence)
+            selected = dnn_model.predict(numpy.array([embedding]), batch_size=1)[0]
+            if selected[0] > selected[1]:
+                logging.info('%s and %s' % (selected[0], selected[1]))
+                forward_dnn_read = True
+            if compute_reverse:
+                reverse_sequence = str(Seq(sequence).reverse_complement())
+                embedding = get_embedding_of_string(reverse_sequence)
+                selected = dnn_model.predict(numpy.array([embedding]), batch_size=1)[0]
+                if selected[0] > selected[1]:
+                    reverse_dnn_read = True
+
+            if forward_dnn_read or reverse_dnn_read:
+                logging.info('computing HMM viterbi')
+                if forward_dnn_read:
+                    logp, vpath = hmm.viterbi(sequence)
+                if reverse_dnn_read:
+                    rev_logp, rev_vpath = hmm.viterbi(reverse_sequence)
+                    if logp < rev_logp:
+                        logging.info('using reversed read')
+                        sequence = reverse_sequence
+                        logp = rev_logp
+                        vpath = rev_vpath
+
+                logging.info('this is a VNTR read')
+                repeat_bps = get_number_of_repeat_bp_matches_in_vpath(vpath)
+                if self.recruit_read(logp, vpath, recruitment_score, len(sequence)):
+                    if repeat_bps > self.min_repeat_bp_to_count_repeats:
+                        vntr_bp_in_unmapped_reads.value += repeat_bps
+                    if repeat_bps > self.min_repeat_bp_to_add_read:
+                        selected_reads.append(SelectedRead(sequence, logp, vpath))
+
     def process_unmapped_read(self, sema, read_segment, hmm, recruitment_score, vntr_bp_in_unmapped_reads,
                               selected_reads, compute_reverse=True):
         if read_segment.count('N') <= 0:
@@ -158,7 +221,8 @@ class VNTRFinder:
                     vntr_bp_in_unmapped_reads.value += repeat_bps
                 if repeat_bps > self.min_repeat_bp_to_add_read:
                     selected_reads.append(SelectedRead(sequence, logp, vpath))
-        sema.release()
+        if sema is not None:
+            sema.release()
 
     def identify_frameshift(self, location_coverage, observed_indel_transitions, expected_indels, error_rate=0.01):
         if observed_indel_transitions >= location_coverage:
@@ -402,7 +466,7 @@ class VNTRFinder:
                 result = key
 
         logging.info('Maximum probability for genotyping: %s' % max_prob)
-        return result
+        return result, max_prob
 
     def get_dominant_copy_numbers_from_spanning_reads(self, spanning_reads):
         if len(spanning_reads) < 1:
@@ -535,15 +599,11 @@ class VNTRFinder:
     @time_usage
     def select_illumina_reads(self, alignment_file, unmapped_filtered_reads, update=False, hmm=None):
         recruitment_score = None
-        sema = Semaphore(settings.CORES)
-        manager = Manager()
-        selected_reads = manager.list()
+        selected_reads = []
         vntr_bp_in_unmapped_reads = Value('d', 0.0)
 
         number_of_reads = 0
         read_length = 150
-
-        process_list = []
 
         for read_segment in unmapped_filtered_reads:
             if number_of_reads == 0:
@@ -557,13 +617,8 @@ class VNTRFinder:
             if len(read_segment.seq) < read_length:
                 continue
 
-            sema.acquire()
-            p = Process(target=self.process_unmapped_read, args=(sema, str(read_segment.seq), hmm, recruitment_score,
-                                                                 vntr_bp_in_unmapped_reads, selected_reads))
-            process_list.append(p)
-            p.start()
-        for p in process_list:
-            p.join()
+            self.process_unmapped_read(None, str(read_segment.seq), hmm, recruitment_score, vntr_bp_in_unmapped_reads,
+                                       selected_reads)
 
         logging.debug('vntr base pairs in unmapped reads: %s' % vntr_bp_in_unmapped_reads.value)
 
@@ -668,14 +723,15 @@ class VNTRFinder:
         if len(max_flanking_repeat) < 5:
             max_flanking_repeat = []
 
-        exact_genotype = self.find_genotype_based_on_observed_repeats(covered_repeats + max_flanking_repeat)
+        exact_genotype, max_prob = self.find_genotype_based_on_observed_repeats(covered_repeats + max_flanking_repeat)
         if exact_genotype is not None:
             exact_genotype_log = '/'.join([str(cn) for cn in sorted(exact_genotype)])
         else:
             exact_genotype_log = 'None'
         logging.info('RU count lower bounds: %s' % exact_genotype_log)
-        if self.reference_vntr.id not in settings.LONG_VNTRS and average_coverage is None:
-            return exact_genotype
+        if average_coverage is None:
+            return GenotypeResult(exact_genotype, len(selected_reads), len(covered_repeats), len(flanking_repeats),
+                                  max_prob)
 
         pattern_occurrences = sum(flanking_repeats) + sum(covered_repeats)
         return self.get_ru_count_with_coverage_method(pattern_occurrences, total_counted_vntr_bp, average_coverage)
@@ -705,23 +761,15 @@ class VNTRFinder:
     @time_usage
     def find_hmm_score_of_simulated_reads(self, hmm, reads):
         initial_recruitment_score = -10000
-        process_list = []
-        sema = Semaphore(settings.CORES)
         manager = Manager()
         processed_reads = manager.list([])
         vntr_bp_in_reads = Value('d', 0.0)
         for read_segment in reads:
-            sema.acquire()
-            p = Process(target=self.process_unmapped_read, args=(sema, read_segment, hmm, initial_recruitment_score,
-                                                                 vntr_bp_in_reads, processed_reads, False))
-            process_list.append(p)
-            p.start()
-        for p in process_list:
-            p.join()
+            self.process_unmapped_read(None, read_segment, hmm, initial_recruitment_score, vntr_bp_in_reads, processed_reads, False)
         return processed_reads
 
     @time_usage
-    def simulate_false_filtered_reads(self, reference_file, min_match=4):
+    def simulate_false_filtered_reads(self, reference_file, min_match=3):
         alphabet = {'A': 0, 'C': 1, 'G': 2, 'T': 3}
         m = 4194301
 
@@ -775,17 +823,23 @@ class VNTRFinder:
         right_flank = self.reference_vntr.right_flanking_region
         left_flank = self.reference_vntr.left_flanking_region
         locus = left_flank[-read_length:] + vntr + right_flank[:read_length]
-        step_size = 10
+        step_size = 1
         alphabet = ['A', 'C', 'G', 'T']
         sim_reads = []
         for i in range(0, len(locus) - read_length + 1, step_size):
             sim_reads.append(locus[i:i+read_length].upper())
         # add 4 special reads to sim_read
-        sim_reads.append((left_flank[-10:] + self.reference_vntr.pattern + right_flank)[:read_length])
-        sim_reads.append((left_flank + self.reference_vntr.pattern + right_flank[:10])[-read_length:])
+        for copies in range(1, len(self.reference_vntr.get_repeat_segments()) - 1):
+            vntr_section = ''.join(self.reference_vntr.get_repeat_segments()[:copies])
+            for i in range(1, 11):
+                sim_reads.append((left_flank[-i:] + vntr_section + right_flank)[:read_length])
+                sim_reads.append((left_flank + vntr_section + right_flank[:i])[-read_length:])
         min_copies = int(read_length / len(vntr)) + 1
-        sim_reads.append((vntr * min_copies)[:read_length])
-        sim_reads.append((vntr * min_copies)[-read_length:])
+        for i in range(1, 21):
+            # print(len((vntr * min_copies)[i:read_length+i]))
+            sim_reads.append((vntr * min_copies)[i:read_length+i])
+            # print(len((vntr * min_copies)[-read_length-i:-i]))
+            sim_reads.append((vntr * min_copies)[-read_length-i:-i])
         simulated_true_reads = []
         for sim_read in sim_reads:
             from random import randint

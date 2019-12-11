@@ -41,6 +41,9 @@ def find_non_overlapping_vntrs(vntrs, result, chrom=None, sema=None):
         print(i, estimated_end - vntrs[i].start_point)
         if i < len(vntrs)-1 and vntrs[i].chromosome == vntrs[i+1].chromosome and estimated_end > vntrs[i+1].start_point:
             vntrs[i].estimated_repeats += vntrs[i+1].estimated_repeats
+        if len(vntrs[i].pattern) * vntrs[i].estimated_repeats > 14000:
+            vntrs[i].non_overlapping = False
+            continue
         vntrs[i].init_from_vntrseek_data()
         repeat_segments = vntrs[i].get_repeat_segments()
         if i in skipped_vntrs:
@@ -105,8 +108,8 @@ def identify_homologous_vntrs(vntrs, chromosome=None):
 
 
 def create_vntrs_database(db_file):
-    if not os.path.exists(os.path.basename(db_file)):
-        os.makedirs(os.path.basename(db_file))
+    if not os.path.exists(os.path.dirname(db_file)):
+        os.makedirs(os.path.dirname(db_file))
     db = sqlite3.connect(db_file)
     cursor = db.cursor()
     cursor.execute('''
@@ -176,8 +179,10 @@ def update_trained_score_in_database(vntr_id, scaled_recruitment_score):
     db.close()
 
 
-def update_gene_name_and_annotation_in_database(vntr_id, gene_name, annotation):
-    db = sqlite3.connect(settings.TRAINED_MODELS_DB)
+def update_gene_name_and_annotation_in_database(vntr_id, gene_name, annotation, db_file=None):
+    if db_file is None:
+        db_file = settings.TRAINED_MODELS_DB
+    db = sqlite3.connect(db_file)
     cursor = db.cursor()
     cursor.execute('''UPDATE vntrs SET gene_name=?, annotation=? WHERE id=?''', (gene_name, annotation, vntr_id))
     db.commit()
@@ -305,8 +310,8 @@ def extend_flanking_regions_in_processed_vntrs(flanking_size=500, output_file='v
 
 def fill_vntr_database():
     for chrom in settings.CHROMOSOMES:
-        processed_vntrs = 'vntr_data/VNTRs_%s.txt' % chrom
-        database_file = 'vntr_data/hg19_VNTRs.db'
+        processed_vntrs = 'results/training_for_hg38/VNTRs_%s.txt' % chrom
+        database_file = 'vntr_data/hg38_genic_VNTRs.db'
         save_vntrs_to_database(processed_vntrs, database_file)
 
 if __name__ == "__main__":

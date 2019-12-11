@@ -52,7 +52,7 @@ def main():
     genotype_io_group.add_argument('-o', '--outfile', metavar='<file>', default=None,
                                    help='file to write results. '
                                         'adVNTR writes output to stdout if oufile is not specified.')
-    outfmt_choices = ['text', 'bed']
+    outfmt_choices = ['text', 'bed', 'vcf']
     genotype_io_group.add_argument('-of', '--outfmt', metavar='<format>', default='text', choices=outfmt_choices,
                                    help='output format. Allowed values are {'+', '.join(outfmt_choices)+'} [%(default)s]')
 
@@ -76,7 +76,7 @@ def main():
                                        help='working directory for creating temporary files needed for computation')
     genotype_others_group.add_argument('-m', '--models', type=str, metavar='<file>', default=None,
                                        help='VNTR models file [%s]' % settings.ILLUMINA_DEFAULT_MODELS_FILE)
-    genotype_others_group.add_argument('-t', '--threads', type=int, metavar='<int>', default=4,
+    genotype_others_group.add_argument('-t', '--threads', type=int, metavar='<int>', default=1,
                                        help='number of threads [%(default)s]')
     genotype_others_group.add_argument('-u', '--update', action='store_true', default=False,
                                        help='set this flag to iteratively update the model')

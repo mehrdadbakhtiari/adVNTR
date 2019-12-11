@@ -1,7 +1,7 @@
 import socket
 
 
-HG19_DIR = './hg19_chromosomes/'
+HG19_DIR = '/mnt/hg19_chromosomes/'
 CHROMOSOMES = ['chr' + str(chr_number) for chr_number in list(range(1, 23))] + ['chrX', 'chrY']
 GENOME_LENGTH = 3100000000
 MAX_INSERT_SIZE = 1000
@@ -35,3 +35,5 @@ else:
 
 FRAMESHIFT_VNTRS = [25561, 519759]
 LONG_VNTRS = [70186]
+
+USE_ENHANCED_HMM = True

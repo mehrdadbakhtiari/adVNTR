@@ -20,7 +20,7 @@ int max_reads_to_report_for_vntr = 2000;
 map<int, int> keyword_to_vntr;
 vector<int> vntr_ids;
 
-const int MAXS = 103582 * 21; // Sum of lengths of keywords
+const int MAXS = 3801639 * 21; // Sum of lengths of keywords
 const int MAXC = 5; // ACGT and N
 
 // OUTPUT FUNCTION IS IMPLEMENTED USING out[] 
@@ -239,7 +239,6 @@ int main(int argc,char **argv)
     keyword_to_vntr = get_keywords(arr);
     int k = arr.size();
     buildMatchingMachine(arr, k);
-//    cerr << "Matching Machine has been built" << endl;
 
     map<int, map<string, count_t> > vntr_read_list;
     map<string, string> read_sequences;

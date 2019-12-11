@@ -1,5 +1,5 @@
 
-ANNOTATION_DIR = 'results/annotation/'
+ANNOTATION_DIR = 'results/hg38_annotation/'
 EXONS = ANNOTATION_DIR + '%s_gene_coding_exons.bed'
 INTRONS = ANNOTATION_DIR + '%s_gene_introns.bed'
 UTR5 = ANNOTATION_DIR + '%s_gene_5utr.bed'
@@ -51,8 +51,9 @@ def get_gene_name_from_refseq_id(query_refseq_id, mapping):
     return 'None'
 
 
-def get_gene_name_and_annotation_of_vntr(vntr_chromosome, vntr_start, vntr_end, genes, exons, introns, utr3, utr5, gene_reference='refseq'):
-    name_mapping = get_refseq_id_to_gene_name_map()
+def get_gene_name_and_annotation_of_vntr(vntr_chromosome, vntr_start, vntr_end, genes, exons, introns, utr3, utr5, name_mapping=None, gene_reference='refseq'):
+    if name_mapping is None:
+        name_mapping = get_refseq_id_to_gene_name_map()
 
     def get_annotation(vntr_start, vntr_end, regions, region_name='Coding'):
         gene_name, annotation = 'None', 'None'
@@ -126,6 +127,7 @@ def get_translate_ranges(exons, gene_reference='refseq'):
 
 def get_exons_info(annotation_file=EXONS, gene_reference='refseq'):
     exons_info = {}
+    number_of_segments = {}
     with open(annotation_file % gene_reference) as infile:
         lines = infile.readlines()
         for line in lines:
@@ -134,11 +136,13 @@ def get_exons_info(annotation_file=EXONS, gene_reference='refseq'):
             end = int(end)
             if chromosome not in exons_info.keys():
                 exons_info[chromosome] = []
-            exons_info[chromosome].append((start, end, identifier, direction))
+            segment_number = int(identifier.split('.')[1].split('_')[2])
+            exons_info[chromosome].append((start, end, identifier, direction, segment_number))
+            number_of_segments[identifier.split('.')[0]] = int(segment_number)
     results = {}
     for chromosome, coordinates in exons_info.items():
         results[chromosome] = sorted(coordinates)
-    return results
+    return results, number_of_segments
 
 
 def get_genes_info(gene_reference='refseq'):
@@ -174,6 +178,39 @@ def sort_file(filename):
             outfile.write('\n')
 
 
+def get_introns_count(introns_info):
+    introns_count = {}
+    found_genes = set()
+    for c in introns_info.keys():
+        for start, end, id, dir in introns_info[c]:
+            id = id.split('.')[0]
+            if id not in found_genes:
+                found_genes.add(id)
+                introns_count[id] = 0
+            introns_count[id] += 1
+    return introns_count
+
+def get_introns(identifier, chromosome, introns_count=None):
+    return introns_count[identifier]
+
+def get_intron_count(vntr_start, vntr_end, chromosome, regions):
+    index = 0
+    res = None
+    for start, end, identifier, direction in regions[chromosome]:
+        if intersect(start, end, vntr_start, vntr_end):
+            if gene_reference == 'ucsc':
+                gene_name = get_gene_name_from_ucsc_id(identifier.split('_')[0])
+            else:
+                gene_name = get_gene_name_from_refseq_id(identifier.split('.')[0], name_mapping)
+            if direction == '+':
+                res = index + 1
+            else:
+                res = get_introns(identifier.split('.')[0], chromosome) - index
+            break
+        if start > vntr_end:
+            break
+    return res
+
 if __name__ == '__main__':
     from models import update_gene_name_and_annotation_in_database, load_unique_vntrs_data
     genes_info = get_genes_info()
@@ -181,12 +218,14 @@ if __name__ == '__main__':
     introns_info = get_exons_info(INTRONS)
     utr5_info = get_exons_info(UTR5)
     utr3_info = get_exons_info(UTR3)
+    name_mapping = get_refseq_id_to_gene_name_map()
     # translate_ranges = get_translate_ranges(exons_info)
-    reference_vntrs = load_unique_vntrs_data()
+    db_file = 'vntr_data/hg38_genic_VNTRs.db'
+    reference_vntrs = load_unique_vntrs_data(db_file)
     for ref_vntr in reference_vntrs:
         end = ref_vntr.start_point + ref_vntr.get_length()
-        new_gene, new_annotation = get_gene_name_and_annotation_of_vntr(ref_vntr.chromosome, ref_vntr.start_point, end, genes_info, exons_info, introns_info, utr3_info, utr5_info)
+        new_gene, new_annotation = get_gene_name_and_annotation_of_vntr(ref_vntr.chromosome, ref_vntr.start_point, end, genes_info, exons_info, introns_info, utr3_info, utr5_info, name_mapping)
         if new_gene == 'None' and ref_vntr.gene_name != 'None':
             new_gene = ref_vntr.gene_name
         print(ref_vntr.id)
-        update_gene_name_and_annotation_in_database(ref_vntr.id, new_gene, new_annotation)
+        update_gene_name_and_annotation_in_database(ref_vntr.id, new_gene, new_annotation, db_file)
