@@ -458,16 +458,17 @@ class Model:
         repeat_start_index = self.state_to_index[repeat_matcher_model.start]
         repeat_end_index = self.state_to_index[repeat_matcher_model.end]
 
-        # Initialize dynamic table
+        # Initialize dynamic programming table
         # Rows represent states and Columns represent sequence
-        self.dynamic_table = np.ones((self.n_states, len(sequence) + 1)) * (-np.inf)
+        sequence_length = len(sequence)
+        self.dynamic_table = np.ones((self.n_states, sequence_length + 1)) * (-np.inf)
         self.dynamic_table[self.state_to_index[self.start]][0] = np.log(1)
 
         # Storing previous states row and column separately (Naive version)
-        vpath_table_row = np.zeros((self.n_states, len(sequence) + 1), dtype=int)
-        vpath_table_col = np.zeros((self.n_states, len(sequence) + 1), dtype=int)
+        vpath_table_row = np.zeros((self.n_states, sequence_length + 1), dtype=int)
+        vpath_table_col = np.zeros((self.n_states, sequence_length + 1), dtype=int)
 
-        for col in range(len(sequence)):
+        for col in range(sequence_length):
             # Filling out suffix matcher table once
             for row in range(0, repeat_start_index):
                 state = self.states[row]
@@ -485,7 +486,7 @@ class Model:
                 self._update_dynamic_table(row, col, sequence, state, vpath_table_row, vpath_table_col)
 
         # For the last update
-        col = len(sequence)
+        col = sequence_length
         state = self.states[-2]
         row = self.state_to_index[state]
         for neighbor_state in self.transition_map[state]:
@@ -503,17 +504,12 @@ class Model:
         end_index = self.state_to_index[self.subModels[-1].end]
 
         vpath.insert(0, (end_index, self.subModels[-1].end))
-        row = vpath_table_row[end_index][-1]
-        col = vpath_table_col[end_index][-1]
+        row, col = vpath_table_row[end_index][-1], vpath_table_col[end_index][-1]
 
         while row != 0 or col != 0:
             vpath.insert(0, (self.state_to_index[self.states[row]], self.states[row]))
-            new_row = vpath_table_row[row][col]
-            new_col = vpath_table_col[row][col]
-            row = new_row
-            col = new_col
+            row, col = vpath_table_row[row][col], vpath_table_col[row][col]
         vpath.insert(0, (self.state_to_index[self.states[row]], self.states[row]))
-
         logp = self.dynamic_table[self.state_to_index[self.subModels[-1].end]][-1]
 
         return logp, vpath
