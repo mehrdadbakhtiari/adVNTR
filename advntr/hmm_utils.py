@@ -13,6 +13,7 @@ else:
     from pomegranate import DiscreteDistribution, State
     from pomegranate import HiddenMarkovModel as Model
 
+from collections import defaultdict
 
 def path_to_alignment(x, y, path):
     for i, (index, state) in enumerate(path[1:-1]):
@@ -204,6 +205,27 @@ def get_number_of_repeat_bp_matches_in_vpath(vpath):
         if is_matching_state(visited_states[i]) and not visited_states[i].endswith('fix'):
             result += 1
     return result
+
+
+def update_number_of_repeat_bp_matches_in_vpath_for_each_hmm(vpath, ru_bp_dictionary):
+    visited_states = [state.name for idx, state in vpath[1:-1]]
+    hmm_id = 0
+    for i in range(len(visited_states)):
+        if visited_states[i].startswith('unit_start'):
+            hmm_id = visited_states[i].split("_")[-1]
+        if is_matching_state(visited_states[i]) and not visited_states[i].endswith('fix'):
+            ru_bp_dictionary[hmm_id] += 1
+
+
+def update_match_count_for_each_hmm(vpath, match_count_dictionary):
+    visited_states_names = [state.name for idx, state in vpath[1:-1]]
+    prev_state_name = None
+    for state_name in visited_states_names:
+        if prev_state_name is not None and state_name.startswith("unit_end"):
+            hmm_index = state_name.split("_")[-1]
+            last_index = int(prev_state_name.split("_")[0][1:])
+            match_count_dictionary[hmm_index] = last_index
+        prev_state_name = state_name
 
 
 def get_left_flanking_region_size_in_vpath(vpath):
