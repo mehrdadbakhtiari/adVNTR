@@ -4,6 +4,7 @@ import numpy
 import os
 from multiprocessing import Process, Manager, Value, Semaphore
 from random import random
+from collections import defaultdict
 
 from keras.models import Sequential, load_model
 import pysam
@@ -27,6 +28,7 @@ else:
     from pomegranate import HiddenMarkovModel as Model
 
 from deep_recruitment import get_embedding_of_string, input_dim
+
 
 class GenotypeResult:
     def __init__(self, copy_numbers, recruited_reads_count, spanning_reads_count, flanking_reads_count, max_likelihood):
@@ -237,12 +239,18 @@ class VNTRFinder:
         mutations = {}
         repeating_bps_in_data = 0
         repeats_lengths_distribution = []
+        ru_bp_coverage = defaultdict(int)
+        hmm_match_count = defaultdict(int)
         for read in selected_reads:
             visited_states = [state.name for idx, state in read.vpath[1:-1]]
+            logging.debug(visited_states)  # DEBUGGING
             repeats_lengths = get_repeating_pattern_lengths(visited_states)
             repeats_lengths_distribution += repeats_lengths
             current_repeat = None
-            repeating_bps_in_data += get_number_of_repeat_bp_matches_in_vpath(read.vpath)
+            # repeating_bps_in_data += get_number_of_repeat_bp_matches_in_vpath(read.vpath)
+            update_number_of_repeat_bp_matches_in_vpath_for_each_hmm(read.vpath, ru_bp_coverage)
+            update_match_count_for_each_hmm(read.vpath, hmm_match_count)
+
             for i in range(len(visited_states)):
                 if visited_states[i].endswith('fix') or visited_states[i].startswith('M'):
                     continue
@@ -255,28 +263,31 @@ class VNTRFinder:
                     continue
                 if not visited_states[i].startswith('I') and not visited_states[i].startswith('D'):
                     continue
-                if repeats_lengths[current_repeat] == len(self.reference_vntr.pattern):
+                if repeats_lengths[current_repeat] == hmm_match_count[visited_states[i].split('_')[-1]]:
                     continue
-                state = visited_states[i].split('_')[0]
+                state = visited_states[i].split('_')[0] + '_' + visited_states[i].split('_')[-1]
                 if state.startswith('I'):
-                    state += get_emitted_basepair_from_visited_states(visited_states[i], visited_states, read.sequence)
-                if abs(repeats_lengths[current_repeat] - len(self.reference_vntr.pattern)) <= 2:
-                    if state not in mutations.keys():
-                        mutations[state] = 0
-                    mutations[state] += 1
+                    state += '_' + get_emitted_basepair_from_visited_states(visited_states[i], visited_states, read.sequence)
+                # if abs(repeats_lengths[current_repeat] - len(self.reference_vntr.pattern)) <= 2:
+                if state not in mutations.keys():
+                    mutations[state] = 0
+                mutations[state] += 1
         sorted_mutations = sorted(mutations.items(), key=lambda x: x[1])
         logging.debug('sorted mutations: %s ' % sorted_mutations)
-        frameshift_candidate = sorted_mutations[-1] if len(sorted_mutations) else (None, 0)
-        logging.info(sorted(repeats_lengths_distribution))
-        logging.info('Frameshift Candidate and Occurrence %s: %s' % frameshift_candidate)
-        logging.info('Observed repeating base pairs in data: %s' % repeating_bps_in_data)
-        avg_bp_coverage = float(repeating_bps_in_data) / self.reference_vntr.get_length() / 2
-        logging.info('Average coverage for each base pair: %s' % avg_bp_coverage)
 
-        expected_indel_transitions = 1 / avg_bp_coverage
-        if self.identify_frameshift(avg_bp_coverage, frameshift_candidate[1], expected_indel_transitions):
-            logging.info('There is a frameshift at %s' % frameshift_candidate[0])
-            return frameshift_candidate[0]
+        for frameshift_candidate in sorted_mutations:
+            logging.info('Frameshift Candidate and Occurrence %s: %s' % frameshift_candidate)
+            ru_length = hmm_match_count[frameshift_candidate[0].split('_')[1]]
+            repeating_bps_in_ru = ru_bp_coverage[frameshift_candidate[0].split('_')[1]]
+            logging.info('Observed repeating base pairs in RU: %s' % repeating_bps_in_ru)
+            avg_bp_coverage = float(repeating_bps_in_ru) / ru_length / 2
+            logging.info('Average coverage for each base pair in RU: %s' % avg_bp_coverage)
+
+            expected_indel_transitions = 1 / avg_bp_coverage
+            if self.identify_frameshift(avg_bp_coverage, frameshift_candidate[1], expected_indel_transitions):
+                logging.info('There is a frameshift at %s' % frameshift_candidate[0])
+                return frameshift_candidate[0]
+
         return None
 
     def read_flanks_repeats_with_confidence(self, vpath):
