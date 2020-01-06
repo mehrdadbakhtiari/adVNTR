@@ -237,24 +237,40 @@ class VNTRFinder:
 
     def find_frameshift_from_selected_reads(self, selected_reads):
         mutations = {}
-        repeating_bps_in_data = 0
         repeats_lengths_distribution = []
         ru_bp_coverage = defaultdict(int)
         hmm_match_count = defaultdict(int)
+
+        pattern_clusters = get_pattern_clusters(self.reference_vntr.get_repeat_segments())
+        estimated_ru_count = defaultdict(int)
+        for i in range(len(pattern_clusters)):
+            estimated_ru_count[str(i+1)] = len(pattern_clusters[i])
+
         for read in selected_reads:
             visited_states = [state.name for idx, state in read.vpath[1:-1]]
-            logging.debug(visited_states)  # DEBUGGING
+            # Debugging log
+            logging.debug(read.sequence)
+            logging.debug(visited_states)
             repeats_lengths = get_repeating_pattern_lengths(visited_states)
-            repeats_lengths_distribution += repeats_lengths
+            repeats_lengths_distribution.append(repeats_lengths)
             current_repeat = None
             # repeating_bps_in_data += get_number_of_repeat_bp_matches_in_vpath(read.vpath)
-            update_number_of_repeat_bp_matches_in_vpath_for_each_hmm(read.vpath, ru_bp_coverage)
             update_match_count_for_each_hmm(read.vpath, hmm_match_count)
+            is_valid_read = True
+
+            # There might be multiple indels in a position of hmm. (e.g. I12, I12, I12)
+            # It is probably because of an error (alignment).
+            # We do not want to count them multiple times, thus we ignore the read or count only once
+            mutation_states_set = set()
 
             for i in range(len(visited_states)):
                 if visited_states[i].endswith('fix') or visited_states[i].startswith('M'):
                     continue
                 if visited_states[i].startswith('unit_start'):
+                    for state in mutation_states_set:
+                        mutations[state] += 1
+                    mutation_states_set = set()
+
                     if current_repeat is None:
                         current_repeat = 0
                     else:
@@ -268,19 +284,26 @@ class VNTRFinder:
                 state = visited_states[i].split('_')[0] + '_' + visited_states[i].split('_')[-1]
                 if state.startswith('I'):
                     state += '_' + get_emitted_basepair_from_visited_states(visited_states[i], visited_states, read.sequence)
-                # if abs(repeats_lengths[current_repeat] - len(self.reference_vntr.pattern)) <= 2:
-                if state not in mutations.keys():
-                    mutations[state] = 0
-                mutations[state] += 1
+                if abs(repeats_lengths[current_repeat] - len(pattern_clusters[int(state.split("_")[1])-1][0])) <= 2:
+                    mutation_states_set.add(state)
+                else:  # Ignore this read. Do not update the ru_bp_coverage.
+                    is_valid_read = False
+
+            if is_valid_read:
+                for state in mutation_states_set:
+                    mutations[state] += 1
+                update_number_of_repeat_bp_matches_in_vpath_for_each_hmm(read.vpath, ru_bp_coverage)
+
         sorted_mutations = sorted(mutations.items(), key=lambda x: x[1])
         logging.debug('sorted mutations: %s ' % sorted_mutations)
 
         for frameshift_candidate in sorted_mutations:
             logging.info('Frameshift Candidate and Occurrence %s: %s' % frameshift_candidate)
             ru_length = hmm_match_count[frameshift_candidate[0].split('_')[1]]
-            repeating_bps_in_ru = ru_bp_coverage[frameshift_candidate[0].split('_')[1]]
-            logging.info('Observed repeating base pairs in RU: %s' % repeating_bps_in_ru)
-            avg_bp_coverage = float(repeating_bps_in_ru) / ru_length / 2
+            total_bps_in_ru = ru_bp_coverage[frameshift_candidate[0].split('_')[1]]
+            logging.info('Observed repeating base pairs in RU: %s' % total_bps_in_ru)
+            # estimated ru is not accurate
+            avg_bp_coverage = float(total_bps_in_ru) / ru_length / 2 / estimated_ru_count[frameshift_candidate[0].split('_')[1]]
             logging.info('Average coverage for each base pair in RU: %s' % avg_bp_coverage)
 
             expected_indel_transitions = 1 / avg_bp_coverage
@@ -615,7 +638,6 @@ class VNTRFinder:
 
         number_of_reads = 0
         read_length = 150
-
         for read_segment in unmapped_filtered_reads:
             if number_of_reads == 0:
                 read_length = len(str(read_segment.seq))
