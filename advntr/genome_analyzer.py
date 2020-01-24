@@ -55,16 +55,16 @@ class GenomeAnalyzer:
         print("##fileformat={}".format(vcf_version))
         print("##source=adVNTR ver. {}".format(__version__))
 
-        print('##INFO=<ID=END,Number=1,Type=Integer,Description="End position of variant"')
-        print('##INFO=<ID=VID,Number=1,Type=Integer,Description="VNTR ID"')
-        print('##INFO=<ID=RU,Number=1,Type=String,Description="Repeat motif"')
-        print('##INFO=<ID=RC,Number=1,Type=Integer,Description="Reference repeat unit count"')
+        print('##INFO=<ID=END,Number=1,Type=Integer,Description="End position of variant">')
+        print('##INFO=<ID=VID,Number=1,Type=Integer,Description="VNTR ID">')
+        print('##INFO=<ID=RU,Number=1,Type=String,Description="Repeat motif">')
+        print('##INFO=<ID=RC,Number=1,Type=Integer,Description="Reference repeat unit count">')
 
-        print('##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype"')
-        print('##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read depth"')
-        print('##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Spanning read count"')
-        print('##FORMAT=<ID=FR,Number=1,Type=Integer,Description="Flanking read count"')
-        print('##FORMAT=<ID=ML,Number=1,Type=Float,Description="Maximum likelihood"')
+        print('##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">')
+        print('##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read depth">')
+        print('##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Spanning read count">')
+        print('##FORMAT=<ID=FR,Number=1,Type=Integer,Description="Flanking read count">')
+        print('##FORMAT=<ID=ML,Number=1,Type=Float,Description="Maximum likelihood">')
 
         print("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" + self.input_file)
 
