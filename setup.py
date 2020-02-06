@@ -1,4 +1,5 @@
 from setuptools import setup
+from distutils.core import setup
 from Cython.Build import cythonize
 import numpy
 
@@ -21,7 +22,7 @@ setup(name='advntr',
       entry_points={
             'console_scripts': ['advntr=advntr.__main__:main']
       },
-      ext_modules=cythonize(["pomegranate/*.pyx"]),
+      ext_modules=cythonize(["pomegranate/*.pyx", "hmm/*.pyx"]),
       include_dirs=[numpy.get_include()],
       classifiers=["Environment :: Console",
                    "Intended Audience :: Developers",
