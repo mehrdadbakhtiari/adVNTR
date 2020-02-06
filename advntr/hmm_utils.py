@@ -7,8 +7,7 @@ from advntr import settings
 
 if settings.USE_ENHANCED_HMM:
     from hmm.hmm import Model
-    from hmm.hmm import State
-    from hmm.hmm import DiscreteDistribution
+    from hmm.base import DiscreteDistribution, State
 else:
     from pomegranate import DiscreteDistribution, State
     from pomegranate import HiddenMarkovModel as Model
@@ -137,6 +136,27 @@ def get_repeating_pattern_lengths(visited_states):
                 if is_matching_state(visited_states[j]):
                     current_len += 1
             lengths.append(current_len)
+        if visited_states[i].startswith('unit_start'):
+            prev_start = i
+    return lengths
+
+
+def get_repeating_unit_state_count(visited_states):
+    lengths = []
+    prev_start = None
+    for i in range(len(visited_states)):
+        if visited_states[i].startswith('unit_end') and prev_start is not None:
+            match_count = 0
+            insert_count = 0
+            delete_count = 0
+            for j in range(prev_start, i):
+                if visited_states[j].startswith("M"):
+                    match_count += 1
+                if visited_states[j].startswith("I"):
+                    insert_count += 1
+                if visited_states[j].startswith("D"):
+                    delete_count += 1
+            lengths.append({'M': match_count, 'I': insert_count, 'D': delete_count})
         if visited_states[i].startswith('unit_start'):
             prev_start = i
     return lengths
