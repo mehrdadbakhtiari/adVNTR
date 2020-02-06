@@ -55,16 +55,16 @@ class GenomeAnalyzer:
         print("##fileformat={}".format(vcf_version))
         print("##source=adVNTR ver. {}".format(__version__))
 
-        print('##INFO=<ID=END,Number=1,Type=Integer,Description="End position of variant"')
-        print('##INFO=<ID=VID,Number=1,Type=Integer,Description="VNTR ID"')
-        print('##INFO=<ID=RU,Number=1,Type=String,Description="Repeat motif"')
-        print('##INFO=<ID=RC,Number=1,Type=Integer,Description="Reference repeat unit count"')
+        print('##INFO=<ID=END,Number=1,Type=Integer,Description="End position of variant">')
+        print('##INFO=<ID=VID,Number=1,Type=Integer,Description="VNTR ID">')
+        print('##INFO=<ID=RU,Number=1,Type=String,Description="Repeat motif">')
+        print('##INFO=<ID=RC,Number=1,Type=Integer,Description="Reference repeat unit count">')
 
-        print('##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype"')
-        print('##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read depth"')
-        print('##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Spanning read count"')
-        print('##FORMAT=<ID=FR,Number=1,Type=Integer,Description="Flanking read count"')
-        print('##FORMAT=<ID=ML,Number=1,Type=Float,Description="Maximum likelihood"')
+        print('##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">')
+        print('##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Read depth">')
+        print('##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Spanning read count">')
+        print('##FORMAT=<ID=FR,Number=1,Type=Integer,Description="Flanking read count">')
+        print('##FORMAT=<ID=ML,Number=1,Type=Float,Description="Maximum likelihood">')
 
         print("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" + self.input_file)
 
@@ -210,9 +210,11 @@ class GenomeAnalyzer:
 
     def find_frameshift_from_alignment_file(self, alignment_file):
         for vid in self.target_vntr_ids:
-            result = self.vntr_finder[vid].find_frameshift_from_alignment_file(alignment_file, [])
+            results = self.vntr_finder[vid].find_frameshift_from_alignment_file(alignment_file, [])
+            print("Input File: {}".format(alignment_file))
             print(vid)
-            print(result)
+            for result in results:
+                print(result)
 
     def find_repeat_counts_from_alignment_file(self, alignment_file, average_coverage, update=False):
         unmapped_reads_file = extract_unmapped_reads_to_fasta_file(alignment_file, self.working_dir, self.ref_filename)

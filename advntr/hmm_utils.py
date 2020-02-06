@@ -7,12 +7,12 @@ from advntr import settings
 
 if settings.USE_ENHANCED_HMM:
     from hmm.hmm import Model
-    from hmm.hmm import State
-    from hmm.hmm import DiscreteDistribution
+    from hmm.base import DiscreteDistribution, State
 else:
     from pomegranate import DiscreteDistribution, State
     from pomegranate import HiddenMarkovModel as Model
 
+from collections import defaultdict
 
 def path_to_alignment(x, y, path):
     for i, (index, state) in enumerate(path[1:-1]):
@@ -141,6 +141,27 @@ def get_repeating_pattern_lengths(visited_states):
     return lengths
 
 
+def get_repeating_unit_state_count(visited_states):
+    lengths = []
+    prev_start = None
+    for i in range(len(visited_states)):
+        if visited_states[i].startswith('unit_end') and prev_start is not None:
+            match_count = 0
+            insert_count = 0
+            delete_count = 0
+            for j in range(prev_start, i):
+                if visited_states[j].startswith("M"):
+                    match_count += 1
+                if visited_states[j].startswith("I"):
+                    insert_count += 1
+                if visited_states[j].startswith("D"):
+                    delete_count += 1
+            lengths.append({'M': match_count, 'I': insert_count, 'D': delete_count})
+        if visited_states[i].startswith('unit_start'):
+            prev_start = i
+    return lengths
+
+
 def get_repeat_segments_from_visited_states_and_region(visited_states, region):
     lengths = get_repeating_pattern_lengths(visited_states)
 
@@ -204,6 +225,27 @@ def get_number_of_repeat_bp_matches_in_vpath(vpath):
         if is_matching_state(visited_states[i]) and not visited_states[i].endswith('fix'):
             result += 1
     return result
+
+
+def update_number_of_repeat_bp_matches_in_vpath_for_each_hmm(vpath, ru_bp_dictionary):
+    visited_states = [state.name for idx, state in vpath[1:-1]]
+    hmm_id = 0
+    for i in range(len(visited_states)):
+        if visited_states[i].startswith('unit_start'):
+            hmm_id = visited_states[i].split("_")[-1]
+        if is_matching_state(visited_states[i]) and not visited_states[i].endswith('fix'):
+            ru_bp_dictionary[hmm_id] += 1
+
+
+def update_match_count_for_each_hmm(vpath, match_count_dictionary):
+    visited_states_names = [state.name for idx, state in vpath[1:-1]]
+    prev_state_name = None
+    for state_name in visited_states_names:
+        if prev_state_name is not None and state_name.startswith("unit_end"):
+            hmm_index = state_name.split("_")[-1]
+            last_index = int(prev_state_name.split("_")[0][1:])
+            match_count_dictionary[hmm_index] = last_index
+        prev_state_name = state_name
 
 
 def get_left_flanking_region_size_in_vpath(vpath):

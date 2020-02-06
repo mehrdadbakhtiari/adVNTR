@@ -4,8 +4,9 @@ import numpy
 import os
 from multiprocessing import Process, Manager, Value, Semaphore
 from random import random
+from collections import defaultdict
 
-from keras.models import Sequential, load_model
+# from keras.models import Sequential, load_model
 import pysam
 from Bio import pairwise2
 from Bio.Seq import Seq
@@ -21,12 +22,12 @@ from advntr.utils import is_low_quality_read
 
 if settings.USE_ENHANCED_HMM:
     from hmm.hmm import Model
-    from hmm.hmm import State
-    from hmm.hmm import DiscreteDistribution
+    from hmm.base import DiscreteDistribution, State
 else:
     from pomegranate import HiddenMarkovModel as Model
 
-from deep_recruitment import get_embedding_of_string, input_dim
+# from deep_recruitment import get_embedding_of_string, input_dim
+
 
 class GenotypeResult:
     def __init__(self, copy_numbers, recruited_reads_count, spanning_reads_count, flanking_reads_count, max_likelihood):
@@ -230,54 +231,124 @@ class VNTRFinder:
         from scipy.stats import binom
         sequencing_error_prob = binom.pmf(observed_indel_transitions, location_coverage, error_rate)
         frameshift_prob = binom.pmf(observed_indel_transitions, location_coverage, expected_indels)
-        prob = sequencing_error_prob / frameshift_prob
-        return prob < 0.01
+
+        from scipy import stats
+        chi_square_val = -2 * numpy.log(sequencing_error_prob / frameshift_prob)
+        pval = 1 - stats.chi2.cdf(chi_square_val, 1)
+
+        return sequencing_error_prob, frameshift_prob, pval
 
     def find_frameshift_from_selected_reads(self, selected_reads):
-        mutations = {}
-        repeating_bps_in_data = 0
-        repeats_lengths_distribution = []
+        mutations = defaultdict(int)
+        ru_bp_coverage = defaultdict(int)
+        hmm_match_count = defaultdict(int)
+
+        pattern_clusters = get_pattern_clusters(self.reference_vntr.get_repeat_segments())
+
+        estimated_ru_count = defaultdict(int)
+        for i in range(len(pattern_clusters)):
+            estimated_ru_count[str(i + 1)] = len(pattern_clusters[i])
+
         for read in selected_reads:
             visited_states = [state.name for idx, state in read.vpath[1:-1]]
-            repeats_lengths = get_repeating_pattern_lengths(visited_states)
-            repeats_lengths_distribution += repeats_lengths
+            # Logging
+            logging.debug(read.sequence)
+            logging.debug(visited_states)
+            logging.debug(read.logp)
+
+            ru_state_count = get_repeating_unit_state_count(visited_states)
             current_repeat = None
-            repeating_bps_in_data += get_number_of_repeat_bp_matches_in_vpath(read.vpath)
+
+            update_match_count_for_each_hmm(read.vpath, hmm_match_count)
+            is_valid_read = True
+            reason_why_rejected = ""
+
+            # There might be multiple insertions in a position of hmm. (e.g. I12, I12, I12, I12)
+            # It is probably because of an error (alignment) and this case is rare
+            # We do not want to count them multiple times, thus we ignore the read or count only once
+            mutation_states_set = set()
+
+            # Read length threshold
+            if len(read.sequence) < 90:
+                logging.info("Rejected: too short reads: len is {}".format(len(read.sequence)))
+                continue
+
             for i in range(len(visited_states)):
                 if visited_states[i].endswith('fix') or visited_states[i].startswith('M'):
                     continue
                 if visited_states[i].startswith('unit_start'):
+                    if not is_valid_read:
+                        break
+                    for state in mutation_states_set:
+                        mutations[state] += 1
+                    mutation_states_set = set()
+
                     if current_repeat is None:
                         current_repeat = 0
                     else:
                         current_repeat += 1
-                if current_repeat is None or current_repeat >= len(repeats_lengths):
-                    continue
                 if not visited_states[i].startswith('I') and not visited_states[i].startswith('D'):
                     continue
-                if repeats_lengths[current_repeat] == len(self.reference_vntr.pattern):
+                if current_repeat is None or current_repeat >= len(ru_state_count):
                     continue
-                state = visited_states[i].split('_')[0]
+
+                pattern_index = visited_states[i].split('_')[-1]
+                # ru_state_count is a dictionary of [repeat][M/I/D]
+                if sum(ru_state_count[current_repeat].values()) == hmm_match_count[pattern_index]:
+                    continue
+                state = visited_states[i].split('_')[0] + '_' + pattern_index
                 if state.startswith('I'):
-                    state += get_emitted_basepair_from_visited_states(visited_states[i], visited_states, read.sequence)
-                if abs(repeats_lengths[current_repeat] - len(self.reference_vntr.pattern)) <= 2:
-                    if state not in mutations.keys():
-                        mutations[state] = 0
+                    state += '_' + get_emitted_basepair_from_visited_states(visited_states[i], visited_states,
+                                                                            read.sequence)
+
+                if abs(ru_state_count[current_repeat]['M'] + ru_state_count[current_repeat]['I'] - len(
+                        pattern_clusters[int(pattern_index) - 1][0])) > 3:
+                    diff = abs(ru_state_count[current_repeat]['M'] + ru_state_count[current_repeat]['I'] - len(
+                        pattern_clusters[int(pattern_index) - 1][0]))
+                    reason_why_rejected = "Rejected read: #M + #I - len(pattern) > 3 bp in pattern {}, diff {}".format(
+                        pattern_index, diff)
+                    is_valid_read = False
+                    continue
+                if ru_state_count[current_repeat]['I'] + ru_state_count[current_repeat]['D'] > 2:
+                    diff = ru_state_count[current_repeat]['I'] + ru_state_count[current_repeat]['D']
+                    reason_why_rejected = "Rejected read: #I + #D > 2 in pattern {}, diff {}".format(pattern_index,
+                                                                                                     diff)
+                    is_valid_read = False
+                else:
+                    mutation_states_set.add(state)
+
+            if is_valid_read:
+                for state in mutation_states_set:
                     mutations[state] += 1
+                update_number_of_repeat_bp_matches_in_vpath_for_each_hmm(read.vpath, ru_bp_coverage)
+            else:
+                logging.debug(reason_why_rejected)
+
         sorted_mutations = sorted(mutations.items(), key=lambda x: x[1])
         logging.debug('sorted mutations: %s ' % sorted_mutations)
-        frameshift_candidate = sorted_mutations[-1] if len(sorted_mutations) else (None, 0)
-        logging.info(sorted(repeats_lengths_distribution))
-        logging.info('Frameshift Candidate and Occurrence %s: %s' % frameshift_candidate)
-        logging.info('Observed repeating base pairs in data: %s' % repeating_bps_in_data)
-        avg_bp_coverage = float(repeating_bps_in_data) / self.reference_vntr.get_length() / 2
-        logging.info('Average coverage for each base pair: %s' % avg_bp_coverage)
 
-        expected_indel_transitions = 1 / avg_bp_coverage
-        if self.identify_frameshift(avg_bp_coverage, frameshift_candidate[1], expected_indel_transitions):
-            logging.info('There is a frameshift at %s' % frameshift_candidate[0])
-            return frameshift_candidate[0]
-        return None
+        frameshifts = []
+        for frameshift_candidate in sorted_mutations:
+            logging.info('Frameshift Candidate and Occurrence %s: %s' % frameshift_candidate)
+            ru_length = hmm_match_count[frameshift_candidate[0].split('_')[1]]
+            total_bps_in_ru = ru_bp_coverage[frameshift_candidate[0].split('_')[1]]
+            logging.info('Observed repeating base pairs in RU: %s' % total_bps_in_ru)
+            # We don't know true RU count. Thus, we use reference to estimate the number of RU
+            avg_bp_coverage = float(total_bps_in_ru) / ru_length / 2 / estimated_ru_count[
+                frameshift_candidate[0].split('_')[1]]
+            logging.info('Average coverage for each base pair in RU: %s' % avg_bp_coverage)
+
+            expected_indel_transitions = float(1) / (2 * estimated_ru_count[frameshift_candidate[0].split('_')[1]])
+            seq_err_prob, frameshift_prob, pval = self.identify_frameshift(avg_bp_coverage, frameshift_candidate[1],
+                                                                           expected_indel_transitions)
+            logging.info('Sequencing error prob: %s' % seq_err_prob)
+            logging.info('Frame-shift prob: %s' % frameshift_prob)
+            logging.info('P-value: %s' % pval)
+            if pval < 0.001:
+                logging.info('There is a frameshift at %s' % frameshift_candidate[0])
+                frameshifts.append(frameshift_candidate[0])
+
+        return frameshifts if frameshifts is not None else frameshifts
 
     def read_flanks_repeats_with_confidence(self, vpath):
         minimum_left_flanking = 5
@@ -604,7 +675,6 @@ class VNTRFinder:
 
         number_of_reads = 0
         read_length = 150
-
         for read_segment in unmapped_filtered_reads:
             if number_of_reads == 0:
                 read_length = len(str(read_segment.seq))

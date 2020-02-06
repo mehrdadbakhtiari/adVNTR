@@ -1,28 +1,19 @@
+#cython: boundscheck=False
+#cython: cdivision=True
+
 from collections import defaultdict
-import numpy as np
 from operator import attrgetter
 
+from .base cimport DiscreteDistribution
+from .base cimport State
 
-class DiscreteDistribution:
+import numpy as np
+cimport numpy as np
 
-    def __init__(self, emission):
-        self.emission = emission
-
-    def __getitem__(self, key):
-        return self.emission[key]
-
-
-class State:
-
-    def __init__(self, distribution=None, name=None):
-        self.distribution = distribution
-        self.name = name or str(id(self))
-
-    def is_silent(self):
-        return self.distribution is None
+cimport cython
 
 
-class Model:
+cdef class Model(object):
     """ Hidden Markov Model
         start: a State representing the model start
         end:   a State representing the model end
@@ -30,6 +21,34 @@ class Model:
         edges:  a list of edges represented by tuples of (from-state, to-state)
 
     """
+    cdef public char* name
+    cdef public char* model
+
+    # states
+    cdef public list states
+    cdef public int n_states
+    cdef public object start # State object
+    cdef public object end
+
+    # store transitions as a map
+    cdef public dict transition_map
+    # 2D matrix (After conforming the topology, create one matrix for visualization)
+    cdef object transition_matrix
+    cdef dict state_to_index
+
+    # edges
+    cdef list edges
+    cdef int n_edges
+
+    cdef public int start_index  # will be set in bake
+    cdef public int end_index # will be set in bake
+
+    cdef public np.ndarray dynamic_table
+
+    cdef public list subModels
+    cdef public int n_subModels
+
+    cdef public bint is_baked
 
     def __init__(self, name=None, start=None, end=None):
         # Save the name or make up a name.
@@ -46,7 +65,7 @@ class Model:
         self.transition_map = dict()
         # 2D matrix (After conforming the topology, create one matrix for visualization)
         self.transition_matrix = None
-        self.state_to_index = {}
+        self.state_to_index = dict()
 
         # Put start and end in the states
         self.add_states(self.start, self.end)
@@ -58,12 +77,15 @@ class Model:
         self.start_index = -1     # will be set in bake
         self.end_index = -1       # will be set in bake
 
-        self.dynamic_table = []
+        self.dynamic_table = None
 
         self.subModels = [self]
         self.n_subModels = 1
 
         self.is_baked = False
+
+    def append_subModel(self, other):
+        self.subModels.append(other)
 
     def add_model(self, model):
         pass
@@ -122,7 +144,7 @@ class Model:
         prob = sum(prob_mat[:,(T-1)%2])
         return np.log(prob)
 
-    def bake(self, merge=None, sort_by_name=False):
+    def bake(self, read_length=None, merge=None, sort_by_name=False):
         """
         In a model, start state comes the first and end state comes the last.
         Other states are in the middle, and they are sorted by their name.
@@ -135,6 +157,8 @@ class Model:
         """
         # Bake all the subModels
         for subModel in self.subModels:
+            if subModel == 0:
+                continue
             # Ordering states
             if sort_by_name:
                 states_without_start_and_end = [state for state in subModel.states if state is not subModel.start and state is not subModel.end ]
@@ -143,21 +167,22 @@ class Model:
             else:
                 subModel._sort_states()
 
-            indices = {subModel.states[i]: i for i in range(subModel.n_states)}
-
-            subModel.start_index = indices[subModel.start]
-            subModel.end_index = indices[subModel.end]
+            # indices = {subModel.states[i]: i for i in range(subModel.n_states)}
+            # subModel.start_index = indices[subModel.start]
+            # subModel.end_index = indices[subModel.end]
 
         # Start is the start state of the very fist sub-model
         self.start = self.subModels[0].start
         # End is the end state of the very last sub-model
-        self.end = self.subModels[-1].end
+        self.end = self.subModels[self.n_subModels-1].end
 
         # Build aggregate states and transition map from subModels
         n_states = 0
         states = []
         transition_map = dict()
         for subModel in self.subModels:
+            if subModel == 0:
+                continue
             self.state_to_index.update(dict(zip(subModel.states, range(n_states, n_states+subModel.n_states))))
             n_states += subModel.n_states
             for state in subModel.states:
@@ -247,7 +272,7 @@ class Model:
                     dummy_start_states.append(state)
                 if "_end_" in state.name:
                     dummy_end_states.append(state)
-                assert ("start" in state.name or "end" in state.name), "State type should be in {I, M, D, start, end}"
+                # assert ("start" in state.name or "end" in state.name), "State type should be in (I, M, D, start, end)"
 
         insert_states.sort(key=lambda x: int(x.name[1:x.name.find("_")]))
         match_states.sort(key=lambda x: int(x.name[1:x.name.find("_")]))
@@ -302,105 +327,105 @@ class Model:
             for n in range(m):
                 state2 = self.states[n]
                 if (self.transition_map[state1][state2] > 0.0):
-                  transition_probabilities[i, n] = self.transition_map[state1][state2]
+                    transition_probabilities[i, n] = self.transition_map[state1][state2]
 
         return transition_probabilities
 
-    @classmethod
-    def from_matrix(cls, transition_probabilities, distributions, starts, ends=None,
-        state_names=None, name=None, verbose=False, merge='All' ):
-        """Create a model from a more standard matrix format.
+    # @classmethod
+    # def from_matrix(cls, transition_probabilities, distributions, starts, ends=None,
+    #                 state_names=None, name=None, verbose=False, merge='All' ):
+    #     """Create a model from a more standard matrix format.
+    #
+    #     Take in a 2D matrix of floats of size n by n, which are the transition
+    #     probabilities to go from any state to any other state. May also take in
+    #     a list of length n representing the names of these nodes, and a model
+    #     name. Must provide the matrix, and a list of size n representing the
+    #     distribution you wish to use for that state, a list of size n indicating
+    #     the probability of starting in a state, and a list of size n indicating
+    #     the probability of ending in a state.
+    #
+    #     Parameters
+    #     ----------
+    #     transition_probabilities : array-like, shape (n_normal_states, n_normal_states)
+    #         The probabilities of each state transitioning to each other state.
+    #
+    #     distributions : array-like, shape (n_normal_states)
+    #         The distributions for each state. Silent states are indicated by
+    #         using None instead of a distribution object.
+    #
+    #     starts : array-like, shape (n_normal_states)
+    #         The probabilities of starting in each of the states.
+    #
+    #     ends : array-like, shape (n_normal_states), optional
+    #         If passed in, the probabilities of ending in each of the states.
+    #         If ends is None, then assumes the model has no explicit end
+    #         state. Default is None.
+    #
+    #     state_names : array-like, shape (n_normal_states), optional
+    #         The name of the states. If None is passed in, default names are
+    #         generated. Default is None
+    #
+    #     name : str, optional
+    #         The name of the model. Default is None
+    #
+    #     verbose : bool, optional
+    #         The verbose parameter for the underlying bake method. Default is False.
+    #
+    #     merge : 'None', 'Partial', 'All', optional
+    #         The merge parameter for the underlying bake method. Default is All
+    #
+    #     Returns
+    #     -------
+    #     model : Model
+    #         The baked model ready to go.
+    #
+    #     Examples
+    #     --------
+    #     matrix = [ [ 0.4, 0.5 ], [ 0.4, 0.5 ] ]
+    #     distributions = [NormalDistribution(1, .5), NormalDistribution(5, 2)]
+    #     starts = [ 1., 0. ]
+    #     ends = [ .1., .1 ]
+    #     state_names= [ "A", "B" ]
+    #
+    #     model = Model.from_matrix( matrix, distributions, starts, ends,
+    #         state_names, name="test_model" )
+    #     """
+    #
+    #     # Build the initial model
+    #     model = Model( name=name )
+    #     state_names = state_names or ["s{}".format(i) for i in range(len(distributions))]
+    #
+    #     # Build state objects for every state with the appropriate distribution
+    #     states = [ State( distribution, name=name ) for name, distribution in
+    #                zip( state_names, distributions) ]
+    #
+    #     n = len( states )
+    #
+    #     # Add all the states to the model
+    #     for state in states:
+    #         model.add_state( state )
+    #
+    #     # Connect the start of the model to the appropriate state
+    #     for i, prob in enumerate( starts ):
+    #         if prob != 0:
+    #             model.add_transition( model.start, states[i], prob )
+    #
+    #     # Connect all states to each other if they have a non-zero probability
+    #     for i in range( n ):
+    #         for j, prob in enumerate( transition_probabilities[i] ):
+    #             if prob != 0.:
+    #                 model.add_transition( states[i], states[j], prob )
+    #
+    #     if ends is not None:
+    #         # Connect states to the end of the model if a non-zero probability
+    #         for i, prob in enumerate( ends ):
+    #             if prob != 0:
+    #                 model.add_transition( states[j], model.end, prob )
+    #
+    #     model.bake()
+    #     return model
 
-        Take in a 2D matrix of floats of size n by n, which are the transition
-        probabilities to go from any state to any other state. May also take in
-        a list of length n representing the names of these nodes, and a model
-        name. Must provide the matrix, and a list of size n representing the
-        distribution you wish to use for that state, a list of size n indicating
-        the probability of starting in a state, and a list of size n indicating
-        the probability of ending in a state.
-
-        Parameters
-        ----------
-        transition_probabilities : array-like, shape (n_normal_states, n_normal_states)
-            The probabilities of each state transitioning to each other state.
-
-        distributions : array-like, shape (n_normal_states)
-            The distributions for each state. Silent states are indicated by
-            using None instead of a distribution object.
-
-        starts : array-like, shape (n_normal_states)
-            The probabilities of starting in each of the states.
-
-        ends : array-like, shape (n_normal_states), optional
-            If passed in, the probabilities of ending in each of the states.
-            If ends is None, then assumes the model has no explicit end
-            state. Default is None.
-
-        state_names : array-like, shape (n_normal_states), optional
-            The name of the states. If None is passed in, default names are
-            generated. Default is None
-
-        name : str, optional
-            The name of the model. Default is None
-
-        verbose : bool, optional
-            The verbose parameter for the underlying bake method. Default is False.
-
-        merge : 'None', 'Partial', 'All', optional
-            The merge parameter for the underlying bake method. Default is All
-
-        Returns
-        -------
-        model : Model
-            The baked model ready to go.
-
-        Examples
-        --------
-        matrix = [ [ 0.4, 0.5 ], [ 0.4, 0.5 ] ]
-        distributions = [NormalDistribution(1, .5), NormalDistribution(5, 2)]
-        starts = [ 1., 0. ]
-        ends = [ .1., .1 ]
-        state_names= [ "A", "B" ]
-
-        model = Model.from_matrix( matrix, distributions, starts, ends,
-            state_names, name="test_model" )
-        """
-
-        # Build the initial model
-        model = Model( name=name )
-        state_names = state_names or ["s{}".format(i) for i in range(len(distributions))]
-
-        # Build state objects for every state with the appropriate distribution
-        states = [ State( distribution, name=name ) for name, distribution in
-            zip( state_names, distributions) ]
-
-        n = len( states )
-
-        # Add all the states to the model
-        for state in states:
-            model.add_state( state )
-
-        # Connect the start of the model to the appropriate state
-        for i, prob in enumerate( starts ):
-            if prob != 0:
-                model.add_transition( model.start, states[i], prob )
-
-        # Connect all states to each other if they have a non-zero probability
-        for i in range( n ):
-            for j, prob in enumerate( transition_probabilities[i] ):
-                if prob != 0.:
-                    model.add_transition( states[i], states[j], prob )
-
-        if ends is not None:
-            # Connect states to the end of the model if a non-zero probability
-            for i, prob in enumerate( ends ):
-                if prob != 0:
-                    model.add_transition( states[j], model.end, prob )
-
-        model.bake()
-        return model
-
-    def concatenate( self, other, suffix='', prefix='', transition_probability=1.0):
+    def concatenate(self, other, suffix='', prefix='', transition_probability=1.0):
         """Concatenate this model to another model.
 
         Concatenate this model to another model in such a way that a single
@@ -427,81 +452,92 @@ class Model:
         -------
         None
         """
-
         other.name = "{}{}{}".format(prefix, other.name, suffix)
         for state in other.states:
             state.name = "{}{}{}".format(prefix, state.name, suffix)
 
-        self.subModels.append(other)
+        # self.subModels[self.n_subModels] = other
+        self.append_subModel(other)
+        # self.subModels.append(other)
         self.n_subModels += 1
 
         # setting connections between subModels if they exist
-        subModel = self.subModels[-1]
-        subModel_prev = self.subModels[-2]
+        subModel = self.subModels[self.n_subModels - 1]
+        subModel_prev = self.subModels[self.n_subModels - 2]
         subModel_prev.transition_map[subModel_prev.end][subModel.start] = transition_probability
 
         # Once concatenation happened, it should be baked again
         self.is_baked = False
 
-    def viterbi(self, sequence):
+    @cython.boundscheck(False)
+    cpdef tuple viterbi(self, sequence):
         """
         :param sequence: a sequence
         :return: log probability and viterbi path
-
         """
         if not self.is_baked:
             print("ERROR: To call viterbi, the model must have been baked")
             raise ValueError
 
         # Find start and end index of repeats matcher
-        repeat_matcher_model = self.subModels[1]
-        repeat_start_index = self.state_to_index[repeat_matcher_model.start]
-        repeat_end_index = self.state_to_index[repeat_matcher_model.end]
+        cdef object repeat_matcher_model = self.subModels[1]
+        cdef int repeat_start_index = self.state_to_index[repeat_matcher_model.start]
+        cdef int repeat_end_index = self.state_to_index[repeat_matcher_model.end]
 
         # Initialize dynamic programming table
         # Rows represent states and Columns represent sequence
-        sequence_length = len(sequence)
-        self.dynamic_table = np.ones((self.n_states, sequence_length + 1)) * (-np.inf)
-        self.dynamic_table[self.state_to_index[self.start]][0] = np.log(1)
+        cdef int sequence_length = len(sequence)
+        # self.dynamic_table = np.ones((self.n_states, sequence_length + 1), dtype=np.double) * (-np.inf)
+        # self.dynamic_table[self.state_to_index[self.start]][0] = np.log(1)
+
+        cdef np.ndarray dynamic_table = np.ones((self.n_states, sequence_length + 1), dtype=np.double) * (-np.inf)
+        dynamic_table[self.state_to_index[self.start]][0] = np.log(1)
 
         # Storing previous states row and column separately (Naive version)
-        vpath_table_row = np.zeros((self.n_states, sequence_length + 1), dtype=int)
-        vpath_table_col = np.zeros((self.n_states, sequence_length + 1), dtype=int)
+        cdef np.ndarray vpath_table_row = np.zeros((self.n_states, sequence_length + 1), dtype=np.intc)
+        cdef np.ndarray vpath_table_col = np.zeros((self.n_states, sequence_length + 1), dtype=np.intc)
 
+        cdef int row, col
         for col in range(sequence_length):
             # Filling out suffix matcher table once
             for row in range(0, repeat_start_index):
+                if col != 0 and dynamic_table[row][col] == -np.inf:
+                    # print ('continued')
+                    continue
                 state = self.states[row]
-                self._update_dynamic_table(row, col, sequence, state, vpath_table_row, vpath_table_col)
+                self._update_dynamic_table(row, col, sequence, state, vpath_table_row, vpath_table_col, dynamic_table)
 
             # Filling out repeat matcher table twice
             for iteration in range(2):
                 for row in range(repeat_start_index, repeat_end_index+1):
                     state = self.states[row]
-                    self._update_dynamic_table(row, col, sequence, state, vpath_table_row, vpath_table_col)
+                    self._update_dynamic_table(row, col, sequence, state, vpath_table_row, vpath_table_col, dynamic_table)
 
             # Filling out prefix matcher table once
             for row in range(repeat_end_index+1, len(self.states)):
                 state = self.states[row]
-                self._update_dynamic_table(row, col, sequence, state, vpath_table_row, vpath_table_col)
+                self._update_dynamic_table(row, col, sequence, state, vpath_table_row, vpath_table_col, dynamic_table)
 
         # For the last update
         col = sequence_length
         state = self.states[-2]
         row = self.state_to_index[state]
-        for neighbor_state in self.transition_map[state]:
-            prob = self.dynamic_table[row][col] + np.log(self.transition_map[state][neighbor_state])
-            neighbor_state_index = self.state_to_index[neighbor_state]
 
-            if self.dynamic_table[neighbor_state_index][col] < prob:
-                self.dynamic_table[neighbor_state_index][col] = prob
+        cdef int neighbor_state_index = 0
+        cdef double prob = 0
+        for neighbor_state in self.transition_map[state]:
+            neighbor_state_index = self.state_to_index[neighbor_state]
+            prob = dynamic_table[row][col] + np.log(self.transition_map[state][neighbor_state])
+
+            if dynamic_table[neighbor_state_index][col] < prob:
+                dynamic_table[neighbor_state_index][col] = prob
                 # update path table
                 vpath_table_row[neighbor_state_index][col] = row
                 vpath_table_col[neighbor_state_index][col] = col
 
         # Back tracking viterbi path from the Prefix Matcher End
-        vpath = []
-        end_index = self.state_to_index[self.subModels[-1].end]
+        cdef list vpath = []
+        cdef int end_index = self.state_to_index[self.subModels[-1].end]
 
         vpath.insert(0, (end_index, self.subModels[-1].end))
         row, col = vpath_table_row[end_index][-1], vpath_table_col[end_index][-1]
@@ -510,28 +546,42 @@ class Model:
             vpath.insert(0, (self.state_to_index[self.states[row]], self.states[row]))
             row, col = vpath_table_row[row][col], vpath_table_col[row][col]
         vpath.insert(0, (self.state_to_index[self.states[row]], self.states[row]))
-        logp = self.dynamic_table[self.state_to_index[self.subModels[-1].end]][-1]
+        cdef double logp = dynamic_table[self.state_to_index[self.subModels[-1].end]][-1]
 
         return logp, vpath
 
-    def _update_dynamic_table(self, row, col, sequence, state, vpath_table_row, vpath_table_col):
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cdef _update_dynamic_table(self,
+                               int row,
+                               int col,
+                               char* sequence,
+                               State state,
+                               np.ndarray vpath_table_row,
+                               np.ndarray vpath_table_col,
+                               np.ndarray dynamic_table):
+
         neighbor_states = self.transition_map[state]
+        cdef int neighbor_state_index = 0
+        cdef double prob = 0
+
         if state.is_silent():  # Silent state: Stay in the same column
             for neighbor_state in neighbor_states:
                 neighbor_state_index = self.state_to_index[neighbor_state]
-                prob = self.dynamic_table[row][col] + np.log(self.transition_map[state][neighbor_state])
+                prob = dynamic_table[row][col] + np.log(self.transition_map[state][neighbor_state])
 
-                if self.dynamic_table[neighbor_state_index][col] < prob:
-                    self.dynamic_table[neighbor_state_index][col] = prob
+                if dynamic_table[neighbor_state_index][col] < prob:
+                    dynamic_table[neighbor_state_index][col] = prob
                     vpath_table_row[neighbor_state_index][col] = row
                     vpath_table_col[neighbor_state_index][col] = col
         else:  # Not a silent state: Emit a character and move to the next column
             for neighbor_state in neighbor_states:
                 neighbor_state_index = self.state_to_index[neighbor_state]
-                prob = self.dynamic_table[row][col] + np.log(self.transition_map[state][neighbor_state]) + np.log(state.distribution[sequence[col]])
+                prob = dynamic_table[row][col] + np.log(self.transition_map[state][neighbor_state]) + \
+                       np.log(state.distribution[sequence[col]])
 
-                if self.dynamic_table[neighbor_state_index][col + 1] < prob:
-                    self.dynamic_table[neighbor_state_index][col + 1] = prob
+                if dynamic_table[neighbor_state_index][col + 1] < prob:
+                    dynamic_table[neighbor_state_index][col + 1] = prob
                     vpath_table_row[neighbor_state_index][col + 1] = row
                     vpath_table_col[neighbor_state_index][col + 1] = col
 
