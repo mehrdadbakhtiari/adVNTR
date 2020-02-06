@@ -210,9 +210,11 @@ class GenomeAnalyzer:
 
     def find_frameshift_from_alignment_file(self, alignment_file):
         for vid in self.target_vntr_ids:
-            result = self.vntr_finder[vid].find_frameshift_from_alignment_file(alignment_file, [])
+            results = self.vntr_finder[vid].find_frameshift_from_alignment_file(alignment_file, [])
+            print("Input File: {}".format(alignment_file))
             print(vid)
-            print(result)
+            for result in results:
+                print(result)
 
     def find_repeat_counts_from_alignment_file(self, alignment_file, average_coverage, update=False):
         unmapped_reads_file = extract_unmapped_reads_to_fasta_file(alignment_file, self.working_dir, self.ref_filename)
