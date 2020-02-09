@@ -9,8 +9,10 @@ from .base cimport State
 
 import numpy as np
 cimport numpy as np
+from libc.math cimport log
 
 cimport cython
+
 
 
 cdef class Model(object):
@@ -480,7 +482,7 @@ cdef class Model(object):
             raise ValueError
 
         # Find start and end index of repeats matcher
-        cdef object repeat_matcher_model = self.subModels[1]
+        cdef Model repeat_matcher_model = self.subModels[1]
         cdef int repeat_start_index = self.state_to_index[repeat_matcher_model.start]
         cdef int repeat_end_index = self.state_to_index[repeat_matcher_model.end]
 
@@ -490,19 +492,18 @@ cdef class Model(object):
         # self.dynamic_table = np.ones((self.n_states, sequence_length + 1), dtype=np.double) * (-np.inf)
         # self.dynamic_table[self.state_to_index[self.start]][0] = np.log(1)
 
-        cdef np.ndarray dynamic_table = np.ones((self.n_states, sequence_length + 1), dtype=np.double) * (-np.inf)
-        dynamic_table[self.state_to_index[self.start]][0] = np.log(1)
+        cdef double[:,:] dynamic_table = np.ones((self.n_states, sequence_length + 1), dtype=np.double) * (-np.inf)
+        dynamic_table[self.state_to_index[self.start]][0] = log(1)
 
         # Storing previous states row and column separately (Naive version)
-        cdef np.ndarray vpath_table_row = np.zeros((self.n_states, sequence_length + 1), dtype=np.intc)
-        cdef np.ndarray vpath_table_col = np.zeros((self.n_states, sequence_length + 1), dtype=np.intc)
+        cdef int[:,:] vpath_table_row = np.zeros((self.n_states, sequence_length + 1), dtype=np.intc)
+        cdef int[:,:] vpath_table_col = np.zeros((self.n_states, sequence_length + 1), dtype=np.intc)
 
         cdef int row, col
         for col in range(sequence_length):
             # Filling out suffix matcher table once
             for row in range(0, repeat_start_index):
                 if col != 0 and dynamic_table[row][col] == -np.inf:
-                    # print ('continued')
                     continue
                 state = self.states[row]
                 self._update_dynamic_table(row, col, sequence, state, vpath_table_row, vpath_table_col, dynamic_table)
@@ -520,14 +521,14 @@ cdef class Model(object):
 
         # For the last update
         col = sequence_length
-        state = self.states[-2]
+        state = self.states[self.n_states-2]
         row = self.state_to_index[state]
 
         cdef int neighbor_state_index = 0
         cdef double prob = 0
         for neighbor_state in self.transition_map[state]:
             neighbor_state_index = self.state_to_index[neighbor_state]
-            prob = dynamic_table[row][col] + np.log(self.transition_map[state][neighbor_state])
+            prob = dynamic_table[row][col] + log(self.transition_map[state][neighbor_state])
 
             if dynamic_table[neighbor_state_index][col] < prob:
                 dynamic_table[neighbor_state_index][col] = prob
@@ -537,29 +538,29 @@ cdef class Model(object):
 
         # Back tracking viterbi path from the Prefix Matcher End
         cdef list vpath = []
-        cdef int end_index = self.state_to_index[self.subModels[-1].end]
+        cdef int end_index = self.state_to_index[self.subModels[self.n_subModels-1].end]
 
-        vpath.insert(0, (end_index, self.subModels[-1].end))
-        row, col = vpath_table_row[end_index][-1], vpath_table_col[end_index][-1]
+        vpath.insert(0, (end_index, self.subModels[self.n_subModels-1].end))
+        row, col = vpath_table_row[end_index][sequence_length], vpath_table_col[end_index][sequence_length]
 
         while row != 0 or col != 0:
             vpath.insert(0, (self.state_to_index[self.states[row]], self.states[row]))
             row, col = vpath_table_row[row][col], vpath_table_col[row][col]
         vpath.insert(0, (self.state_to_index[self.states[row]], self.states[row]))
-        cdef double logp = dynamic_table[self.state_to_index[self.subModels[-1].end]][-1]
+        cdef double logp = dynamic_table[self.state_to_index[self.subModels[self.n_subModels-1].end]][sequence_length]
 
         return logp, vpath
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
-    cdef _update_dynamic_table(self,
+    cdef void _update_dynamic_table(self,
                                int row,
                                int col,
                                char* sequence,
                                State state,
-                               np.ndarray vpath_table_row,
-                               np.ndarray vpath_table_col,
-                               np.ndarray dynamic_table):
+                               int[:,:] vpath_table_row,
+                               int[:,:] vpath_table_col,
+                               double[:,:] dynamic_table):
 
         neighbor_states = self.transition_map[state]
         cdef int neighbor_state_index = 0
@@ -568,7 +569,7 @@ cdef class Model(object):
         if state.is_silent():  # Silent state: Stay in the same column
             for neighbor_state in neighbor_states:
                 neighbor_state_index = self.state_to_index[neighbor_state]
-                prob = dynamic_table[row][col] + np.log(self.transition_map[state][neighbor_state])
+                prob = dynamic_table[row][col] + log(self.transition_map[state][neighbor_state])
 
                 if dynamic_table[neighbor_state_index][col] < prob:
                     dynamic_table[neighbor_state_index][col] = prob
@@ -577,8 +578,8 @@ cdef class Model(object):
         else:  # Not a silent state: Emit a character and move to the next column
             for neighbor_state in neighbor_states:
                 neighbor_state_index = self.state_to_index[neighbor_state]
-                prob = dynamic_table[row][col] + np.log(self.transition_map[state][neighbor_state]) + \
-                       np.log(state.distribution[sequence[col]])
+                prob = dynamic_table[row][col] + log(self.transition_map[state][neighbor_state]) + \
+                       log(state.distribution[sequence[col]])
 
                 if dynamic_table[neighbor_state_index][col + 1] < prob:
                     dynamic_table[neighbor_state_index][col + 1] = prob
