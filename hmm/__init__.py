@@ -1,7 +1,8 @@
 
 from .hmm import *
+import pyximport; pyximport.install()
 
 try:
     from .base import *
 except ImportError:
-    raise ImportError('Please check the variable, USE_ENHANCED_HMM')
+    raise ImportError('Please install hmm package using setup.py')
