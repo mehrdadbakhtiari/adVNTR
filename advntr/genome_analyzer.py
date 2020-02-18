@@ -81,7 +81,7 @@ class GenomeAnalyzer:
         id = '.'
         print(id + "\t"),
         # REF
-        ref = vntr.get_corresponding_region_in_ref()
+        ref = ''.join(vntr.get_repeat_segments())
         print(ref + "\t"),
         # ALT
         consensus_seq = vntr.pattern  # TODO use consensus and confidence
