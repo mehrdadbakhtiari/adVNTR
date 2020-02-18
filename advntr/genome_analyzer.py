@@ -65,8 +65,8 @@ class GenomeAnalyzer:
         print('##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Spanning read count">')
         print('##FORMAT=<ID=FR,Number=1,Type=Integer,Description="Flanking read count">')
         print('##FORMAT=<ID=ML,Number=1,Type=Float,Description="Maximum likelihood">')
-
-        print("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" + self.input_file)
+        sample = self.input_file.strip().split("/")[-1].split(".")[0]
+        print("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" + sample)
 
     def print_genotype_in_vcf(self, vntr_id, genotype_result):
         vntr = self.vntr_finder[vntr_id].reference_vntr
