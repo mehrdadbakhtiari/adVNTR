@@ -87,23 +87,27 @@ class GenomeAnalyzer:
         consensus_seq = vntr.pattern  # TODO use consensus and confidence
         GT = []
         diff_count = 0
-        diff_copy_number = -1
+        diff_index = -1
 
         if genotype_result.copy_numbers is None:
-            GT.append('.').append('.')
+            GT.append('.')
+            GT.append('.')
         else:
-            for copy_number in genotype_result.copy_numbers:
+            for index, copy_number in enumerate(genotype_result.copy_numbers):
                 if copy_number != vntr.estimated_repeats:
-                    diff_copy_number = copy_number
+                    diff_index = index
                     diff_count += 1
                     GT.append(diff_count)
+                    if len(set(vntr.estimated_repeats)) == 1:
+                        GT.append(diff_count)
+                        break
                 else:
                     GT.append(0)
 
         if diff_count == 2:
             print(consensus_seq * genotype_result.copy_numbers[0] + "," + consensus_seq * genotype_result.copy_numbers[1] + "\t"),
         elif diff_count == 1:
-            print(consensus_seq * genotype_result.copy_numbers.index(diff_copy_number) + "\t"),
+            print(consensus_seq * genotype_result.copy_numbers[diff_index] + "\t"),
         else:
             print('.' + "\t"),
 
