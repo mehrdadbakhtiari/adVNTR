@@ -141,7 +141,8 @@ class GenomeAnalyzer:
         # FR
         format_string += str(genotype_result.flanking_reads_count) + ":"
         # ML
-        format_string += str(genotype_result.maximum_likelihood)
+        format_string += "{0:.4f}".format(genotype_result.maximum_likelihood)
+
         print(format_string)
 
     def print_genotype_in_text_format(self, vntr_id, copy_numbers):
