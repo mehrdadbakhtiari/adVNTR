@@ -98,7 +98,7 @@ class GenomeAnalyzer:
                     diff_index = index
                     diff_count += 1
                     GT.append(diff_count)
-                    if len(set(vntr.estimated_repeats)) == 1:
+                    if len(set(genotype_result.copy_numbers)) == 1:
                         GT.append(diff_count)
                         break
                 else:
