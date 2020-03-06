@@ -65,6 +65,15 @@ class GenomeAnalyzer:
         print('##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Spanning read count">')
         print('##FORMAT=<ID=FR,Number=1,Type=Integer,Description="Flanking read count">')
         print('##FORMAT=<ID=ML,Number=1,Type=Float,Description="Maximum likelihood">')
+
+        contigs = set()
+        for vntr_id in self.target_vntr_ids:
+            ref_vntr = self.vntr_finder[vntr_id].reference_vntr
+            chromosome = ref_vntr.chromosome[3:]
+            contigs.add(chromosome)
+        for contig in sorted(list(contigs)):
+            print('##contig=<ID={}>'.format(contig))
+
         sample = self.input_file.strip().split("/")[-1].split(".")[0]
         print("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" + sample)
 
