@@ -670,18 +670,6 @@ class VNTRFinder:
         haplotypes = 1 if self.is_haploid else 2
         estimate = [int(pattern_occurrences / (float(average_coverage) * haplotypes))] * 2
         return estimate
-        pattern_occurrences = total_counted_vntr_bp / float(len(self.reference_vntr.pattern))
-        read_mode = self.get_alignment_file_read_mode(alignment_file)
-        samfile = pysam.AlignmentFile(alignment_file, read_mode, reference_filename=self.reference_filename)
-        reference = get_reference_genome_of_alignment_file(samfile)
-        bias_detector = CoverageBiasDetector(alignment_file, self.reference_vntr.chromosome, reference)
-        coverage_corrector = CoverageCorrector(bias_detector.get_gc_content_coverage_map())
-
-        logging.info('Sequencing mean coverage: %s' % coverage_corrector.get_sequencing_mean_coverage())
-        observed_copy_number = pattern_occurrences / coverage_corrector.get_sequencing_mean_coverage()
-        scaled_copy_number = coverage_corrector.get_scaled_coverage(self.reference_vntr, observed_copy_number)
-        logging.info('scaled copy number and observed copy number: %s, %s' % (scaled_copy_number, observed_copy_number))
-        return [scaled_copy_number]
 
     @time_usage
     def find_repeat_count_from_alignment_file(self, alignment_file, unmapped_filtered_reads, average_coverage=None,
