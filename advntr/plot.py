@@ -1226,16 +1226,62 @@ def plot_pacbio_flanking_region_sizes():
     plt.show()
 
 
-def plot_vntr_length_distribution(max_len=1000):
+def plot_vntr_length_distribution(max_len=20000):
+    import matplotlib
+    matplotlib.use('Agg')
     from matplotlib import rc, rcParams
     import matplotlib.pyplot as plt
-    plt.style.use('ggplot')
-    plt.rcParams['axes.facecolor'] = '#FFFFFF'
+#    plt.style.use('ggplot')
+#    plt.rcParams['axes.facecolor'] = '#FFFFFF'
     rc('text', usetex=True)
     rcParams['text.latex.preamble'] = [r'\usepackage{sfmath} \boldmath']
-    plt.title('Length distribuion for VNTRs shorter than %sbp' % max_len)
-    plt.gca().spines['bottom'].set_color('black')
-    plt.gca().spines['left'].set_color('black')
+
+    # import seaborn as sns
+    # sns.set()
+    # sns.set_style("whitegrid")
+    # sns.set_context("paper")
+    fig, ax1 = plt.subplots(figsize=(6, 4))
+    ax2 = ax1.twinx()
+
+    ax1.set_title('Length Distribuion of VNTRs in GRCh38')
+    # ax1.spines['bottom'].set_color('black')
+    # ax1.spines['left'].set_color('black')
+    ax2.spines['bottom'].set_color('black')
+    ax2.spines['left'].set_color('black')
+    ax2.spines['right'].set_color('black')
+    ax2.spines['top'].set_color('black')
+    ax1.grid(False)
+    ax2.grid(False)
+
+    def get_length_dist_in_hg38():
+        with open('results/training_for_hg38/repeats_length_patterns_chromosomes_starts.txt') as infile:
+            lines = infile.readlines()
+        lengths = []
+
+        last_end = 0
+        last_start = 0
+        last_len = 0
+        last_chr = 0
+        for i in range(len(lines)):
+            repeats, length, pattern, chr, start = lines[i].split()
+            if len(pattern) < 6:
+                continue
+            # if int(length) > 20000:
+            #     continue
+            if int(start) > last_end or chr != last_chr:
+                if last_len < 20000 and last_len > 0:
+                    lengths.append(last_len)
+                last_len = int(length)
+                last_end = int(start) + int(length)
+                last_start = int(start)
+            else:
+                last_len = int(start) + int(length) - last_start
+            last_chr = chr
+
+        # print(min(lengths))
+        print('hg38:', len(lengths))
+        print('shortest in hg38:', min(lengths))
+        return lengths
 
     import seaborn as sns
     sns.set()
@@ -1243,28 +1289,125 @@ def plot_vntr_length_distribution(max_len=1000):
     sns.set_context("talk")
 
     from advntr.models import load_unique_vntrs_data
-    vntrs = load_unique_vntrs_data('vntr_data/hg38_genic_VNTRs.db')
+    vntrs = load_unique_vntrs_data('vntr_data/hg38_selected_VNTRs_Illumina.db')
+    long_vntrs = load_unique_vntrs_data('vntr_data/hg38_genic_VNTRs.db')
     lengths = []
+    important_lengths = []
+    short_vntrs = 0
+    important_short_vntrs = 0
+    short_length = 140
+    dist = {}
+    eliminated = 0
     for vntr in vntrs:
+        # if vntr.annotation not in ['Coding', 'Promoter', 'UTR'] or len(vntr.pattern) < 6:
+        #     continue
         length = vntr.get_length()
-        if length < max_len:
-            lengths.append(length)
-    plt.xlabel('VNTR Length in GRCh38')
-    plt.ylabel('Number of VNTRs')
+        if length > max_len:
+            continue
+        if length < 25:
+            eliminated += 1
+            continue
+        lengths.append(length)
+        if vntr.annotation in ['Promoter', 'Coding', 'UTR'] and len(vntr.pattern) >= 6:
+            if vntr.annotation not in dist.keys():
+                dist[vntr.annotation] = 0
+            dist[vntr.annotation] += 1
+            important_lengths.append(length)
+            if length <= short_length:
+                important_short_vntrs += 1
+    important_short_vntrs += eliminated
+    print('eliminated', eliminated)
 
-    # plt.hist(lengths, 100)
+    for vntr in long_vntrs:
+        # if vntr.annotation not in ['Coding', 'Promoter', 'UTR'] or len(vntr.pattern) < 6:
+        #     continue
+        length = vntr.get_length()
+        if length > max_len:
+            continue
+        if length <= short_length:
+            continue
+        if length < 25:
+            continue
+        lengths.append(length)
+        if vntr.annotation in ['Promoter', 'Coding', 'UTR'] and len(vntr.pattern) >= 6:
+            if vntr.annotation not in dist.keys():
+                dist[vntr.annotation] = 0
+            dist[vntr.annotation] += 1
+            important_lengths.append(length)
+            if length <= short_length:
+                important_short_vntrs += 1
 
-    import numpy as np
-    values, base = np.histogram(lengths, bins=80)
-    cumulative = np.cumsum(values)
-    plt.plot(base[:-1], cumulative)
-    # plt.plot([140, 140], [333000, 361464])
+    print(dist)
+    print('sum', sum(dist.values()))
+    lengths = get_length_dist_in_hg38()
+    short_vntrs = sum([1 for e in lengths if e <= short_length])
 
-    plt.arrow(340, 325618, -200, 0, width=2000, alpha=1, length_includes_head=True, head_width=10000, head_length=40)#fc='r', ec='r'
-    plt.annotate('321718 VNTRs shorter than 140bp', (350, 320618))
+    ax1.set_xlabel('VNTR Length in GRCh38')
+    ax1.set_ylabel('Number of VNTRs')
 
+    def plot_hist(vntr_lengths, ax, color=None):
+        import numpy as np
+        values, base = np.histogram(vntr_lengths, bins=5000)
+        print('num of VNTRs:', len(vntr_lengths))
+        cumulative = np.cumsum(values)
+        # ax.plot(base[:-1][9:], cumulative[9:], color=color)
+        ax.plot(base[:-1], cumulative, color=color)
 
-    plt.show()
+    red_color = '#e41a1c'
+    blue_color = "#0072B2"
+    red_color = "#d62728"
+    blue_color = "#1f77b4"
+
+    plot_hist(lengths, ax1, red_color)
+    ax1.set_xscale('log')
+
+    print('short', important_short_vntrs, short_vntrs)
+    head_width = len(lengths)/45.0
+    head_width = len(important_lengths)/45.0
+    all_vntrs_y = float(short_vntrs) / len(lengths) * len(important_lengths)
+    ax2.arrow(440, all_vntrs_y, -300, 0, length_includes_head=True,
+             width=head_width/6, head_width=head_width, head_length=30, color='k', zorder=200)
+    ax2.annotate('%s VNTRs' % short_vntrs, (460, all_vntrs_y-head_width/2), fontsize=11)
+    head_width = len(important_lengths)/45.0
+    ax2.arrow(440, important_short_vntrs, -300, 0, length_includes_head=True,
+             width=head_width/6, head_width=head_width, head_length=30, color='k')
+    ax2.annotate('%s VNTRs' % important_short_vntrs, (460, important_short_vntrs-head_width/2), fontsize=11)
+    ax2.axvline(140, color='k', linestyle='dashed', linewidth=1)
+
+    plot_hist(important_lengths, ax2, blue_color)
+    ax2.set_xscale('log')
+
+    def add_percentage_to_labels(labels, max_number):
+        new_labels = []
+        for item in labels:
+            if item != '':
+                percentage = int(100 * float("{0:.2f}".format(float(item[1:-1]) / max_number)))
+                new_labels.append('$%s$' % (item[1:-1] + '\>(%s' % percentage + '\%' + ')'))
+            else:
+                new_labels.append(item)
+        return new_labels
+
+    fig.canvas.draw()
+
+    total = float(len(lengths))
+    labels = [item.get_text() for item in ax1.get_yticklabels()]
+    new_labels = add_percentage_to_labels(labels, total)
+    ax1.set_yticklabels(new_labels, color=red_color)
+    # ax1.set_ylim(bottom=0)
+
+    total = float(len(important_lengths))
+    labels = [item.get_text() for item in ax2.get_yticklabels()]
+    new_labels = add_percentage_to_labels(labels, total)
+    ax2.set_yticklabels(new_labels, color=blue_color)
+
+    rate2 = ax2.get_ylim()[0] / ax2.get_ylim()[1]
+    rate1 = ax1.get_ylim()[0] / ax1.get_ylim()[1]
+    ax1.set_ylim(ax1.get_ylim()[0] * rate2 / rate1, ax1.get_ylim()[1])
+    print(ax1.get_ylim())
+    print(ax2.get_ylim())
+
+    plt.tight_layout()
+    plt.savefig('VNTR_length_dist_xlog.png', dpi=300)
 
 
 edges = [(1, 8), (1, 16), (2, 17), (4, 18), (8, 16), (30, 32), (30, 33), (32, 33), (34, 40), (34, 47), (38, 57),
