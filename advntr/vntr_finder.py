@@ -252,9 +252,9 @@ class VNTRFinder:
         for read in selected_reads:
             visited_states = [state.name for idx, state in read.vpath[1:-1]]
             # Logging
-            logging.debug(read.sequence)
-            logging.debug(visited_states)
-            logging.debug(read.logp)
+            logging.debug("Read:{}".format(read.sequence))
+            logging.debug("VisitedStates:{}".format(visited_states))
+            logging.debug("LogProb:{}".format(read.logp))
 
             ru_state_count = get_repeating_unit_state_count(visited_states)
             current_repeat = None
