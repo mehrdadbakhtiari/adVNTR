@@ -161,6 +161,7 @@ def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151, is_
 
                 else:  # Pattern matches
                     unit_index = int(split[1]) - 1  # unit index is 1-based
+                    pattern_chr = ""
                     if state_name == "M":
                         query_seq += sequence[seq_index]
                         if is_frameshift:
@@ -277,12 +278,12 @@ def generate_pairwise_aln(log_file, aln_file, ref_vntr_db=None, vntr_ids=None, s
                 print("ERROR: If log file is given as a directory, output name should be None")
                 exit(-1)
             if aln_file is None:
-                aln_file = lf.split("/")[-1].split(".")[0] + ".aln"
-            _generate_pairwise_aln(lf, aln_file, ref_vntrs, vntr_ids, sort_by_repeat)
+                out_file = lf.split("/")[-1].split(".")[0] + ".aln"
+            _generate_pairwise_aln(lf, out_file, ref_vntrs, vntr_ids, sort_by_repeat)
     else:
         if aln_file is None:
-            aln_file = log_file.split("/")[-1].split(".")[0] + ".aln"
-        _generate_pairwise_aln(log_file, aln_file, ref_vntrs, vntr_ids, sort_by_repeat)
+            out_file = log_file.split("/")[-1].split(".")[0] + ".aln"
+        _generate_pairwise_aln(log_file, out_file, ref_vntrs, vntr_ids, sort_by_repeat)
 
 
 def _update_count_dictionary(ref_vntr, repeats, visited_states, sequence, repeat_flanking_errcount, repeat_flanking_bpcount):
