@@ -277,7 +277,7 @@ def generate_pairwise_aln(log_file, aln_file, ref_vntr_db=None, vntr_ids=None, s
                 print("ERROR: If log file is given as a directory, output name should be None")
                 exit(-1)
             if aln_file is None:
-                aln_file = log_file.split("/")[-1].split(".")[0] + ".aln"
+                aln_file = lf.split("/")[-1].split(".")[0] + ".aln"
             _generate_pairwise_aln(lf, aln_file, ref_vntrs, vntr_ids, sort_by_repeat)
     else:
         if aln_file is None:
