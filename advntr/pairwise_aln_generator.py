@@ -285,6 +285,125 @@ def generate_pairwise_aln(log_file, aln_file, ref_vntr_db=None, vntr_ids=None, s
         _generate_pairwise_aln(log_file, aln_file, ref_vntrs, vntr_ids, sort_by_repeat)
 
 
+def _update_count_dictionary(ref_vntr, repeats, visited_states, sequence, repeat_flanking_errcount, repeat_flanking_bpcount):
+
+    left_flank = ref_vntr.left_flanking_region
+    right_flank = ref_vntr.right_flanking_region
+
+    seq_index = 0
+    max_hmm_index = -1
+    prev_state = visited_states[0]  # initialization
+    for state in visited_states:
+        if 'suffix_end_suffix' in state:
+            max_hmm_index = int(prev_state.split("_")[0][1:])
+            break
+        prev_state = state
+
+    for state in visited_states:
+        if 'start' in state:
+            continue
+        if 'end' in state:
+            continue
+
+        split = state.split("_")  # [M/I/D][hmm_index]_[unit_index]
+        state_name = split[0][0]  # [M/I/D]
+        hmm_index = int(split[0][1:])
+        if 'suffix' in state:
+            repeat_flanking_bpcount[repeats]['left'] += 1
+            if state_name == "M":
+                if sequence[seq_index] != left_flank[-(max_hmm_index - hmm_index + 1)]:
+                    repeat_flanking_errcount[repeats]['left'] += 1
+                seq_index += 1
+            if state_name == "I":
+                repeat_flanking_errcount[repeats]['left'] += 1
+                seq_index += 1
+            if state_name == "D":
+                repeat_flanking_errcount[repeats]['left'] += 1
+
+        elif 'prefix' in state:
+            repeat_flanking_bpcount[repeats]['right'] += 1
+            if state_name == "M":
+                if sequence[seq_index] != right_flank[hmm_index - 1]:
+                    repeat_flanking_errcount[repeats]['right'] += 1
+                seq_index += 1
+            if state_name == "I":
+                repeat_flanking_errcount[repeats]['right'] += 1
+                seq_index += 1
+            if state_name == "D":
+                repeat_flanking_errcount[repeats]['right'] += 1
+
+        else:  # Pattern matches
+            if state_name == "M":
+                seq_index += 1
+            if state_name == "I":
+                seq_index += 1
+            if state_name == "D":
+                pass  # Do nothing
+
+
+def _get_flanking_region_error_rate(log_file, ref_vntrs, vid_list):
+    vid_repeat_flanking_errcount = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+    vid_repeat_flanking_bpcount = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+    is_target = False if vid_list is not None else True
+
+    # Load adVNTR log files
+    with open(log_file, "r") as f:
+        for line in f:
+            if "DEBUG:finding" in line:  # DEBUG:finding repeat count from alignment file for [vid]
+                vid = int(line.split(" ")[-1])
+                if vid_list is not None:
+                    is_target = True if vid in vid_list else False
+
+            if is_target:
+                if "DEBUG:repeats" in line:  # DEBUG:repeats: [repeat_count]
+                    repeats = int(line.strip().split(" ")[-1])
+                    _update_count_dictionary(ref_vntrs[vid], repeats, visited_states, sequence,
+                                             vid_repeat_flanking_errcount[vid], vid_repeat_flanking_bpcount[vid])
+                if "DEBUG:spanning read visited states" in line or "DEBUG:[" in line:
+                    visited = line[line.index('[') + 1:-2]
+                    split = visited.split(', ')
+                    split = [item[1:-1] for item in split]
+                    visited_states = split
+                else:
+                    sequence = line[30:].strip()
+
+    return vid_repeat_flanking_errcount, vid_repeat_flanking_bpcount
+
+
+def get_flakning_region_error_rate(log_file, out_file, ref_vntr_db, vntr_ids):
+    # Load reference VNTRs
+    reference_vntrs = load_unique_vntrs_data(ref_vntr_db)
+    ref_vntrs = {ref_vntr.id: ref_vntr for ref_vntr in reference_vntrs}
+
+    total_vid_repeat_flanking_errcount = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+    total_vid_repeat_flanking_bpcount = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+
+    if os.path.isdir(log_file):
+        log_files = glob.glob(log_file + "/log_*.log")
+        for lf in log_files:
+            errcount_dict, bpcount_dict = _get_flanking_region_error_rate(lf, ref_vntrs, vntr_ids)
+            for vid in bpcount_dict.keys():
+                for repeat_count in bpcount_dict[vid].keys():
+                    for flanking in bpcount_dict[vid][repeat_count].keys():
+                        total_vid_repeat_flanking_errcount[vid][repeat_count][flanking] += errcount_dict[vid][repeat_count][flanking]
+                        total_vid_repeat_flanking_bpcount[vid][repeat_count][flanking] += bpcount_dict[vid][repeat_count][flanking]
+    else:
+        total_vid_repeat_flanking_errcount, total_vid_repeat_flanking_bpcount = _get_flanking_region_error_rate(log_file, ref_vntrs, vntr_ids)
+
+    with open(out_file, "w") as of:
+        for vid in total_vid_repeat_flanking_bpcount.keys():
+            of.write("VID:{} ".format(vid)),
+            of.write("REFRC:{} ".format(ref_vntrs[vid].estimated_repeats))
+            for repeat_count in sorted(total_vid_repeat_flanking_bpcount[vid].keys()):
+                of.write("{}:".format(repeat_count))
+                of.write("{:.2f}/{:.2f} ".format(
+                    1 - float(total_vid_repeat_flanking_errcount[vid][repeat_count]['left']) /
+                    total_vid_repeat_flanking_bpcount[vid][repeat_count]['left'],
+                    1 - float(total_vid_repeat_flanking_errcount[vid][repeat_count]['right']) /
+                    total_vid_repeat_flanking_bpcount[vid][repeat_count]['right']))
+            of.write("\n")
+
+
 def init_argparse():
     parser = argparse.ArgumentParser(
         usage="%(prog)s [-i logfile] [-o outfile] [-db vntr_db] [-vid vntr_ids]",
@@ -315,6 +434,14 @@ def init_argparse():
         default=None,
         help="VID list to generate pairwise alignment. If not specified, all VNTRs in the log file is the list"
     )
+    parser.add_argument(
+        "-stat",
+        action='store',
+        nargs="?",
+        default=None,
+        const=True,
+        help="For given log files, output match rate in flanking regions"
+    )
     return parser
 
 
@@ -325,7 +452,11 @@ def main():
     target_vntrs_ids = None
     if arg_dict['vid'] is not None:
         target_vntrs_ids = [int(x) for x in arg_dict['vid']]
-    generate_pairwise_aln(arg_dict['i'], arg_dict['o'], arg_dict['db'], vntr_ids=target_vntrs_ids, sort_by_repeat=True)
+
+    if arg_dict['stat']:
+        get_flakning_region_error_rate(arg_dict['i'], arg_dict['o'], arg_dict['db'], vntr_ids=target_vntrs_ids)
+    else:
+        generate_pairwise_aln(arg_dict['i'], arg_dict['o'], arg_dict['db'], vntr_ids=target_vntrs_ids, sort_by_repeat=True)
 
 
 if __name__ == "__main__":
