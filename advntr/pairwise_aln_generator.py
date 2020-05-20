@@ -455,6 +455,9 @@ def main():
         target_vntrs_ids = [int(x) for x in arg_dict['vid']]
 
     if arg_dict['stat']:
+        if arg_dict['o'] is None:
+            print("ERROR: Please specify the output file name")
+            exit(-1)
         get_flakning_region_error_rate(arg_dict['i'], arg_dict['o'], arg_dict['db'], vntr_ids=target_vntrs_ids)
     else:
         generate_pairwise_aln(arg_dict['i'], arg_dict['o'], arg_dict['db'], vntr_ids=target_vntrs_ids, sort_by_repeat=True)
