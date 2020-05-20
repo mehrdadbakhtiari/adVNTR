@@ -44,7 +44,7 @@ def get_consensus_pattern(patterns):
     return consensus_seq
 
 
-def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151):
+def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151, is_frameshift=False):
     query_id = "VID:" + str(vntr_id) + " " \
                + "REFRC:" + str(ref_vntr.estimated_repeats) + " " \
                + ref_vntr.chromosome + ":" \
@@ -55,6 +55,13 @@ def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151):
 
     patterns = ref_vntr.repeat_segments
     consensus_pattern = get_consensus_pattern(patterns)
+    if is_frameshift:
+        from pattern_clustering import get_pattern_clusters
+        clustered_patterns = get_pattern_clusters(patterns)
+        print(clustered_patterns)
+        consensus_patterns = []
+        for p in clustered_patterns:
+            consensus_patterns.append(get_consensus_pattern(p))
 
     for repeat in sorted(repeat_seq_dict.keys()):
         seq_list = repeat_seq_dict[repeat]
@@ -153,13 +160,15 @@ def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151):
                         mismatch_count_in_right_flanking += 1
 
                 else:  # Pattern matches
+                    unit_index = int(split[1]) - 1  # unit index is 1-based
                     if state_name == "M":
                         query_seq += sequence[seq_index]
-                        ref_seq += consensus_pattern[hmm_index - 1]
-                        if sequence[seq_index] == consensus_pattern[hmm_index - 1]:
-                            match_line += "|"
+                        if is_frameshift:
+                            pattern_chr = consensus_patterns[unit_index][hmm_index - 1]
                         else:
-                            match_line += " "
+                            pattern_chr += consensus_pattern[hmm_index - 1]
+                        ref_seq += pattern_chr
+                        match_line += '|' if sequence[seq_index] == pattern_chr else " "
                         seq_index += 1
                     if state_name == "I":
                         query_seq += sequence[seq_index]
@@ -168,7 +177,11 @@ def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151):
                         seq_index += 1
                     if state_name == "D":
                         query_seq += '-'
-                        ref_seq += consensus_pattern[hmm_index - 1]
+                        if is_frameshift:
+                            pattern_chr = consensus_patterns[unit_index][hmm_index - 1]
+                        else:
+                            pattern_chr += consensus_pattern[hmm_index - 1]
+                        ref_seq += pattern_chr
                         match_line += " "
 
             af.write(query_seq + "\n")
@@ -178,15 +191,15 @@ def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151):
                 mismatch_count_in_left_flanking + mismatch_count_in_right_flanking,\
                 left_flank_bp_count + right_flank_bp_count, \
                 float(mismatch_count_in_left_flanking + mismatch_count_in_right_flanking)\
-                / (left_flank_bp_count + right_flank_bp_count),\
+                / (left_flank_bp_count + right_flank_bp_count) if left_flank_bp_count != 0 or right_flank_bp_count != 0 else 0,\
 
                 mismatch_count_in_left_flanking,\
                 left_flank_bp_count,\
-                float(mismatch_count_in_left_flanking)/left_flank_bp_count,\
+                float(mismatch_count_in_left_flanking)/left_flank_bp_count if left_flank_bp_count != 0 else 0,\
 
                 mismatch_count_in_right_flanking,\
                 right_flank_bp_count,\
-                float(mismatch_count_in_right_flanking)/right_flank_bp_count))
+                float(mismatch_count_in_right_flanking)/right_flank_bp_count  if right_flank_bp_count != 0 else 0))
 
 
 def _generate_pairwise_aln(log_file, aln_outfile, ref_vntrs, vid_list=None, sort_by_repeat=True):
@@ -194,6 +207,7 @@ def _generate_pairwise_aln(log_file, aln_outfile, ref_vntrs, vid_list=None, sort
     vid_read_length = defaultdict(int)
 
     is_target = False if vid_list is not None else True
+    is_frameshift_result = False
 
     # Load adVNTR log files
     with open(log_file, "r") as f:
@@ -202,26 +216,36 @@ def _generate_pairwise_aln(log_file, aln_outfile, ref_vntrs, vid_list=None, sort
                 read_length = int(line.split(" ")[-1])
                 vid_read_length[vid] = read_length
             if "DEBUG:finding" in line:  # DEBUG:finding repeat count from alignment file for [vid]
+                is_frameshift_result = True if "frameshift" in line else False
                 vid = int(line.split(" ")[-1])
                 if vid_list is not None:
-                    if vid in vid_list:
-                        is_target = True
-                    else:
-                        is_target = False
+                    is_target = True if vid in vid_list else False
+
             if is_target:
-                if "DEBUG:repeats" in line:  # DEBUG:repeats: [repeat_count]
-                    repeats = int(line.strip().split(" ")[-1])
-                    vid_to_aln_info[vid][repeats].append((sequence, visited_states))
-                if "DEBUG:spanning read visited states" in line or "DEBUG:[" in line:
-                    visited = line[line.index('[') + 1:-2]
-                    split = visited.split(', ')
-                    split = [item[1:-1] for item in split]
-                    visited_states = split
+                if is_frameshift_result:
+                    if "DEBUG:Read" in line:  # DEBUG:Read:[sequence]
+                        sequence = line[30+5:].strip()
+                    if "DEBUG:VisitedStates:" in line:  # DEBUG:VisitedStates:['state1', ...]
+                        visited = line[line.index('[') + 1:-2]
+                        split = visited.split(', ')
+                        split = [item[1:-1] for item in split]
+                        visited_states = split
+                        # In case of frameshift detection, repeat count doesn't matter. It is set to 0 for consistency.
+                        vid_to_aln_info[vid][0].append((sequence, visited_states))
                 else:
-                    sequence = line[30:].strip()
+                    if "DEBUG:repeats" in line:  # DEBUG:repeats: [repeat_count]
+                        repeats = int(line.strip().split(" ")[-1])
+                        vid_to_aln_info[vid][repeats].append((sequence, visited_states))
+                    if "DEBUG:spanning read visited states" in line or "DEBUG:[" in line:
+                        visited = line[line.index('[') + 1:-2]
+                        split = visited.split(', ')
+                        split = [item[1:-1] for item in split]
+                        visited_states = split
+                    else:
+                        sequence = line[30:].strip()
 
     if sort_by_repeat:
-        vid_to_aln_info = {k: v for k, v in sorted(vid_to_aln_info.items(), key=lambda (k, v): v)}
+        vid_to_aln_info = {k: v for k, v in sorted(vid_to_aln_info.items(), key=lambda k_v: k_v[1])}
 
     with open(aln_outfile, "w") as af:
         for vid in sorted(vid_to_aln_info.keys()):
@@ -230,7 +254,7 @@ def _generate_pairwise_aln(log_file, aln_outfile, ref_vntrs, vid_list=None, sort
                 print("ERROR: The reference VNTR is not in the DB, VID: {}".format(vid))
                 af.write("ERROR: The reference VNTR is not in the DB, VID: {}\n".format(vid))
                 continue
-            write_alignment(af, vid, vid_to_aln_info[vid], ref_vntrs[vid], vid_read_length[vid])
+            write_alignment(af, vid, vid_to_aln_info[vid], ref_vntrs[vid], vid_read_length[vid], is_frameshift_result)
 
 
 def generate_pairwise_aln(log_file, aln_file, ref_vntr_db=None, vntr_ids=None, sort_by_repeat=True):
