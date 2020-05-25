@@ -26,10 +26,10 @@ Data Requirements
 In order to genotype VNTRs, you need to either train models for loci of interest or use pre-trained models (recommended):
 * To run adVNTR on trained VNTR models:
     - Download [vntr_data_recommended_loci.zip](https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data_recommended_loci.zip)
-    and extract it inside the project directory. This includes a set of pre-trained VNTR models for Illumina (6719 loci)
-    and Pacbio (8960 loci) sequencing data.
+    and extract it inside the project directory. This includes a set of pre-trained VNTR models in hg19 for Illumina (6719 loci)
+    and Pacbio (8960 loci) sequencing data. You can use [vntr_data_recommended_loci_hg38.zip](https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data_recommended_loci_hg38.zip) for VNTRs in GRCh38.
     - You can also download and use [vntr_data_genic_loci.zip](https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data_genic_loci.zip)
-    for 158522 VNTRs that results in having much longer running time.
+    for 158522 VNTRs in hg19 that results in having much longer running time.
 
 Alternatively, you can add model for custom VNTR. See [Add Custom VNTR](http://advntr.readthedocs.io/en/latest/tutorial.html#add-custom-vntr-label) for more information about training models for custom VNTRs.
 
