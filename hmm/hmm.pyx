@@ -530,7 +530,7 @@ cdef class Model(object):
             neighbor_state_index = self.state_to_index[neighbor_state]
             prob = dynamic_table[row][col] + log(self.transition_map[state][neighbor_state])
 
-            if dynamic_table[neighbor_state_index][col] < prob:
+            if prob - dynamic_table[neighbor_state_index][col] > 1e-10:
                 dynamic_table[neighbor_state_index][col] = prob
                 # update path table
                 vpath_table_row[neighbor_state_index][col] = row
@@ -571,7 +571,7 @@ cdef class Model(object):
                 neighbor_state_index = self.state_to_index[neighbor_state]
                 prob = dynamic_table[row][col] + log(self.transition_map[state][neighbor_state])
 
-                if dynamic_table[neighbor_state_index][col] < prob:
+                if prob - dynamic_table[neighbor_state_index][col] > 1e-10:
                     dynamic_table[neighbor_state_index][col] = prob
                     vpath_table_row[neighbor_state_index][col] = row
                     vpath_table_col[neighbor_state_index][col] = col
@@ -581,7 +581,7 @@ cdef class Model(object):
                 prob = dynamic_table[row][col] + log(self.transition_map[state][neighbor_state]) + \
                        log(state.distribution[sequence[col]])
 
-                if dynamic_table[neighbor_state_index][col + 1] < prob:
+                if prob - dynamic_table[neighbor_state_index][col + 1] > 1e-10:
                     dynamic_table[neighbor_state_index][col + 1] = prob
                     vpath_table_row[neighbor_state_index][col + 1] = row
                     vpath_table_col[neighbor_state_index][col + 1] = col
