@@ -226,13 +226,11 @@ class VNTRFinder:
             sema.release()
 
     def identify_frameshift(self, location_coverage, observed_indel_transitions, expected_indels, error_rate=0.01):
-        if observed_indel_transitions >= location_coverage:
-            return True
         from scipy.stats import binom
+        from scipy import stats
         sequencing_error_prob = binom.pmf(observed_indel_transitions, location_coverage, error_rate)
         frameshift_prob = binom.pmf(observed_indel_transitions, location_coverage, expected_indels)
 
-        from scipy import stats
         chi_square_val = -2 * numpy.log(sequencing_error_prob / frameshift_prob)
         pval = 1 - stats.chi2.cdf(chi_square_val, 1)
 
