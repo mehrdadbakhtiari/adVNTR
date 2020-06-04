@@ -346,7 +346,7 @@ class VNTRFinder:
                 logging.info('There is a frameshift at %s' % frameshift_candidate[0])
                 frameshifts.append(frameshift_candidate[0])
 
-        return frameshifts if frameshifts is not None else frameshifts
+        return frameshifts if len(frameshifts) > 0 else None
 
     def read_flanks_repeats_with_confidence(self, vpath):
         minimum_left_flanking = 5
