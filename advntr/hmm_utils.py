@@ -205,6 +205,21 @@ def get_number_of_repeat_bp_matches_in_vpath(vpath):
     return result
 
 
+def get_flanking_regions_matching_rate(vpath):
+    visited_states = [state.name for idx, state in vpath[1:-1]]
+    flanking_matches = 0
+    flanking_basepairs = 0
+    for i in range(len(visited_states)):
+        if visited_states[i].endswith('prefix') or visited_states[i].endswith('suffix'):
+            if is_match_state(visited_states[i]):
+                flanking_matches += 1
+            if is_emitting_state(visited_states[i]):
+                flanking_basepairs += 1
+    if flanking_basepairs < 5:
+        return 1.0
+    return float(flanking_matches) / flanking_basepairs
+
+
 def get_left_flanking_region_size_in_vpath(vpath):
     visited_states = [state.name for idx, state in vpath[1:-1]]
     result = 0

@@ -145,6 +145,8 @@ class VNTRFinder:
 
     @staticmethod
     def recruit_read(logp, vpath, min_score_to_count_read, read_length):
+        if get_flanking_regions_matching_rate(vpath) < 0.90:
+            return False
         if min_score_to_count_read is not None and logp > min_score_to_count_read:
             return True
         matches = get_number_of_matches_in_vpath(vpath)
