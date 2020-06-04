@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import matplotlib
+matplotlib.use('Agg')
+
+
 def plot1():
     stat_files = ['0_size_related_reads.txt', '1_size_sensitivity.txt', '2_size_blast_selected.txt',
                   '3_sim_read_coverage__gc_content.txt']
@@ -1226,6 +1230,36 @@ def plot_pacbio_flanking_region_sizes():
     plt.show()
 
 
+def plot_pattern_clustering_result():
+    import matplotlib.pyplot as plt
+
+    import seaborn as sns
+    sns.set()
+    sns.set_style("whitegrid")
+    sns.set_context("talk")
+
+    from advntr.models import load_unique_vntrs_data
+    vntrs = load_unique_vntrs_data('/home/mehrdad/workspace/adVNTR/vntr_data/hg38_selected_VNTRs_Illumina.db')
+    from advntr.pattern_clustering import get_pattern_clusters
+    patterns_dist = []
+    hist_data = {}
+    for i, vntr in enumerate(vntrs):
+        if vntr.annotation == 'Intron':
+            continue
+        num_of_clusters = len(get_pattern_clusters(vntr.get_repeat_segments()))
+        patterns_dist.append(num_of_clusters)
+        if vntr.annotation not in hist_data.keys():
+            hist_data[vntr.annotation] = []
+        hist_data[vntr.annotation].append(num_of_clusters)
+        print(i)
+
+    for key, value in hist_data.items():
+        print('average:', key, sum(value) / float(len(value)))
+    plt.hist(hist_data.values(), bins=10, label=hist_data.keys(), normed=False, linewidth=1.2)#,cumulative=True, histtype='step')
+    plt.legend()
+    plt.savefig('pattern_clusters.png', dpi=200)
+
+
 def plot_vntr_length_distribution(max_len=1000):
     from matplotlib import rc, rcParams
     import matplotlib.pyplot as plt
@@ -1299,4 +1333,5 @@ for a, b in edges:
 # plot_lr_pcr()
 
 # plot_coverage_confidence_violin()
-plot_vntr_length_distribution()
+#plot_vntr_length_distribution()
+plot_pattern_clustering_result()
