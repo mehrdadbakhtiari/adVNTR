@@ -85,7 +85,7 @@ def extract_repeating_segments_from_read(sequence, visited_states):
         if visited_states[i].startswith('unit_start'):
             prev_start = sequence_index
             prev_start_state = i
-        if is_matching_state(visited_states[i]):
+        if is_emitting_state(visited_states[i]):
             sequence_index += 1
     return repeats, vpaths
 
@@ -107,12 +107,18 @@ def get_emitted_basepair_from_visited_states(state, visited_states, sequence):
     for visited_state in visited_states:
         if visited_state == state:
             return sequence[base_pair_idx]
-        if is_matching_state(visited_state):
+        if is_emitting_state(visited_state):
             base_pair_idx += 1
     return None
 
 
-def is_matching_state(state_name):
+def is_match_state(state_name):
+    if state_name.startswith('M'):
+        return True
+    return False
+
+
+def is_emitting_state(state_name):
     if state_name.startswith('M') or state_name.startswith('I') or state_name.startswith('start_random_matches') \
             or state_name.startswith('end_random_matches'):
         return True
@@ -126,7 +132,7 @@ def get_repeating_pattern_lengths(visited_states):
         if visited_states[i].startswith('unit_end') and prev_start is not None:
             current_len = 0
             for j in range(prev_start, i):
-                if is_matching_state(visited_states[j]):
+                if is_emitting_state(visited_states[j]):
                     current_len += 1
             lengths.append(current_len)
         if visited_states[i].startswith('unit_start'):
@@ -152,7 +158,7 @@ def get_number_of_repeats_in_vpath(vpath):
 
     read_length = 0
     for vs in visited_states:
-        if is_matching_state(vs):
+        if is_emitting_state(vs):
             read_length += 1
 
     minimum_required_bp_in_repeat = 3
@@ -162,7 +168,7 @@ def get_number_of_repeats_in_vpath(vpath):
     first_start = None
     last_start = None
     for i in range(len(visited_states)):
-        if is_matching_state(visited_states[i]):
+        if is_emitting_state(visited_states[i]):
             current_bp += 1
         if visited_states[i].startswith('unit_start') and read_length - current_bp >= minimum_required_bp_in_repeat:
             if first_start is None:
@@ -185,7 +191,7 @@ def get_number_of_matches_in_vpath(vpath):
     visited_states = [state.name for idx, state in vpath[1:-1]]
     result = 0
     for i in range(len(visited_states)):
-        if is_matching_state(visited_states[i]):
+        if is_match_state(visited_states[i]):
             result += 1
     return result
 
@@ -194,7 +200,7 @@ def get_number_of_repeat_bp_matches_in_vpath(vpath):
     visited_states = [state.name for idx, state in vpath[1:-1]]
     result = 0
     for i in range(len(visited_states)):
-        if is_matching_state(visited_states[i]) and not visited_states[i].endswith('fix'):
+        if is_emitting_state(visited_states[i]) and not visited_states[i].endswith('fix'):
             result += 1
     return result
 
@@ -203,7 +209,7 @@ def get_left_flanking_region_size_in_vpath(vpath):
     visited_states = [state.name for idx, state in vpath[1:-1]]
     result = 0
     for i in range(len(visited_states)):
-        if is_matching_state(visited_states[i]) and visited_states[i].endswith('suffix'):
+        if is_emitting_state(visited_states[i]) and visited_states[i].endswith('suffix'):
             result += 1
     return result
 
@@ -212,7 +218,7 @@ def get_right_flanking_region_size_in_vpath(vpath):
     visited_states = [state.name for idx, state in vpath[1:-1]]
     result = 0
     for i in range(len(visited_states)):
-        if is_matching_state(visited_states[i]) and visited_states[i].endswith('prefix'):
+        if is_emitting_state(visited_states[i]) and visited_states[i].endswith('prefix'):
             result += 1
     return result
 
