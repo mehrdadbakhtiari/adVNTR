@@ -209,9 +209,9 @@ class GenomeAnalyzer:
             self.print_genotype(vid, copy_numbers)
 
     def find_frameshift_from_alignment_file(self, alignment_file):
+        print("Input File: {}".format(alignment_file))
         for vid in self.target_vntr_ids:
             results = self.vntr_finder[vid].find_frameshift_from_alignment_file(alignment_file, [])
-            print("Input File: {}".format(alignment_file))
             print(vid)
             if results is not None:
                 print("Frameshift mutation has detected")
