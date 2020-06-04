@@ -5,8 +5,10 @@ import numpy as np
 import numpy.matlib as matlib
 
 
-def get_sequence_distance(s, t):
+def get_sequence_distance(s, t, high_indel_penalty=False):
     max_length = max(len(s), len(t))
+    if high_indel_penalty:
+        return max_length - pairwise2.align.globalms(s, t, 1, -.5, -1, -1)[0][2]
     return max_length - pairwise2.align.globalxx(s, t, score_only=True)
 
 
