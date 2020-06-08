@@ -294,7 +294,8 @@ class VNTRFinder:
 
                 pattern_index = visited_states[i].split('_')[-1]
                 # ru_state_count is a dictionary of [repeat][M/I/D]
-                if sum(ru_state_count[current_repeat].values()) == hmm_match_count[pattern_index]:
+                if ru_state_count[current_repeat]['M'] + ru_state_count[current_repeat]['I']\
+                        - ru_state_count[current_repeat]['D'] == hmm_match_count[pattern_index]:
                     continue
                 state = visited_states[i].split('_')[0] + '_' + pattern_index
                 if state.startswith('I'):
