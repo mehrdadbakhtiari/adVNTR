@@ -53,7 +53,7 @@ class SelectedRead:
 class VNTRFinder:
     """Find the VNTR structure of a reference VNTR in NGS data of the donor."""
 
-    def __init__(self, reference_vntr, is_haploid=False, reference_filename=None):
+    def __init__(self, reference_vntr, is_haploid=False, reference_filename=None, is_frameshift_mode=False):
         self.reference_vntr = reference_vntr
         self.is_haploid = is_haploid
         self.reference_filename = reference_filename
@@ -67,6 +67,8 @@ class VNTRFinder:
 
         self.vntr_start = self.reference_vntr.start_point
         self.vntr_end = self.vntr_start + self.reference_vntr.get_length()
+
+        self.is_frameshift_mode = is_frameshift_mode
 
     def get_copies_for_hmm(self, read_length):
         return int(round(float(read_length) / len(self.reference_vntr.pattern) + 0.5))
@@ -85,7 +87,7 @@ class VNTRFinder:
         right_flanking_region = self.reference_vntr.right_flanking_region[:flanking_region_size]
 
         if settings.USE_ENHANCED_HMM:
-            vntr_matcher = get_read_matcher_model_enhanced(left_flanking_region, right_flanking_region, patterns, copies)
+            vntr_matcher = get_read_matcher_model_enhanced(left_flanking_region, right_flanking_region, patterns, copies, self.is_frameshift_mode)
         else:
             vntr_matcher = get_read_matcher_model(left_flanking_region, right_flanking_region, patterns, copies)
         return vntr_matcher

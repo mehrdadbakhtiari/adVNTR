@@ -658,10 +658,12 @@ def get_read_matcher_model(left_flanking_region, right_flanking_region, patterns
 
 
 @time_usage
-def get_read_matcher_model_enhanced(left_flanking_region, right_flanking_region, patterns, copies=1, vpaths=None):
+def get_read_matcher_model_enhanced(left_flanking_region, right_flanking_region, patterns, copies=1, vpaths=None, is_frameshift_mode=False):
     model = get_suffix_matcher_hmm(left_flanking_region)
-    # pattern_clusters = [[pattern]*patterns.count(pattern) for pattern in set(patterns)]  # Naive approach
-    pattern_clusters = get_pattern_clusters(patterns)
+    if is_frameshift_mode:
+        pattern_clusters = [[pattern]*patterns.count(pattern) for pattern in set(patterns)]
+    else:
+        pattern_clusters = get_pattern_clusters(patterns)
     repeats_matcher = get_repeat_matcher_enhanced_hmm(pattern_clusters, copies, vpaths)
     right_flanking_matcher = get_prefix_matcher_hmm(right_flanking_region)
 

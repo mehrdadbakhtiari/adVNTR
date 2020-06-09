@@ -10,7 +10,7 @@ from advntr.vntr_finder import VNTRFinder
 
 class GenomeAnalyzer:
     def __init__(self, ref_vntrs, target_vntr_ids, working_dir='./', outfmt='text', is_haploid=False, ref_filename=None,
-                 input_file=None):
+                 input_file=None, is_frameshift_mode=False):
         self.reference_vntrs = ref_vntrs
         self.target_vntr_ids = target_vntr_ids
         self.working_dir = working_dir
@@ -22,7 +22,7 @@ class GenomeAnalyzer:
         self.vntr_finder = {}
         for ref_vntr in self.reference_vntrs:
             if ref_vntr.id in target_vntr_ids:
-                self.vntr_finder[ref_vntr.id] = VNTRFinder(ref_vntr, is_haploid, ref_filename)
+                self.vntr_finder[ref_vntr.id] = VNTRFinder(ref_vntr, is_haploid, ref_filename, is_frameshift_mode)
 
     def print_genotype(self, vntr_id, genotype_result):
         if self.outfmt == 'bed':
