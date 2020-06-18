@@ -14,6 +14,8 @@ PROMOTER_RANGE = 500
 def intersect(s1, e1, s2, e2):
     return s1 <= e2 and s2 <= e1
 
+def include(s1, e1, vntr_s, vntr_e):
+    return s1 <= vntr_s <= vntr_e <= e1
 
 def get_gene_name_from_ensmbl(known_ensmbl):
     with open(ENSEMBL_TO_GENE) as infile:
@@ -144,6 +146,55 @@ def get_exons_info(annotation_file=EXONS, gene_reference='refseq'):
         results[chromosome] = sorted(coordinates)
     return results, number_of_segments
 
+def is_within_coding_exon(vntr_chromosome, vntr_start, vntr_end, exons):
+    for start, end, _, _, _ in exons[vntr_chromosome]:
+        if start > vntr_end:
+            break
+        if include(start, end, vntr_start, vntr_end):
+            return True
+    return False
+
+def intersects_with_coding_exon(vntr_chromosme, vntr_start, vntr_end, exons):
+    for start, end, _, _, _ in exons[vntr_chromosome]:
+        if start > vntr_end:
+            break
+        if intersect(start, end, vntr_start, vntr_end):
+            return True
+    return False
+
+def get_RepeatMasker_info(repeat_ref_file):
+    # Repeating Elements by RepeatMasker
+    # http://genome.ucsc.edu/cgi-bin/hgTables?db=hg38&hgta_group=rep&hgta_track=rmsk&hgta_table=rmsk&hgta_doSchema=describe+table+schema
+
+    from collections import defaultdict
+    repeat_info = defaultdict(list)
+    with open(repeat_ref_file, "r") as infile:
+        for line in infile:
+            split_line = line.strip().split()
+            # Columns
+            # bin   swScore	milliDiv	milliDel	milliIns
+            # genoName	genoStart	genoEnd	genoLeft	strand	repName	repClass	repFamily
+            # repStart	repEnd	repLeft	id
+
+            # repName: (TAACCC)n, TAR1, L1MC5a, MER5B, (TGG)n, L3...
+            # repClass: Simple_repeat, Satellite, LINE, DNA, SINE, ...
+            # repFamily: Simple_repeat, telo, L1, MIR,
+            _, _, _, _, _, chromosome, genoStart, genoEnd, _, strand, repName, repClass, repFamily, _, _, _, _ = split_line
+            repeat_info[chromosome].append((int(genoStart), int(genoEnd), strand, repName, repClass, repFamily))
+
+    results = {}
+    for chromosome, coordinates in repeat_info.items():
+        results[chromosome] = sorted(coordinates)
+    return results
+
+def is_within_alu_elements(vntr_chromosome, vntr_start, vntr_end, repeat_masker_info):
+    for start, end, strand, repName, repClass, repFamily, in repeat_masker_info[vntr_chromosome]:
+        if repClass == "LINE" or repClass =="SINE":
+            if start > vntr_end:
+                break
+            if include(start, end, vntr_start, vntr_end):
+                return True
+    return False
 
 def get_genes_info(gene_reference='refseq'):
     genes_info = {}
