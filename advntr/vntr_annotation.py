@@ -187,7 +187,7 @@ def get_RepeatMasker_info(repeat_ref_file):
         results[chromosome] = sorted(coordinates)
     return results
 
-def is_within_alu_elements(vntr_chromosome, vntr_start, vntr_end, repeat_masker_info):
+def is_within_LINE_or_SINE(vntr_chromosome, vntr_start, vntr_end, repeat_masker_info):
     for start, end, strand, repName, repClass, repFamily, in repeat_masker_info[vntr_chromosome]:
         if repClass == "LINE" or repClass =="SINE":
             if start > vntr_end:
