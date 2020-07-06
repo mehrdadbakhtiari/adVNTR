@@ -58,7 +58,6 @@ def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151, is_
     if is_frameshift:
         from pattern_clustering import get_pattern_clusters
         clustered_patterns = get_pattern_clusters(patterns)
-        print(clustered_patterns)
         consensus_patterns = []
         for p in clustered_patterns:
             consensus_patterns.append(get_consensus_pattern(p))
@@ -88,18 +87,25 @@ def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151, is_
                     break
                 prev_state = state
 
+            visited_repeat_unit_order = []
+            observed_first_unit_start = False
             for state in visited_states:
                 if 'start' in state:
                     if 'unit_start' in state:
                         query_seq += "|"
                         ref_seq += "|"
                         match_line += "+"
+                        visited_repeat_unit_order.append(state.split("_")[-1])
+                        observed_first_unit_start = True
                     if 'Prefix Matcher HMM' in state:
                         query_seq += "*"
                         ref_seq += "*"
                         match_line += ">"
                     continue
                 if 'end' in state:
+                    if 'unit_end' in state:
+                        if not observed_first_unit_start:
+                            visited_repeat_unit_order.append(state.split("_")[-1])
                     if 'Suffix Matcher HMM' in state:
                         query_seq += "*"
                         ref_seq += "*"
@@ -188,6 +194,8 @@ def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151, is_
             af.write(query_seq + "\n")
             af.write(match_line + "\n")
             af.write(ref_seq + "\n")
+            if is_frameshift:
+                af.write("Visited repeat unit order {}".format(visited_repeat_unit_order))
             af.write("# Mismatch in flanking regions: {}/{} {:.2f}, L:{}/{} {:.2f}, R:{}/{} {:.2f}\n".format(\
                 mismatch_count_in_left_flanking + mismatch_count_in_right_flanking,\
                 left_flank_bp_count + right_flank_bp_count, \
@@ -278,7 +286,10 @@ def generate_pairwise_aln(log_file, aln_file, ref_vntr_db=None, vntr_ids=None, s
                 print("ERROR: If log file is given as a directory, output name should be None")
                 exit(-1)
             if aln_file is None:
-                out_file = lf.split("/")[-1].split(".")[0] + ".aln"
+                if len(vntr_ids) == 1:
+                    out_file = lf.split("/")[-1].split(".")[0] + "_{}_".format(vntr_ids[0]) + ".aln"
+                else:
+                    out_file = lf.split("/")[-1].split(".")[0] + ".aln"
             _generate_pairwise_aln(lf, out_file, ref_vntrs, vntr_ids, sort_by_repeat)
     else:
         if aln_file is None:
