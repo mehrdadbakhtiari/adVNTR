@@ -294,6 +294,8 @@ def generate_pairwise_aln(log_file, aln_file, ref_vntr_db=None, vntr_ids=None, s
     else:
         if aln_file is None:
             out_file = log_file.split("/")[-1].split(".")[0] + ".aln"
+        else:
+            out_file = aln_file
         _generate_pairwise_aln(log_file, out_file, ref_vntrs, vntr_ids, sort_by_repeat)
 
 
