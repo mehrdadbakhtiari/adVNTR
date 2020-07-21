@@ -34,7 +34,43 @@ Currently there are two possible formats to get the genotyping output:
 
 
 - VCF
-    (Under construction)
+    Please see `VCF_specification
+    <http://samtools.github.io/hts-specs/VCFv4.2.pdf>`_ for detailed information on VCF file format. The followings are the
+    additional custom fields for adVNTR:
+
+    **INFO fields**
+
+    INFO fields have information about VNTR.
+
+    +-------+-------------------------------------------+
+    | FIELD |                DESCRIPTION                |
+    +=======+===========================================+
+    |  END  | End position of VNTR                      |
+    +-------+-------------------------------------------+
+    |  VID  | VNTR ID                                   |
+    +-------+-------------------------------------------+
+    |   RU  | Repeat motif (the representative)         |
+    +-------+-------------------------------------------+
+    |   RC  | Reference Repeat Unit Count (Copy Number) |
+    +-------+-------------------------------------------+
+
+    **FORMAT fields**
+
+    FORMAT fields have information on genotype call.
+
+    +-------+-------------------------------------------------------------+
+    | FIELD |                         DESCRIPTION                         |
+    +=======+=============================================================+
+    |   GT  | Genotype                                                    |
+    +-------+-------------------------------------------------------------+
+    |   DP  | Read Depth, Number of recruited reads; flanking or spanning |
+    +-------+-------------------------------------------------------------+
+    |   SR  | Number of Spanning Read                                     |
+    +-------+-------------------------------------------------------------+
+    |   FR  | Number of Flanking Read                                     |
+    +-------+-------------------------------------------------------------+
+    |   ML  | Maximum likelihood                                          |
+    +-------+-------------------------------------------------------------+
 
 Usage
 -----
