@@ -205,19 +205,41 @@ def get_number_of_repeat_bp_matches_in_vpath(vpath):
     return result
 
 
-def get_flanking_regions_matching_rate(vpath):
+def get_flanking_regions_matching_rate(vpath, sequence, left_flank, right_flank):
     visited_states = [state.name for idx, state in vpath[1:-1]]
-    flanking_matches = 0
-    flanking_basepairs = 0
+    right_flanking_matches = 0
+    right_flanking_basepairs = 0
+    left_flanking_matches = 0
+    left_flanking_basepairs = 0
+
+    seq_index = 0
+    max_hmm_index = -1
+    prev_state = visited_states[0]
+    for state in visited_states:
+        if 'suffix_end_suffix' in state:
+            max_hmm_index = int(prev_state.split("_")[0][1:])
+            break
+        prev_state = state
     for i in range(len(visited_states)):
-        if visited_states[i].endswith('prefix') or visited_states[i].endswith('suffix'):
-            if is_match_state(visited_states[i]):
-                flanking_matches += 1
+        if 'start' in state or 'end' in state:
+            continue
+        hmm_state = int(visited_states[i].split("_")[0][1:])
+        if visited_states[i].endswith('prefix') and hmm_state < 35:
+            if is_match_state(visited_states[i]) and sequence[seq_index] == right_flank[hmm_index - 1]:
+                right_flanking_matches += 1
             if is_emitting_state(visited_states[i]):
-                flanking_basepairs += 1
-    if flanking_basepairs < 5:
-        return 1.0
-    return float(flanking_matches) / flanking_basepairs
+                right_flanking_basepairs += 1
+        if visited_states[i].endswith('suffix') and max_hmm_index - hmm_state < 35:
+            if is_match_state(visited_states[i]) and sequence[seq_index] == left_flank[-(max_hmm_index - hmm_index + 1)]:
+                left_flanking_matches += 1
+            if is_emitting_state(visited_states[i]):
+                left_flanking_basepairs += 1
+        if is_emitting_state(visited_states[i]):
+            seq_index += 1
+    right_rate = float(right_flanking_matches) / right_flanking_basepairs if right_flanking_basepairs != 0 else 1
+    left_rate = float(left_flanking_matches) / left_flanking_basepairs if left_flanking_basepairs != 0 else 1
+    result = min(right_rate, left_rate)
+    return result
 
 
 def get_left_flanking_region_size_in_vpath(vpath):
