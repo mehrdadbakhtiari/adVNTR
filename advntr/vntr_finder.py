@@ -12,6 +12,7 @@ from Bio.Seq import Seq
 from Bio import SeqIO
 
 from advntr.coverage_bias import CoverageBiasDetector, CoverageCorrector
+from advntr.deep_recruitment import get_embedding_of_string, input_dim
 from advntr.hmm_utils import *
 from advntr.pacbio_haplotyper import PacBioHaplotyper
 from advntr.profiler import time_usage
@@ -19,8 +20,6 @@ from advntr.sam_utils import get_reference_genome_of_alignment_file, get_related
 from advntr import settings
 from advntr.utils import is_low_quality_read
 from pomegranate import HiddenMarkovModel as Model
-
-from deep_recruitment import get_embedding_of_string, input_dim
 
 
 class GenotypeResult:
