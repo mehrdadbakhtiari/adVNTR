@@ -56,11 +56,32 @@ class VNTRFinder:
             self.min_repeat_bp_to_add_read = 2
         self.min_repeat_bp_to_count_repeats = 2
 
-        self.minimum_left_flanking_size = {}
-        self.minimum_right_flanking_size = {69212: 19, 532789: 12, 400825: 10, 468671: 10}
+        self.minimum_flanking_size = 5
+        self.minimum_left_flanking_size = 5
+        self.minimum_right_flanking_size = 5
 
         self.vntr_start = self.reference_vntr.start_point
         self.vntr_end = self.vntr_start + self.reference_vntr.get_length()
+
+    def get_unique_left_flank(self):
+        patterns = self.reference_vntr.get_repeat_segments()[0] * 10
+        for i in range(self.minimum_flanking_size, 30):
+            alns = pairwise2.align.globalms(patterns[-i:], self.reference_vntr.left_flanking_region[-i:], 1, -1, -1, -1)
+            if len(alns) < 1:
+                return i
+            if alns[0][2] < i * 0.5:
+                return i
+        return 30
+
+    def get_unique_right_flank(self):
+        patterns = self.reference_vntr.get_repeat_segments()[-1] * 10
+        for i in range(self.minimum_flanking_size, 30):
+            alns = pairwise2.align.globalms(patterns[:i], self.reference_vntr.right_flanking_region[:i], 1, -1, -1, -1)
+            if len(alns) < 1:
+                return i
+            if alns[0][2] < i * 0.5:
+                return i
+        return 30
 
     def get_copies_for_hmm(self, read_length):
         return int(round(float(read_length) / len(self.reference_vntr.pattern) + 0.5))
@@ -143,9 +164,11 @@ class VNTRFinder:
             return None
         return self.reference_vntr.scaled_score * read_length
 
-    @staticmethod
-    def recruit_read(logp, vpath, min_score_to_count_read, read_length):
-        if get_flanking_regions_matching_rate(vpath) < 0.90:
+    def recruit_read(self, logp, vpath, min_score_to_count_read, read_sequence):
+        read_length = len(read_sequence)
+        right_flank = self.reference_vntr.right_flanking_region
+        left_flank = self.reference_vntr.left_flanking_region
+        if get_flanking_regions_matching_rate(vpath, read_sequence, left_flank, right_flank) < 0.90:
             return False
         if min_score_to_count_read is not None and logp > min_score_to_count_read:
             return True
@@ -191,7 +214,7 @@ class VNTRFinder:
 
                 logging.info('this is a VNTR read')
                 repeat_bps = get_number_of_repeat_bp_matches_in_vpath(vpath)
-                if self.recruit_read(logp, vpath, recruitment_score, len(sequence)):
+                if self.recruit_read(logp, vpath, recruitment_score, sequence):
                     if repeat_bps > self.min_repeat_bp_to_count_repeats:
                         vntr_bp_in_unmapped_reads.value += repeat_bps
                     if repeat_bps > self.min_repeat_bp_to_add_read:
@@ -210,7 +233,7 @@ class VNTRFinder:
                     logp = rev_logp
                     vpath = rev_vpath
             repeat_bps = get_number_of_repeat_bp_matches_in_vpath(vpath)
-            if self.recruit_read(logp, vpath, recruitment_score, len(sequence)):
+            if self.recruit_read(logp, vpath, recruitment_score, sequence):
                 if repeat_bps > self.min_repeat_bp_to_count_repeats:
                     vntr_bp_in_unmapped_reads.value += repeat_bps
                 if repeat_bps > self.min_repeat_bp_to_add_read:
@@ -273,16 +296,13 @@ class VNTRFinder:
             return frameshift_candidate[0]
         return None
 
-    def read_flanks_repeats_with_confidence(self, vpath):
-        minimum_left_flanking = 5
-        minimum_right_flanking = 5
-        if self.reference_vntr.id in self.minimum_left_flanking_size:
-            minimum_left_flanking = self.minimum_left_flanking_size[self.reference_vntr.id]
-        if self.reference_vntr.id in self.minimum_right_flanking_size:
-            minimum_right_flanking = self.minimum_right_flanking_size[self.reference_vntr.id]
-
-        if get_left_flanking_region_size_in_vpath(vpath) > minimum_left_flanking:
-            if get_right_flanking_region_size_in_vpath(vpath) > minimum_right_flanking:
+    def read_flanks_repeats_with_confidence(self, vpath, read_sequence):
+        right_flank = self.reference_vntr.right_flanking_region
+        left_flank = self.reference_vntr.left_flanking_region
+        if get_flanking_regions_matching_rate(vpath, read_sequence, left_flank, right_flank) < 0.95:
+            return False
+        if get_left_flanking_region_size_in_vpath(vpath) > self.minimum_left_flanking_size:
+            if get_right_flanking_region_size_in_vpath(vpath) > self.minimum_right_flanking_size:
                 return True
         return False
 
@@ -646,7 +666,7 @@ class VNTRFinder:
                         logp = rev_logp
                         vpath = rev_vpath
                     length = len(sequence)
-                    if is_low_quality_read(read) and not self.recruit_read(logp, vpath, recruitment_score, length):
+                    if is_low_quality_read(read) and not self.recruit_read(logp, vpath, recruitment_score, sequence):
                         logging.debug('Rejected Read: %s' % sequence)
                         continue
                     selected_reads.append(SelectedRead(sequence, logp, vpath, read.mapq, read.reference_start))
@@ -691,7 +711,7 @@ class VNTRFinder:
             logging.debug('right flanking size: %s' % get_right_flanking_region_size_in_vpath(selected_read.vpath))
             logging.debug(selected_read.sequence)
             visited_states = [state.name for idx, state in selected_read.vpath[1:-1]]
-            if self.read_flanks_repeats_with_confidence(selected_read.vpath):
+            if self.read_flanks_repeats_with_confidence(selected_read.vpath, selected_read.sequence):
                 logging.debug('spanning read visited states :%s' % visited_states)
                 logging.debug('repeats: %s' % repeats)
                 covered_repeats.append(repeats)

@@ -10,6 +10,7 @@ from advntr.models import delete_vntr_from_database, create_vntrs_database
 from advntr.reference_vntr import ReferenceVNTR
 from advntr.vntr_finder import VNTRFinder
 from advntr import settings
+from advntr import __version__
 
 
 def valid_vntr_for_frameshift(target_vntrs):
@@ -104,6 +105,7 @@ def genotype(args, genotype_parser):
     target_vntrs = [ref_vntr.id for ref_vntr in reference_vntrs]
     if args.vntr_id is not None:
         target_vntrs = [int(vid) for vid in args.vntr_id.split(',')]
+    logging.info('adVNTR %s' % __version__)
     logging.info('Running adVNTR for %s VNTRs' % len(target_vntrs))
     genome_analyzier = GenomeAnalyzer(reference_vntrs, target_vntrs, working_directory, args.outfmt, args.haploid,
                                       args.reference_filename, input_file)
