@@ -176,17 +176,17 @@ class VNTRFinder:
             return True
         return False
 
-    def process_unmapped_read_with_dnn(self, read_segment, hmm, recruitment_score, vntr_bp_in_unmapped_reads, selected_reads, compute_reverse, dnn_model):
+    def process_unmapped_read_with_dnn(self, read_segment, hmm, recruitment_score, vntr_bp_in_unmapped_reads,
+                                       selected_reads, compute_reverse, dnn_model):
         logging.info('process unmapped read with DNN')
         if read_segment.count('N') <= 0:
             sequence = read_segment.upper()
+            reverse_sequence = ''
             forward_dnn_read = False
             reverse_dnn_read = False
 
             logp = 0
             vpath = []
-            rev_logp = 0
-            rev_vpath = []
             embedding = get_embedding_of_string(sequence)
             selected = dnn_model.predict(numpy.array([embedding]), batch_size=1)[0]
             if selected[0] > selected[1]:
@@ -612,6 +612,7 @@ class VNTRFinder:
     @time_usage
     def select_illumina_reads(self, alignment_file, unmapped_filtered_reads, update=False, hmm=None):
         recruitment_score = None
+        dnn_model = None
         selected_reads = []
         vntr_bp_in_unmapped_reads = Value('d', 0.0)
 
@@ -626,12 +627,19 @@ class VNTRFinder:
                 hmm = self.get_vntr_matcher_hmm(read_length=read_length)
             if not recruitment_score:
                 recruitment_score = self.get_min_score_to_select_a_read(read_length)
+                model_file = settings.DNN_MODELS_DIR + '/%s.hd5' % self.reference_vntr.id
+                if os.path.exists(model_file):
+                    dnn_model = load_model(model_file)
 
             if len(read_segment.seq) < read_length:
                 continue
 
-            self.process_unmapped_read(None, str(read_segment.seq), hmm, recruitment_score, vntr_bp_in_unmapped_reads,
-                                       selected_reads)
+            if dnn_model is None:
+                self.process_unmapped_read(None, str(read_segment.seq), hmm, recruitment_score,
+                                           vntr_bp_in_unmapped_reads, selected_reads)
+            else:
+                self.process_unmapped_read_with_dnn(str(read_segment.seq), hmm, recruitment_score,
+                                                    vntr_bp_in_unmapped_reads, selected_reads, True, dnn_model)
 
         logging.debug('vntr base pairs in unmapped reads: %s' % vntr_bp_in_unmapped_reads.value)
 
@@ -664,7 +672,6 @@ class VNTRFinder:
                         sequence = str(Seq(read.seq).reverse_complement()).upper()
                         logp = rev_logp
                         vpath = rev_vpath
-                    length = len(sequence)
                     if is_low_quality_read(read) and not self.recruit_read(logp, vpath, recruitment_score, sequence):
                         logging.debug('Rejected Read: %s' % sequence)
                         continue

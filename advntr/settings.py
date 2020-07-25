@@ -35,3 +35,6 @@ else:
 
 FRAMESHIFT_VNTRS = [25561, 519759]
 LONG_VNTRS = [70186]
+
+DNN_MODELS_DIR = 'dnn_models/'
+
