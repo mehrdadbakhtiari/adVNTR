@@ -59,7 +59,7 @@ def get_gene_name_and_annotation_of_vntr(vntr_chromosome, vntr_start, vntr_end, 
 
     def get_annotation(vntr_start, vntr_end, regions, region_name='Coding'):
         gene_name, annotation = 'None', 'None'
-        for start, end, identifier, direction in regions:
+        for start, end, identifier, direction, seg_number in regions:
             if intersect(start, end, vntr_start, vntr_end):
                 if gene_reference == 'ucsc':
                     gene_name = get_gene_name_from_ucsc_id(identifier.split('_')[0])
@@ -82,7 +82,7 @@ def get_gene_name_and_annotation_of_vntr(vntr_chromosome, vntr_start, vntr_end, 
 
     if gene_name == 'None':
         for start, end, identifier, direction in genes[vntr_chromosome]:
-            if direction == '+':
+            if direction == '-':
                 start = end
                 end += PROMOTER_RANGE
             else:
