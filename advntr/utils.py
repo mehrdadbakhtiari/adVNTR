@@ -40,8 +40,12 @@ def is_low_quality_read(read):
 
 def get_chromosome_reference_sequence(chromosome):
     ref_file_name = HG19_DIR + chromosome + '.fa'
+    ref_file_name = 'hg38_chromosomes/hg38.fa'
+#    ref_file_name = '/tmp/hg38.fa'
     fasta_sequences = SeqIO.parse(open(ref_file_name), 'fasta')
     ref_sequence = ''
     for fasta in fasta_sequences:
-        name, ref_sequence = fasta.id, str(fasta.seq)
+        if chromosome == fasta.id:
+            name, ref_sequence = fasta.id, str(fasta.seq)
+            break
     return ref_sequence
