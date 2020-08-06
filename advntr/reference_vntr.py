@@ -28,6 +28,7 @@ class ReferenceVNTR:
         self.repeat_segments = repeat_segments
         flanking_region_size = 500
         self.left_flanking_region, self.right_flanking_region = self.get_flanking_regions(flanking_region_size)
+        self.chromosome_sequence = None
 
     def init_from_xml(self, repeat_segments, left_flanking_region, right_flanking_region):
         self.repeat_segments = repeat_segments

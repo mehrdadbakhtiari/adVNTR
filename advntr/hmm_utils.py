@@ -649,6 +649,6 @@ def build_reference_repeat_finder_hmm(patterns, copies=1):
     if len(patterns) > 1:
         # model.fit(patterns, algorithm='baum-welch', transition_pseudocount=1, use_pseudocount=True)
         fit_patterns = [pattern * copies for pattern in patterns]
-        model.fit(fit_patterns, algorithm='viterbi', transition_pseudocount=1, use_pseudocount=True)
+        #model.fit(fit_patterns, algorithm='viterbi', transition_pseudocount=1, use_pseudocount=True)
 
     return model

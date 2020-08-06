@@ -10,30 +10,40 @@ from advntr.vntr_annotation import get_gene_name_and_annotation_of_vntr, is_vntr
 from advntr import settings
 from advntr.utils import get_chromosome_reference_sequence
 
+from threading import Lock
+lock = Lock()
 
-def load_unprocessed_vntrseek_data(vntrseek_output, chromosome=None):
+
+PROCESSING_DIR = 'whole_genome_loc/'
+
+
+def load_unprocessed_vntrseek_data(vntrseek_output, chromosome=None, only_genic=False):
     vntrs = []
-    genes_info = get_genes_info()
+    if only_genic:
+        genes_info = get_genes_info()
+    else:
+        genes_info = {}
+    chr_seq = get_chromosome_reference_sequence(chromosome)
     with open(vntrseek_output) as input_file:
         input_lines = [line.strip() for line in input_file.readlines() if line.strip() != '']
         for vntr_id, line in enumerate(input_lines):
             vntrseek_repeat, _, pattern, chromosome_number, start = line.split()
-            if len(pattern) > 100:
+            if len(pattern) > 100 or len(pattern) < 6:
                 continue
             start = int(start) - 1
-            estimated_repeats = int(float(vntrseek_repeat) + 5)
+            estimated_repeats = int(float(vntrseek_repeat) + 2)
             if chromosome is not None and chromosome_number != chromosome:
                 continue
             estimated_end = estimated_repeats * len(pattern) + start
-            if not is_vntr_close_to_gene(genes_info, chromosome_number, start, estimated_end):
+            if only_genic and not is_vntr_close_to_gene(genes_info, chromosome_number, start, estimated_end):
                 continue
-            vntrs.append(ReferenceVNTR(vntr_id, pattern, start, chromosome_number, None, None, estimated_repeats))
+            vntrs.append(ReferenceVNTR(vntr_id, pattern, start, chromosome_number, None, None, estimated_repeats, chromosome_sequence=chr_seq))
     print('%s VNTRs are close to a gene' % len(vntrs))
     return vntrs
 
 
-def find_non_overlapping_vntrs(vntrs, result, chrom=None, sema=None):
-    skipped_vntrs = []
+def find_non_overlapping_vntrs(manager, vntrs, result, index, chrom=None, output_file=None, sema=None):
+    skipped_vntrs = set([])
     for i in range(len(vntrs)):
         if chrom is not None and vntrs[i].chromosome != chrom:
             continue
@@ -41,7 +51,7 @@ def find_non_overlapping_vntrs(vntrs, result, chrom=None, sema=None):
         print(i, estimated_end - vntrs[i].start_point)
         if i < len(vntrs)-1 and vntrs[i].chromosome == vntrs[i+1].chromosome and estimated_end > vntrs[i+1].start_point:
             vntrs[i].estimated_repeats += vntrs[i+1].estimated_repeats
-        if len(vntrs[i].pattern) * vntrs[i].estimated_repeats > 14000:
+        if len(vntrs[i].pattern) * vntrs[i].estimated_repeats > 1000:
             vntrs[i].non_overlapping = False
             continue
         vntrs[i].init_from_vntrseek_data()
@@ -52,10 +62,24 @@ def find_non_overlapping_vntrs(vntrs, result, chrom=None, sema=None):
             j = i + 1
             end_point = len(vntrs[i].pattern) * len(repeat_segments) + vntrs[i].start_point
             while j < len(vntrs) and vntrs[i].chromosome == vntrs[j].chromosome and end_point > vntrs[j].start_point:
-                skipped_vntrs.append(j)
+                skipped_vntrs.add(j)
                 j += 1
-    for vntr in vntrs:
-        result.append(vntr)
+    with lock:
+        print('writing %s for %s' % (len(vntrs), chrom))
+        for vntr in vntrs:
+            if not vntr.is_non_overlapping():
+                continue
+            repeat_segments = ','.join(vntr.get_repeat_segments())
+            with open(output_file, 'a') as out:
+                end_point = vntr.start_point + vntr.get_length()
+                gene_name, annotation = None, None
+                out.write('%s %s %s %s %s %s %s %s %s %s\n' % (vntr.id, vntr.is_non_overlapping(), vntr.chromosome,
+                                                               vntr.start_point, gene_name, annotation, vntr.pattern,
+                                                               vntr.left_flanking_region, vntr.right_flanking_region,
+                                                               repeat_segments,))
+    res = manager.list(result[index])
+    result[index] = res
+    vntrs = None
     if sema is not None:
         sema.release()
 
@@ -73,27 +97,12 @@ def process_vntrseek_data(unprocessed_vntrs_file, output_file='vntr_data/VNTRs.t
         start = i * q
         end = (i+1) * q if i + 1 < settings.CORES else len(unprocessed_vntrs)
         partial_input = unprocessed_vntrs[start:end]
-        p = Process(target=find_non_overlapping_vntrs, args=(partial_input, partial_vntrs[i], chrom, sema))
+        p = Process(target=find_non_overlapping_vntrs, args=(manager, partial_input, partial_vntrs, i, chrom, output_file, sema))
         process_list.append(p)
         p.start()
     for p in process_list:
         p.join()
-    vntrs = []
-    for partial_list in partial_vntrs:
-        vntrs.extend(list(partial_list))
-    print(chrom, len(vntrs))
-
-    for vntr in vntrs:
-        if not vntr.is_non_overlapping():
-            continue
-        repeat_segments = ','.join(vntr.get_repeat_segments())
-        with open(output_file, 'a') as out:
-            end_point = vntr.start_point + vntr.get_length()
-            gene_name, annotation = get_gene_name_and_annotation_of_vntr(vntr.chromosome, vntr.start_point, end_point)
-            out.write('%s %s %s %s %s %s %s %s %s %s\n' % (vntr.id, vntr.is_non_overlapping(), vntr.chromosome,
-                                                           vntr.start_point, gene_name, annotation, vntr.pattern,
-                                                           vntr.left_flanking_region, vntr.right_flanking_region,
-                                                           repeat_segments,))
+    print(chrom, 'Done')
 
 
 def identify_homologous_vntrs(vntrs, chromosome=None):
@@ -158,6 +167,8 @@ def save_vntrs_to_database(processed_vntrs, db_file):
     for line in lines:
         line = line.strip()
         vntr_id, overlap, chromosome, start, gene, annotation, pattern, left_flank, right_flank, segments = line.split()
+        if len(segments.replace(',', '')) > 150:
+            continue
         cursor.execute('''INSERT INTO vntrs(id, nonoverlapping, chromosome, ref_start, gene_name, annotation, pattern,
                        left_flanking, right_flanking, repeats, scaled_score) VALUES(?,?,?,?,?,?,?,?,?,?,?)''',
                        (vntr_id, overlap, chromosome, start, gene, annotation, pattern, left_flank, right_flank,
@@ -310,10 +321,17 @@ def extend_flanking_regions_in_processed_vntrs(flanking_size=500, output_file='v
 
 def fill_vntr_database():
     for chrom in settings.CHROMOSOMES:
-        processed_vntrs = 'results/training_for_hg38/VNTRs_%s.txt' % chrom
-        database_file = 'vntr_data/hg38_genic_VNTRs.db'
+        processed_vntrs = PROCESSING_DIR + 'VNTRs_%s.txt' % chrom
+        database_file = PROCESSING_DIR + 'GRCh38_VNTRs_%s.db' % chrom
+        create_vntrs_database(database_file)
         save_vntrs_to_database(processed_vntrs, database_file)
 
 if __name__ == "__main__":
-    pass
-    # process_vntrseek_data(sorted_vntrseek_output, processed_vntrs, chrom)
+    import sys
+    for i, chrom in enumerate(settings.CHROMOSOMES):
+        if i != int(sys.argv[1]):
+            continue
+        sorted_vntrseek_output = PROCESSING_DIR + '/repeats_length_patterns_chromosomes_starts.txt'
+        processed_vntrs = PROCESSING_DIR + '/VNTRs_%s.txt' % chrom
+        process_vntrseek_data(sorted_vntrseek_output, processed_vntrs, chrom)
+        break
