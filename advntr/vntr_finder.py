@@ -722,6 +722,8 @@ class VNTRFinder:
                 logging.debug('repeats: %s' % repeats)
                 covered_repeats.append(repeats)
             else:
+                logging.debug('flanking read visited states :%s' % visited_states)
+                logging.debug('repeats: %s' % repeats)
                 flanking_repeats.append(repeats)
         flanking_repeats = sorted(flanking_repeats)
         logging.info('covered repeats: %s' % covered_repeats)
