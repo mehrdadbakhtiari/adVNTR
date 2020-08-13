@@ -7,6 +7,7 @@ except ImportError:
 
 from Bio.Align.Applications import MuscleCommandline
 from Bio import AlignIO
+from Bio import pairwise2
 
 from collections import defaultdict
 from collections import Counter
@@ -44,16 +45,15 @@ def get_consensus_pattern(patterns):
     return consensus_seq
 
 
-def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151, is_frameshift=False):
-    query_id = "VID:" + str(vntr_id) + " " \
-               + "REFRC:" + str(ref_vntr.estimated_repeats) + " " \
-               + ref_vntr.chromosome + ":" \
-               + str(ref_vntr.start_point) + "-" + str(ref_vntr.start_point + ref_vntr.get_length())
+def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151, is_frameshift=False, flanking_repeats_used_in_genotyping=None):
+    af.write("#VID: {} {}:{}-{}\n".format(vntr_id, ref_vntr.chromosome, ref_vntr.start_point, ref_vntr.start_point + ref_vntr.get_length()))
+    query_id = "VID:{} REFRC:{}".format(vntr_id, ref_vntr.estimated_repeats)
 
     left_flank = ref_vntr.left_flanking_region
     right_flank = ref_vntr.right_flanking_region
 
     patterns = ref_vntr.repeat_segments
+    unique_patterns = set(patterns)
     consensus_pattern = get_consensus_pattern(patterns)
     if is_frameshift:
         from pattern_clustering import get_pattern_clusters
@@ -61,12 +61,16 @@ def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151, is_
         consensus_patterns = []
         for p in clustered_patterns:
             consensus_patterns.append(get_consensus_pattern(p))
-
+    
     for repeat in sorted(repeat_seq_dict.keys()):
         seq_list = repeat_seq_dict[repeat]
-        for idx, (sequence, visited_states) in enumerate(seq_list):
+        for idx, (sequence, visited_states, is_spanning_read) in enumerate(seq_list):
+            if flanking_repeats_used_in_genotyping is not None:
+                if not is_spanning_read and repeat != flanking_repeats_used_in_genotyping:
+                    continue
             # Alignment header
-            af.write(">" + str(idx) + "_RC:" + str(repeat) + "_SEQLEN:" + str(len(sequence)) + " " + query_id + "\n")
+            read_class = "SR" if is_spanning_read else "FR"
+            af.write(">{}_RC:{} SEQLEN:{} {} REPEATS:{} {}\n".format(idx, repeat, len(sequence), query_id, repeat, read_class))
 
             query_seq = ""
             ref_seq = ""
@@ -89,6 +93,7 @@ def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151, is_
 
             visited_repeat_unit_order = []
             observed_first_unit_start = False
+
             for state in visited_states:
                 if 'start' in state:
                     if 'unit_start' in state:
@@ -198,7 +203,7 @@ def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151, is_
                 af.write("Visited repeat unit order {}".format(visited_repeat_unit_order))
             af.write("# Mismatch in flanking regions: {}/{} {:.2f}, L:{}/{} {:.2f}, R:{}/{} {:.2f}\n".format(\
                 mismatch_count_in_left_flanking + mismatch_count_in_right_flanking,\
-                left_flank_bp_count + right_flank_bp_count, \
+                left_flank_bp_count + right_flank_bp_count,\
                 float(mismatch_count_in_left_flanking + mismatch_count_in_right_flanking)\
                 / (left_flank_bp_count + right_flank_bp_count) if left_flank_bp_count != 0 or right_flank_bp_count != 0 else 0,\
 
@@ -211,13 +216,19 @@ def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151, is_
                 float(mismatch_count_in_right_flanking)/right_flank_bp_count  if right_flank_bp_count != 0 else 0))
 
 
-def _generate_pairwise_aln(log_file, aln_outfile, ref_vntrs, vid_list=None, sort_by_repeat=True):
+def _generate_pairwise_aln(log_file, aln_outfile, ref_vntrs, vid_list=None, sort_by_repeat=True, print_only_informative_flanking_read=True):
     vid_to_aln_info = defaultdict(lambda: defaultdict(list))
     vid_read_length = defaultdict(int)
+    vid_flanking_repeats_used_in_genotyping = defaultdict(int)
 
     is_target = False if vid_list is not None else True
     is_frameshift_result = False
 
+    is_spanning_read = False
+
+    spanning_repeats = []
+    flanking_repeats = []
+    visited_states = None
     # Load adVNTR log files
     with open(log_file, "r") as f:
         for line in f:
@@ -244,26 +255,39 @@ def _generate_pairwise_aln(log_file, aln_outfile, ref_vntrs, vid_list=None, sort
                 else:
                     if "DEBUG:repeats" in line:  # DEBUG:repeats: [repeat_count]
                         repeats = int(line.strip().split(" ")[-1])
-                        vid_to_aln_info[vid][repeats].append((sequence, visited_states))
-                    if "DEBUG:spanning read visited states" in line or "DEBUG:[" in line:
+                        vid_to_aln_info[vid][repeats].append((sequence, visited_states, is_spanning_read))
+                        if is_spanning_read:
+                            spanning_repeats.append(repeats)
+                            is_spanning_read = False
+                        else:
+                            flanking_repeats.append(repeats)
+                    elif "DEBUG:spanning read visited states" in line:
+                        is_spanning_read = True
                         visited = line[line.index('[') + 1:-2]
-                        split = visited.split(', ')
-                        split = [item[1:-1] for item in split]
-                        visited_states = split
+                        visited_states = [item[1:-1] for item in visited.split(', ')]
+                    elif "DEBUG:flanking read visited states" in line:
+                        visited = line[line.index('[') + 1:-2]
+                        visited_states = [item[1:-1] for item in visited.split(', ')]
                     else:
                         sequence = line[30:].strip()
+
+            if "RU count lower bounds" in line:
+                if print_only_informative_flanking_read:
+                    min_valid_flanked = max(spanning_repeats) if len(spanning_repeats) > 0 else 0
+                    max_flanking_repeat = [r for r in flanking_repeats if
+                                           r == max(flanking_repeats) and r >= min_valid_flanked]
+                    vid_flanking_repeats_used_in_genotyping[vid] = max(flanking_repeats) if len(max_flanking_repeat) >= 5 else -1
 
     if sort_by_repeat:
         vid_to_aln_info = {k: v for k, v in sorted(vid_to_aln_info.items(), key=lambda k_v: k_v[1])}
 
     with open(aln_outfile, "w") as af:
         for vid in sorted(vid_to_aln_info.keys()):
-            af.write("#VID: {}\n".format(vid))
             if ref_vntrs[vid] is None:
                 print("ERROR: The reference VNTR is not in the DB, VID: {}".format(vid))
                 af.write("ERROR: The reference VNTR is not in the DB, VID: {}\n".format(vid))
                 continue
-            write_alignment(af, vid, vid_to_aln_info[vid], ref_vntrs[vid], vid_read_length[vid], is_frameshift_result)
+            write_alignment(af, vid, vid_to_aln_info[vid], ref_vntrs[vid], vid_read_length[vid], is_frameshift_result, vid_flanking_repeats_used_in_genotyping[vid])
 
 
 def generate_pairwise_aln(log_file, aln_file, ref_vntr_db=None, vntr_ids=None, sort_by_repeat=True):
