@@ -45,6 +45,31 @@ def get_consensus_pattern(patterns):
     return consensus_seq
 
 
+def find_best_repeat_unit(repeat_unit_seq, unique_repeat_units):
+    best_score = 0
+    best_aln = None
+    for unique_repeat_unit in unique_repeat_units:
+        aln = pairwise2.align.globalms(repeat_unit_seq, unique_repeat_unit, 2, -1, -1, -1)
+        score = float(aln[0][2])/aln[0][-1] # aln[0][2] is the score (match +1, otherwise 0)
+        if score > best_score:
+            best_score = score
+            best_aln = aln
+
+    return best_aln[0]
+
+
+def get_match_line(best_aln):
+    query = best_aln[0]
+    ref = best_aln[1]
+    assert len(query) == len(ref)
+
+    match_line = ""
+    for i in range(len(query)):
+        match_line += "|" if query[i] == ref[i] else " "
+
+    return match_line
+
+
 def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151, is_frameshift=False, flanking_repeats_used_in_genotyping=None):
     af.write("#VID: {} {}:{}-{}\n".format(vntr_id, ref_vntr.chromosome, ref_vntr.start_point, ref_vntr.start_point + ref_vntr.get_length()))
     query_id = "VID:{} REFRC:{}".format(vntr_id, ref_vntr.estimated_repeats)
@@ -93,10 +118,13 @@ def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151, is_
 
             visited_repeat_unit_order = []
             observed_first_unit_start = False
+            repeat_unit_state_count = 0
 
             for state in visited_states:
                 if 'start' in state:
                     if 'unit_start' in state:
+                        repeat_unit_state_count = 0
+                        repeat_unit_seq = ""  # Initialize repeat unit sequence
                         query_seq += "|"
                         ref_seq += "|"
                         match_line += "+"
@@ -109,6 +137,18 @@ def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151, is_
                     continue
                 if 'end' in state:
                     if 'unit_end' in state:
+                        # Update the query sequence and reference sequence and the match line
+                        if observed_first_unit_start:
+                            best_aln = find_best_repeat_unit(repeat_unit_seq, unique_patterns)
+                            query_seq = query_seq[:len(query_seq)-repeat_unit_state_count]
+                            query_seq += best_aln[0]
+
+                            match_line = match_line[:len(match_line)-repeat_unit_state_count]
+                            match_line += get_match_line(best_aln)
+
+                            ref_seq = ref_seq[:len(ref_seq)-repeat_unit_state_count]
+                            ref_seq += best_aln[1]
+
                         if not observed_first_unit_start:
                             visited_repeat_unit_order.append(state.split("_")[-1])
                     if 'Suffix Matcher HMM' in state:
@@ -171,9 +211,13 @@ def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151, is_
                         mismatch_count_in_right_flanking += 1
 
                 else:  # Pattern matches
+                    repeat_unit_state_count += 1
                     unit_index = int(split[1]) - 1  # unit index is 1-based
                     pattern_chr = ""
                     if state_name == "M":
+                        if observed_first_unit_start:
+                            repeat_unit_seq += sequence[seq_index]  # Do it only when the first unit is observed
+
                         query_seq += sequence[seq_index]
                         if is_frameshift:
                             pattern_chr = consensus_patterns[unit_index][hmm_index - 1]
@@ -183,6 +227,9 @@ def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151, is_
                         match_line += '|' if sequence[seq_index] == pattern_chr else " "
                         seq_index += 1
                     if state_name == "I":
+                        if observed_first_unit_start:
+                            repeat_unit_seq += sequence[seq_index]
+
                         query_seq += sequence[seq_index]
                         ref_seq += '-'
                         match_line += " "
