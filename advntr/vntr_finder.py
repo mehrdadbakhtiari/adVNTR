@@ -672,8 +672,8 @@ class VNTRFinder:
                         sequence = str(Seq(read.seq).reverse_complement()).upper()
                         logp = rev_logp
                         vpath = rev_vpath
-                    if is_low_quality_read(read) and not self.recruit_read(logp, vpath, recruitment_score, sequence):
-                        logging.debug('Rejected Read: %s' % sequence)
+                    if is_low_quality_read(read) or not self.recruit_read(logp, vpath, recruitment_score, sequence):
+                        logging.debug('Rejected Aligned Read: %s' % sequence)
                         continue
                     selected_reads.append(SelectedRead(sequence, logp, vpath, read.mapq, read.reference_start))
                 end = min(read_end, vntr_end)
