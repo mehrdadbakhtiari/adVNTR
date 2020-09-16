@@ -52,6 +52,8 @@ cdef class Model(object):
 
     cdef public bint is_baked
 
+    cdef public int read_length_used_to_build_model
+
     def __init__(self, name=None, start=None, end=None):
         # Save the name or make up a name.
         self.name = str(name) or str(id(self))
@@ -85,6 +87,8 @@ cdef class Model(object):
         self.n_subModels = 1
 
         self.is_baked = False
+
+        self.read_length_used_to_build_model = 0
 
     def append_subModel(self, other):
         self.subModels.append(other)
@@ -157,6 +161,9 @@ cdef class Model(object):
 
         setting connections between subModels
         """
+        if read_length is not None:
+            self.read_length_used_to_build_model = read_length
+
         # Bake all the subModels
         for subModel in self.subModels:
             if subModel == 0:
@@ -221,26 +228,26 @@ cdef class Model(object):
         ...
         suffix_matcher_hmm_end
         --------------------------
-        unit_start (repeating unit matcher hmm)
+        Repeating Pattern Matcher HMM Model-start
         --------------------------
-        repeat_start_1
+        unit_start_1
         I0_1
         D1_1
         M1_1
         I1_1
         ...
-        repeat_end_1
+        unit_end_1
         --------------------------
-        repeat_start_2
+        unit_start_2
         I0_2
         D1_2
         M1_2
         I1_2
         ...
-        repeat_end_2
-
+        unit_end_2
+        ...
         --------------------------
-        unit_end (repeating unit matcher hmm)
+        Repeating Pattern Matcher HMM Model-end
         --------------------------
         prefix_matcher_hmm_start
         ...
@@ -255,57 +262,94 @@ cdef class Model(object):
 
         sorted_states = []
 
-        insert_states = []
-        match_states = []
-        delete_states = []
+        insert_states = defaultdict(list)
+        match_states = defaultdict(list)
+        delete_states = defaultdict(list)
 
-        dummy_start_states = []
-        dummy_end_states = []
+        dummy_start_states = defaultdict(list)
+        dummy_end_states = defaultdict(list)
 
         for state in self.states:
+            repeat_unit_id = state.name.split("_")[-1]
+
             if state.name.startswith("I"):
-                insert_states.append(state)
+                insert_states[repeat_unit_id].append(state)
+                # insert_states.append(state)
             elif state.name.startswith("M"):
-                match_states.append(state)
+                match_states[repeat_unit_id].append(state)
+                # match_states.append(state)
             elif state.name.startswith("D"):
-                delete_states.append(state)
+                delete_states[repeat_unit_id].append(state)
+                # delete_states.append(state)
             else:
                 if "_start_" in state.name:
-                    dummy_start_states.append(state)
+                    dummy_start_states[repeat_unit_id].append(state)
+                    # dummy_start_states.append(state)
                 if "_end_" in state.name:
-                    dummy_end_states.append(state)
+                    dummy_end_states[repeat_unit_id].append(state)
+                    # dummy_end_states.append(state)
                 # assert ("start" in state.name or "end" in state.name), "State type should be in (I, M, D, start, end)"
 
-        insert_states.sort(key=lambda x: int(x.name[1:x.name.find("_")]))
-        match_states.sort(key=lambda x: int(x.name[1:x.name.find("_")]))
-        delete_states.sort(key=lambda x: int(x.name[1:x.name.find("_")]))
+        for repeat_unit_id, states in insert_states.items():
+            states.sort(key=lambda x: int(x.name[1:x.name.find("_")]))
 
-        # 1. Start state
+        for repeat_unit_id, states in match_states.items():
+            states.sort(key=lambda x: int(x.name[1:x.name.find("_")]))
+
+        for repeat_unit_id, states in delete_states.items():
+            states.sort(key=lambda x: int(x.name[1:x.name.find("_")]))
+        # insert_states.sort(key=lambda x: int(x.name[1:x.name.find("_")]))
+        # match_states.sort(key=lambda x: int(x.name[1:x.name.find("_")]))
+        # delete_states.sort(key=lambda x: int(x.name[1:x.name.find("_")]))
+
+        # 1. Model-start state
         sorted_states.append(self.start)
-        # 1.1 Dummy start state
-        for dummy_start in dummy_start_states:
-            sorted_states.append(dummy_start)
 
-        # 2. Insert 0 state (number of repeating units)
-        for i in range(len(dummy_start_states)):
-            sorted_states.append(insert_states.pop(0))
+        # TODO: iterate
+        for repeat_unit_id in sorted(dummy_start_states.keys()):
+            # unit start or suffix, prefix start
+            sorted_states.extend(dummy_start_states[repeat_unit_id])
 
-        # 3. Delete, Match, Insert states
-        assert (len(match_states) == len(delete_states))
+            # Insert 0
+            sorted_states.append(insert_states[repeat_unit_id].pop(0))
 
-        for i in range(len(match_states)):
-            sorted_states.append(delete_states[i])
-            sorted_states.append(match_states[i])
-            sorted_states.append(insert_states[i])
+            # Delete, Match, Insert
+            for i in range(len(match_states[repeat_unit_id])):
+                sorted_states.append(delete_states[repeat_unit_id][i])
+                sorted_states.append(match_states[repeat_unit_id][i])
+                sorted_states.append(insert_states[repeat_unit_id][i])
 
-        # 4.0 Dummy end state
-        for dummy_end in dummy_end_states:
-            sorted_states.append(dummy_end)
+            # unit end or suffix, prefix end
+            sorted_states.extend(dummy_end_states[repeat_unit_id])
 
-        # 4. End state
+        # Model-end state
         sorted_states.append(self.end)
-
         self.states = sorted_states
+
+        # # 1.1 Dummy start state
+        # for dummy_start in dummy_start_states:
+        #     sorted_states.append(dummy_start)
+        #
+        # # 2. Insert 0 state (number of repeating units)
+        # for i in range(len(dummy_start_states)):
+        #     sorted_states.append(insert_states.pop(0))
+        #
+        # # 3. Delete, Match, Insert states
+        # assert (len(match_states) == len(delete_states))
+        #
+        # for i in range(len(match_states)):
+        #     sorted_states.append(delete_states[i])
+        #     sorted_states.append(match_states[i])
+        #     sorted_states.append(insert_states[i])
+        #
+        # # 4.0 Dummy end state
+        # for dummy_end in dummy_end_states:
+        #     sorted_states.append(dummy_end)
+        #
+        # # 4. End state
+        # sorted_states.append(self.end)
+        #
+        # self.states = sorted_states
 
     def dense_transition_matrix( self ):
         """Returns the dense transition matrix.
@@ -454,9 +498,9 @@ cdef class Model(object):
         -------
         None
         """
-        other.name = "{}{}{}".format(prefix, other.name, suffix)
-        for state in other.states:
-            state.name = "{}{}{}".format(prefix, state.name, suffix)
+        # other.name = "{}{}{}".format(prefix, other.name, suffix)
+        # for state in other.states:
+        #     state.name = "{}{}{}".format(prefix, state.name, suffix)
 
         # self.subModels[self.n_subModels] = other
         self.append_subModel(other)
@@ -470,6 +514,143 @@ cdef class Model(object):
 
         # Once concatenation happened, it should be baked again
         self.is_baked = False
+
+    @cython.boundscheck(False)
+    cpdef tuple subseq_viterbi(self, sequence, repeat_unit_number):
+        cdef Model repeat_matcher_model = self.subModels[1]
+
+        cdef int repeat_start_index = 0
+        cdef int repeat_end_index = 0
+        for state in repeat_matcher_model.states:
+            if state.name == 'unit_start_{}'.format(repeat_unit_number):
+                repeat_start_index = self.state_to_index[state]
+            if state.name == 'unit_end_{}'.format(repeat_unit_number):
+                repeat_end_index = self.state_to_index[state]
+                break
+
+        # print("repeat unit number taret {}".format(repeat_unit_number))
+        # for i in range(repeat_start_index, repeat_end_index+1):
+        #     print(self.states[i].name)
+        # print("all repeat unit states")
+
+        # Initialize dynamic programming table
+        # Rows represent states and Columns represent sequence
+        cdef int sequence_length = len(sequence)
+        cdef int state_count = repeat_end_index - repeat_start_index + 1
+
+        cdef double[:,:] dynamic_table = np.ones((state_count, sequence_length + 1), dtype=np.double) * (-np.inf)
+        dynamic_table[0][0] = log(1)
+
+        # Storing previous states row and column separately (Naive version)
+        cdef int[:,:] vpath_table_row = np.zeros((state_count, sequence_length + 1), dtype=np.intc)
+        cdef int[:,:] vpath_table_col = np.zeros((state_count, sequence_length + 1), dtype=np.intc)
+
+        cdef int row, col
+        for col in range(sequence_length):
+            for row in range(state_count-1):
+                # Don't believe partially mapped read (the first and last)
+                # if col == 0 and row == 0:
+                #     neighbor_states = "all_match_states"
+                #     for neighbor_state in neighbor_states:
+                #         neighbor_state_index = self.state_to_index[neighbor_state] - repeat_start_index
+                #         if neighbor_state_index > repeat_end_index - repeat_start_index:
+                #             continue
+                #         prob = dynamic_table[row][col] + log(self.transition_map[state][neighbor_state])
+                #
+                #         if prob - dynamic_table[neighbor_state_index][col] > 1e-10:
+                #             dynamic_table[neighbor_state_index][col] = prob
+                #             vpath_table_row[neighbor_state_index][col] = row
+                #             vpath_table_col[neighbor_state_index][col] = col
+
+                row_index = repeat_start_index + row
+                if col != 0 and dynamic_table[row][col] == -np.inf:
+                    continue
+                state = self.states[row_index]
+                self._update_tables_for_subseq(row, col, repeat_start_index, repeat_end_index, sequence, state, vpath_table_row, vpath_table_col, dynamic_table)
+
+        # # For the last update
+        col = sequence_length
+        for row in range(state_count-1):
+            row_index = repeat_start_index + row
+            if col != 0 and dynamic_table[row][col] == -np.inf:
+                continue
+            state = self.states[row_index]
+            neighbor_states = self.transition_map[state]
+            neighbor_state_index = 0
+            prob = 0
+
+            if state.is_silent():  # Silent state: Stay in the same column
+                for neighbor_state in neighbor_states:
+                    neighbor_state_index = self.state_to_index[neighbor_state] - repeat_start_index
+                    if neighbor_state_index > repeat_end_index - repeat_start_index:
+                        continue
+                    prob = dynamic_table[row][col] + log(self.transition_map[state][neighbor_state])
+
+                    if prob - dynamic_table[neighbor_state_index][col] > 1e-10:
+                        dynamic_table[neighbor_state_index][col] = prob
+                        vpath_table_row[neighbor_state_index][col] = row
+                        vpath_table_col[neighbor_state_index][col] = col
+
+        # Back tracking viterbi path from the Prefix Matcher End
+        cdef list vpath = []
+        vpath.insert(0, (state_count - 1,  self.states[repeat_end_index]))
+        row, col = vpath_table_row[state_count-1][sequence_length], vpath_table_col[state_count-1][sequence_length]
+        row_index = row + repeat_start_index
+
+        # print(row, col)
+        while row != 0 or col != 0:
+            # print(row, col)
+            # print(self.states[row_index].name)
+            vpath.insert(0, (self.state_to_index[self.states[row_index]], self.states[row_index]))
+            row, col = vpath_table_row[row][col], vpath_table_col[row][col]
+            row_index = row + repeat_start_index
+
+        vpath.insert(0, (self.state_to_index[self.states[row_index]], self.states[row_index]))
+        # cdef double logp = dynamic_table[self.state_to_index[self.subModels[self.n_subModels-1].end]][sequence_length]
+
+        return 0, vpath
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cdef void _update_tables_for_subseq(self,
+                               int row,
+                               int col,
+                               int repeat_start_index,
+                               int repeat_end_index,
+                               char* sequence,
+                               State state,
+                               int[:,:] vpath_table_row,
+                               int[:,:] vpath_table_col,
+                               double[:,:] dynamic_table):
+
+        neighbor_states = self.transition_map[state]
+        cdef int neighbor_state_index = 0
+        cdef double prob = 0
+
+        if state.is_silent():  # Silent state: Stay in the same column
+            for neighbor_state in neighbor_states:
+                neighbor_state_index = self.state_to_index[neighbor_state] - repeat_start_index
+                if neighbor_state_index > repeat_end_index - repeat_start_index:
+                    continue
+                prob = dynamic_table[row][col] + log(self.transition_map[state][neighbor_state])
+
+                if prob - dynamic_table[neighbor_state_index][col] > 1e-10:
+                    dynamic_table[neighbor_state_index][col] = prob
+                    vpath_table_row[neighbor_state_index][col] = row
+                    vpath_table_col[neighbor_state_index][col] = col
+        else:  # Not a silent state: Emit a character and move to the next column
+            for neighbor_state in neighbor_states:
+                neighbor_state_index = self.state_to_index[neighbor_state] - repeat_start_index
+                if neighbor_state_index > repeat_end_index - repeat_start_index:
+                    continue
+                prob = dynamic_table[row][col] + log(self.transition_map[state][neighbor_state]) + \
+                       log(state.distribution[sequence[col]])
+
+                if prob - dynamic_table[neighbor_state_index][col + 1] > 1e-10:
+                    dynamic_table[neighbor_state_index][col + 1] = prob
+                    vpath_table_row[neighbor_state_index][col + 1] = row
+                    vpath_table_col[neighbor_state_index][col + 1] = col
+
 
     @cython.boundscheck(False)
     cpdef tuple viterbi(self, sequence):

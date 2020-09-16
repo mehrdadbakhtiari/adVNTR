@@ -698,7 +698,8 @@ def get_read_matcher_model_enhanced(left_flanking_region, right_flanking_region,
 
         repeats_matcher_model.set_transition(match_state, right_flanking_matcher.end, to_end/total)
 
-    model.bake(merge=None)
+    read_length_used_to_build_model = len(left_flanking_region)
+    model.bake(merge=None, read_length=read_length_used_to_build_model)
 
     return model
 
