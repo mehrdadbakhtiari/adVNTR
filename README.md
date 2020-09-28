@@ -33,6 +33,8 @@ In order to genotype VNTRs, you need to either train models for loci of interest
 
 Alternatively, you can add model for custom VNTR. See [Add Custom VNTR](http://advntr.readthedocs.io/en/latest/tutorial.html#add-custom-vntr-label) for more information about training models for custom VNTRs.
 
+[Optional] For faster genotyping with adVNTR-NN, pretrained neural network models can be downloaded from [here](https://drive.google.com/drive/folders/1xeIoaE_iX4JojfKjlUkqXQ0iONPR5Zax?usp=sharing).
+
 Execution:
 ----------
 Use following command to see the help for running the tool.
