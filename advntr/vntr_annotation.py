@@ -265,10 +265,10 @@ def get_intron_count(vntr_start, vntr_end, chromosome, regions):
 if __name__ == '__main__':
     from models import update_gene_name_and_annotation_in_database, load_unique_vntrs_data
     genes_info = get_genes_info()
-    exons_info = get_exons_info()
-    introns_info = get_exons_info(INTRONS)
-    utr5_info = get_exons_info(UTR5)
-    utr3_info = get_exons_info(UTR3)
+    exons_info, _ = get_exons_info()
+    introns_info, _ = get_exons_info(INTRONS)
+    utr5_info, _ = get_exons_info(UTR5)
+    utr3_info, _ = get_exons_info(UTR3)
     name_mapping = get_refseq_id_to_gene_name_map()
     # translate_ranges = get_translate_ranges(exons_info)
     db_file = 'vntr_data/hg38_genic_VNTRs.db'
