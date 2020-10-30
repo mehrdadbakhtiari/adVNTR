@@ -46,7 +46,7 @@ def get_consensus_pattern(patterns):
 
 
 def find_best_repeat_unit(repeat_unit_seq, unique_repeat_units):
-    best_score = 0
+    best_score = -len(min(unique_repeat_units, key=len))
     best_aln = None
     for unique_repeat_unit in unique_repeat_units:
         aln = pairwise2.align.globalms(repeat_unit_seq, unique_repeat_unit, 2, -1, -1, -1)
