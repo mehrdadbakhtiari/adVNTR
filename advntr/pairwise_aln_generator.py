@@ -139,15 +139,16 @@ def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151, is_
                     if 'unit_end' in state:
                         # Update the query sequence and reference sequence and the match line
                         if observed_first_unit_start:
-                            best_aln = find_best_repeat_unit(repeat_unit_seq, unique_patterns)
-                            query_seq = query_seq[:len(query_seq)-repeat_unit_state_count]
-                            query_seq += best_aln[0]
+                            if repeat_unit_seq != "":  # Check for erroneous case having all deletion states
+                                best_aln = find_best_repeat_unit(repeat_unit_seq, unique_patterns)
+                                query_seq = query_seq[:len(query_seq)-repeat_unit_state_count]
+                                query_seq += best_aln[0]
 
-                            match_line = match_line[:len(match_line)-repeat_unit_state_count]
-                            match_line += get_match_line(best_aln)
+                                match_line = match_line[:len(match_line)-repeat_unit_state_count]
+                                match_line += get_match_line(best_aln)
 
-                            ref_seq = ref_seq[:len(ref_seq)-repeat_unit_state_count]
-                            ref_seq += best_aln[1]
+                                ref_seq = ref_seq[:len(ref_seq)-repeat_unit_state_count]
+                                ref_seq += best_aln[1]
 
                         if not observed_first_unit_start:
                             visited_repeat_unit_order.append(state.split("_")[-1])
