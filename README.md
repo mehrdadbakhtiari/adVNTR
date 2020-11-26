@@ -14,7 +14,7 @@ If you are using the conda packaging manager (e.g. [miniconda](https://docs.cond
 you can install adVNTR from the [bioconda  channel](https://bioconda.github.io/):
 
     conda config --add channels bioconda
-    conda install advntr
+    conda install -c conda-forge -c bioconda advntr
 
 adVNTR could be invoked from command line with ``advntr``
 
