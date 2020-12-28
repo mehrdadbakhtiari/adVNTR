@@ -12,6 +12,7 @@ else:
     from pomegranate import DiscreteDistribution, State
     from pomegranate import HiddenMarkovModel as Model
 
+from math import log
 from collections import defaultdict
 
 def path_to_alignment(x, y, path):
@@ -142,24 +143,57 @@ def get_repeating_pattern_lengths(visited_states):
 
 
 def get_repeating_unit_state_count(visited_states):
-    lengths = []
-    prev_start = None
+    state_count_for_ru = {}
+    complete_ru_index = 0
+    prev_start_index = None
+    last_end_index = 0
     for i in range(len(visited_states)):
-        if visited_states[i].startswith('unit_end') and prev_start is not None:
-            match_count = 0
-            insert_count = 0
-            delete_count = 0
-            for j in range(prev_start, i):
-                if visited_states[j].startswith("M"):
-                    match_count += 1
-                if visited_states[j].startswith("I"):
-                    insert_count += 1
-                if visited_states[j].startswith("D"):
-                    delete_count += 1
-            lengths.append({'M': match_count, 'I': insert_count, 'D': delete_count})
+        if visited_states[i].startswith('unit_end'):
+            last_end_index = i
+            if prev_start_index is None:
+                # Haven't seen the start (partially mapped read) Ah only partial start? (error?)
+                match_count = 0
+                insert_count = 0
+                delete_count = 0
+                for j in range(0, i):
+                    if visited_states[j].startswith("M"):
+                        match_count += 1
+                    if visited_states[j].startswith("I"):
+                        insert_count += 1
+                    if visited_states[j].startswith("D"):
+                        delete_count += 1
+                state_count_for_ru['partial_start'] = {'M': match_count, 'I': insert_count, 'D': delete_count}
+            else:
+                match_count = 0
+                insert_count = 0
+                delete_count = 0
+                for j in range(prev_start_index, i):
+                    if visited_states[j].startswith("M"):
+                        match_count += 1
+                    if visited_states[j].startswith("I"):
+                        insert_count += 1
+                    if visited_states[j].startswith("D"):
+                        delete_count += 1
+                state_count_for_ru[complete_ru_index] = {'M': match_count, 'I': insert_count, 'D': delete_count}
+                complete_ru_index += 1
         if visited_states[i].startswith('unit_start'):
-            prev_start = i
-    return lengths
+            prev_start_index = i
+
+    if prev_start_index > last_end_index:
+        # if met unit start but not unit_end - update the length
+        match_count = 0
+        insert_count = 0
+        delete_count = 0
+        for j in range(prev_start_index, len(visited_states)):
+            if visited_states[j].startswith("M"):
+                match_count += 1
+            if visited_states[j].startswith("I"):
+                insert_count += 1
+            if visited_states[j].startswith("D"):
+                delete_count += 1
+        state_count_for_ru['partial_end'] = {'M': match_count, 'I': insert_count, 'D': delete_count}
+
+    return state_count_for_ru
 
 
 def get_repeat_segments_from_visited_states_and_region(visited_states, region):
@@ -231,8 +265,8 @@ def update_number_of_repeat_bp_matches_in_vpath_for_each_hmm(vpath, ru_bp_dictio
     visited_states = [state.name for idx, state in vpath[1:-1]]
     hmm_id = 0
     for i in range(len(visited_states)):
-        if visited_states[i].startswith('unit_start'):
-            hmm_id = visited_states[i].split("_")[-1]
+        # if visited_states[i].startswith('unit_start'):
+        hmm_id = visited_states[i].split("_")[-1]  # Allowing partially mapped repeats
         if is_matching_state(visited_states[i]) and not visited_states[i].endswith('fix'):
             ru_bp_dictionary[hmm_id] += 1
 
@@ -699,7 +733,19 @@ def get_read_matcher_model_enhanced(left_flanking_region, right_flanking_region,
         repeats_matcher_model.set_transition(match_state, right_flanking_matcher.end, to_end/total)
 
     read_length_used_to_build_model = len(left_flanking_region)
-    model.bake(merge=None, read_length=read_length_used_to_build_model)
+
+    # Get the lower bound of log probability score
+    if is_frameshift_mode:
+        dp_score_threshold = 0
+        dp_score_threshold += log(0.3)  # model-start to match < to suffix-start
+        dp_score_threshold += (log(0.97) + log(0.99)) * read_length_used_to_build_model  # sequence length * match
+        dp_score_threshold += (log(0.01) + log(0.25)) * 2  # allow upto 2 insertions/deletions (transtion, emit prob)
+        dp_score_threshold += log(1.0/len(set(patterns)))  # transition from pattern to prefix-start
+        dp_score_threshold += log(to_end/total)  # match to end
+        dp_score_threshold += (log(0.01) + log(0.01)) * 2  # Margin
+        model.bake(merge=None, read_length=read_length_used_to_build_model, dp_score_threshold=dp_score_threshold)
+    else:
+        model.bake(merge=None, read_length=read_length_used_to_build_model)
 
     return model
 
