@@ -1,3 +1,6 @@
+# distutils: sources = hmm/queue.c
+# distutils: include_dirs = hmm
+
 #cython: boundscheck=False
 #cython: cdivision=True
 
@@ -13,6 +16,74 @@ from libc.math cimport log
 
 cimport cython
 
+cimport cqueue
+
+cdef class Queue(object):
+    """A queue class for C integer values.
+
+    >>> q = Queue()
+    >>> q.append(5)
+    >>> q.peek()
+    5
+    >>> q.pop()
+    5
+    """
+    cdef cqueue.Queue* _c_queue
+    def __cinit__(self):
+        self._c_queue = cqueue.queue_new()
+        if self._c_queue is NULL:
+            raise MemoryError()
+
+    def __dealloc__(self):
+        if self._c_queue is not NULL:
+            cqueue.queue_free(self._c_queue)
+
+    cpdef append(self, int value):
+        if not cqueue.queue_push_tail(self._c_queue,
+                                      <void*> <Py_ssize_t> value):
+            raise MemoryError()
+
+    # The `cpdef` feature is obviously not available for the original "extend()"
+    # method, as the method signature is incompatible with Python argument
+    # types (Python does not have pointers).  However, we can rename
+    # the C-ish "extend()" method to e.g. "extend_ints()", and write
+    # a new "extend()" method that provides a suitable Python interface by
+    # accepting an arbitrary Python iterable.
+    cpdef extend(self, values):
+        for value in values:
+            self.append(value)
+
+    cdef extend_ints(self, int* values, size_t count):
+        cdef int value
+        for value in values[:count]:  # Slicing pointer to limit the iteration boundaries.
+            self.append(value)
+
+    cpdef int peek(self) except? -1:
+        cdef int value = <Py_ssize_t> cqueue.queue_peek_head(self._c_queue)
+
+        if value == 0:
+            # this may mean that the queue is empty,
+            # or that it happens to contain a 0 value
+            if cqueue.queue_is_empty(self._c_queue):
+                raise IndexError("Queue is empty")
+        return value
+
+    cpdef int pop(self) except? -1:
+        if cqueue.queue_is_empty(self._c_queue):
+            raise IndexError("Queue is empty")
+        return <Py_ssize_t> cqueue.queue_pop_head(self._c_queue)
+
+    cdef bint is_empty(self):
+        return cqueue.queue_is_empty(self._c_queue)
+
+    def __bool__(self):
+        return not cqueue.queue_is_empty(self._c_queue)
+
+    @staticmethod
+    def swap_queue(Queue q1, Queue q2):
+        cdef cqueue.Queue* temp = q2._c_queue
+        q2._c_queue = q1._c_queue
+        q1._c_queue = temp
 
 
 cdef class Model(object):
@@ -34,8 +105,10 @@ cdef class Model(object):
 
     # store transitions as a map
     cdef public dict transition_map
+    cdef public dict neighbors
     # 2D matrix (After conforming the topology, create one matrix for visualization)
-    cdef object transition_matrix
+    cdef double[::1,:] transition_matrix
+    # cdef int[:,:] neighboring_state_indices
     cdef dict state_to_index
 
     # edges
@@ -53,6 +126,7 @@ cdef class Model(object):
     cdef public bint is_baked
 
     cdef public int read_length_used_to_build_model
+    cdef public double dp_score_threshold
 
     def __init__(self, name=None, start=None, end=None):
         # Save the name or make up a name.
@@ -67,8 +141,9 @@ cdef class Model(object):
 
         # store transitions as a map
         self.transition_map = dict()
+        self.neighbors = dict()
         # 2D matrix (After conforming the topology, create one matrix for visualization)
-        self.transition_matrix = None
+        # self.transition_matrix = NULL
         self.state_to_index = dict()
 
         # Put start and end in the states
@@ -89,6 +164,7 @@ cdef class Model(object):
         self.is_baked = False
 
         self.read_length_used_to_build_model = 0
+        self.dp_score_threshold = -np.inf
 
     def append_subModel(self, other):
         self.subModels.append(other)
@@ -150,7 +226,7 @@ cdef class Model(object):
         prob = sum(prob_mat[:,(T-1)%2])
         return np.log(prob)
 
-    def bake(self, read_length=None, merge=None, sort_by_name=False):
+    def bake(self, read_length=None, dp_score_threshold=None, merge=None, sort_by_name=False):
         """
         In a model, start state comes the first and end state comes the last.
         Other states are in the middle, and they are sorted by their name.
@@ -161,6 +237,8 @@ cdef class Model(object):
 
         setting connections between subModels
         """
+        if dp_score_threshold is not None:
+            self.dp_score_threshold = dp_score_threshold
         if read_length is not None:
             self.read_length_used_to_build_model = read_length
 
@@ -201,6 +279,33 @@ cdef class Model(object):
         self.states = states
         self.n_states = n_states
         self.transition_map = transition_map
+
+
+        self.transition_matrix = np.zeros((self.n_states, self.n_states), dtype=np.double, order='F')
+        cdef int from_index = 0
+        cdef int to_index = 0
+        for from_state in transition_map.keys():
+            outgoing_states = transition_map[from_state]
+            self.neighbors[from_state] = sorted([self.state_to_index[ot] for ot in outgoing_states])
+            for to_state in outgoing_states.keys():
+                from_index = self.state_to_index[from_state]
+                to_index = self.state_to_index[to_state]
+                self.transition_matrix[from_index][to_index] = log(outgoing_states[to_state])
+
+        # self.neighboring_state_indices = np.zeros((self.n_states, self.n_states), dtype=np.int)
+        # for from_state in transition_map.keys():
+        #     outgoing_states = transition_map[from_state]
+        #     for to_state in outgoing_states:
+        #         from_index = self.state_to_index[from_state]
+        #         to_index = self.state_to_index[to_state]
+        #         self.neighboring_state_indices[from_index][to_index] = 1
+
+
+        # Find start and end index of repeats matcher
+        # if len(self.subModels) > 1:
+        #     repeat_matcher_model = self.subModels[1]
+        #     self.repeat_start_index = self.state_to_index[repeat_matcher_model.start]
+        #     self.repeat_end_index = self.state_to_index[repeat_matcher_model.end]
 
         self.is_baked = True
 
@@ -515,10 +620,11 @@ cdef class Model(object):
         # Once concatenation happened, it should be baked again
         self.is_baked = False
 
+    @cython.wraparound(False)
     @cython.boundscheck(False)
     cpdef tuple subseq_viterbi(self, sequence, repeat_unit_number):
-        cdef Model repeat_matcher_model = self.subModels[1]
 
+        cdef Model repeat_matcher_model = self.subModels[1]
         cdef int repeat_start_index = 0
         cdef int repeat_end_index = 0
         for state in repeat_matcher_model.states:
@@ -528,24 +634,21 @@ cdef class Model(object):
                 repeat_end_index = self.state_to_index[state]
                 break
 
-        # print("repeat unit number taret {}".format(repeat_unit_number))
-        # for i in range(repeat_start_index, repeat_end_index+1):
-        #     print(self.states[i].name)
-        # print("all repeat unit states")
-
         # Initialize dynamic programming table
         # Rows represent states and Columns represent sequence
         cdef int sequence_length = len(sequence)
+        cdef int[::1] encoded_sequence = self.get_encoded_sequence(sequence)
         cdef int state_count = repeat_end_index - repeat_start_index + 1
 
-        cdef double[:,:] dynamic_table = np.ones((state_count, sequence_length + 1), dtype=np.double) * (-np.inf)
+        cdef double[::1,:] dynamic_table = np.full((state_count, sequence_length + 1), -np.inf, dtype=np.double, order='F')
         dynamic_table[0][0] = log(1)
 
         # Storing previous states row and column separately (Naive version)
-        cdef int[:,:] vpath_table_row = np.zeros((state_count, sequence_length + 1), dtype=np.intc)
-        cdef int[:,:] vpath_table_col = np.zeros((state_count, sequence_length + 1), dtype=np.intc)
+        cdef int[::1,:] vpath_table_row = np.zeros((state_count, sequence_length + 1), dtype=np.intc, order='F')
+        cdef int[::1,:] vpath_table_col = np.zeros((state_count, sequence_length + 1), dtype=np.intc, order='F')
 
         cdef int row, col
+        cdef char ch
         for col in range(sequence_length):
             for row in range(state_count-1):
                 # Don't believe partially mapped read (the first and last)
@@ -563,31 +666,32 @@ cdef class Model(object):
                 #             vpath_table_col[neighbor_state_index][col] = col
 
                 row_index = repeat_start_index + row
-                if col != 0 and dynamic_table[row][col] == -np.inf:
+                if col != 0 and dynamic_table[row][col] < self.dp_score_threshold:
                     continue
                 state = self.states[row_index]
-                self._update_tables_for_subseq(row, col, repeat_start_index, repeat_end_index, sequence, state, vpath_table_row, vpath_table_col, dynamic_table)
+                ch = encoded_sequence[col]
+                self._update_tables_for_subseq(row, col, repeat_start_index, repeat_end_index, ch, state, vpath_table_row, vpath_table_col, dynamic_table)
 
-        # # For the last update
+        # For the last update
         col = sequence_length
         for row in range(state_count-1):
             row_index = repeat_start_index + row
             if col != 0 and dynamic_table[row][col] == -np.inf:
                 continue
             state = self.states[row_index]
-            neighbor_states = self.transition_map[state]
-            neighbor_state_index = 0
-            prob = 0
 
             if state.is_silent():  # Silent state: Stay in the same column
+                neighbor_states = self.transition_map[state]
+                neighbor_state_index = 0
+                log_prob = 0
                 for neighbor_state in neighbor_states:
                     neighbor_state_index = self.state_to_index[neighbor_state] - repeat_start_index
                     if neighbor_state_index > repeat_end_index - repeat_start_index:
                         continue
-                    prob = dynamic_table[row][col] + log(self.transition_map[state][neighbor_state])
+                    log_prob = dynamic_table[row][col] + self.transition_matrix[row][neighbor_state_index]
 
-                    if prob - dynamic_table[neighbor_state_index][col] > 1e-10:
-                        dynamic_table[neighbor_state_index][col] = prob
+                    if log_prob - dynamic_table[neighbor_state_index][col] > 1e-10:
+                        dynamic_table[neighbor_state_index][col] = log_prob
                         vpath_table_row[neighbor_state_index][col] = row
                         vpath_table_col[neighbor_state_index][col] = col
 
@@ -617,25 +721,25 @@ cdef class Model(object):
                                int col,
                                int repeat_start_index,
                                int repeat_end_index,
-                               char* sequence,
+                               char ch,
                                State state,
-                               int[:,:] vpath_table_row,
-                               int[:,:] vpath_table_col,
-                               double[:,:] dynamic_table):
+                               int[::1,:] vpath_table_row,
+                               int[::1,:] vpath_table_col,
+                               double[::1,:] dynamic_table):
 
         neighbor_states = self.transition_map[state]
         cdef int neighbor_state_index = 0
-        cdef double prob = 0
+        cdef double log_prob = 0
 
         if state.is_silent():  # Silent state: Stay in the same column
             for neighbor_state in neighbor_states:
                 neighbor_state_index = self.state_to_index[neighbor_state] - repeat_start_index
                 if neighbor_state_index > repeat_end_index - repeat_start_index:
                     continue
-                prob = dynamic_table[row][col] + log(self.transition_map[state][neighbor_state])
+                log_prob = dynamic_table[row][col] + self.transition_matrix[row][neighbor_state_index]
 
-                if prob - dynamic_table[neighbor_state_index][col] > 1e-10:
-                    dynamic_table[neighbor_state_index][col] = prob
+                if log_prob - dynamic_table[neighbor_state_index][col] > 1e-10:
+                    dynamic_table[neighbor_state_index][col] = log_prob
                     vpath_table_row[neighbor_state_index][col] = row
                     vpath_table_col[neighbor_state_index][col] = col
         else:  # Not a silent state: Emit a character and move to the next column
@@ -643,15 +747,19 @@ cdef class Model(object):
                 neighbor_state_index = self.state_to_index[neighbor_state] - repeat_start_index
                 if neighbor_state_index > repeat_end_index - repeat_start_index:
                     continue
-                prob = dynamic_table[row][col] + log(self.transition_map[state][neighbor_state]) + \
-                       log(state.distribution[sequence[col]])
+                log_prob = dynamic_table[row][col] + self.transition_matrix[row][neighbor_state_index] + state.distribution[ch]
 
-                if prob - dynamic_table[neighbor_state_index][col + 1] > 1e-10:
-                    dynamic_table[neighbor_state_index][col + 1] = prob
+                if log_prob - dynamic_table[neighbor_state_index][col + 1] > 1e-10:
+                    dynamic_table[neighbor_state_index][col + 1] = log_prob
                     vpath_table_row[neighbor_state_index][col + 1] = row
                     vpath_table_col[neighbor_state_index][col + 1] = col
 
+    cpdef get_encoded_sequence(self, sequence):
+        key_map = {'A':0, 'C':1, 'G':2, 'T':3}
+        encoded_seq = [key_map[ch] for ch in sequence]
+        return np.array(encoded_seq, dtype=np.intc)
 
+    @cython.wraparound(False)
     @cython.boundscheck(False)
     cpdef tuple viterbi(self, sequence):
         """
@@ -659,8 +767,7 @@ cdef class Model(object):
         :return: log probability and viterbi path
         """
         if not self.is_baked:
-            print("ERROR: To call viterbi, the model must have been baked")
-            raise ValueError
+            raise ValueError("ERROR: To call viterbi, the model must have been baked")
 
         # Find start and end index of repeats matcher
         cdef Model repeat_matcher_model = self.subModels[1]
@@ -670,35 +777,62 @@ cdef class Model(object):
         # Initialize dynamic programming table
         # Rows represent states and Columns represent sequence
         cdef int sequence_length = len(sequence)
+        cdef int[::1] encoded_sequence = self.get_encoded_sequence(sequence)
+
         # self.dynamic_table = np.ones((self.n_states, sequence_length + 1), dtype=np.double) * (-np.inf)
         # self.dynamic_table[self.state_to_index[self.start]][0] = np.log(1)
 
-        cdef double[:,:] dynamic_table = np.ones((self.n_states, sequence_length + 1), dtype=np.double) * (-np.inf)
+        cdef double[::1,:] dynamic_table = np.full((self.n_states, sequence_length + 1), -np.inf, dtype=np.double, order='F')
         dynamic_table[self.state_to_index[self.start]][0] = log(1)
 
         # Storing previous states row and column separately (Naive version)
-        cdef int[:,:] vpath_table_row = np.zeros((self.n_states, sequence_length + 1), dtype=np.intc)
-        cdef int[:,:] vpath_table_col = np.zeros((self.n_states, sequence_length + 1), dtype=np.intc)
+        cdef int[::1,:] vpath_table_row = np.zeros((self.n_states, sequence_length + 1), dtype=np.intc, order='F')
+        cdef int[::1,:] vpath_table_col = np.zeros((self.n_states, sequence_length + 1), dtype=np.intc, order='F')
 
         cdef int row, col
+        cdef int ch
+
+        cdef Queue current_states = Queue()
+        cdef Queue next_states = Queue()
+        next_states.append(self.state_to_index[self.start])  # At the beginning, only the start state has a probability
+
         for col in range(sequence_length):
-            # Filling out suffix matcher table once
-            for row in range(0, repeat_start_index):
-                if col != 0 and dynamic_table[row][col] == -np.inf:
-                    continue
-                state = self.states[row]
-                self._update_dynamic_table(row, col, sequence, state, vpath_table_row, vpath_table_col, dynamic_table)
+            Queue.swap_queue(current_states, next_states)
 
-            # Filling out repeat matcher table twice
-            for iteration in range(2):
-                for row in range(repeat_start_index, repeat_end_index+1):
-                    state = self.states[row]
-                    self._update_dynamic_table(row, col, sequence, state, vpath_table_row, vpath_table_col, dynamic_table)
+            if current_states.is_empty(): # No other update is needed, so break
+                break
 
-            # Filling out prefix matcher table once
-            for row in range(repeat_end_index+1, len(self.states)):
+            while not current_states.is_empty():
+                row = current_states.pop()
                 state = self.states[row]
-                self._update_dynamic_table(row, col, sequence, state, vpath_table_row, vpath_table_col, dynamic_table)
+                ch = encoded_sequence[col]
+                self.__update_dynamic_table(row, col, ch, state, vpath_table_row, vpath_table_col, dynamic_table, current_states, next_states)
+
+        # for col in range(sequence_length):
+        #     # Filling out suffix matcher table once
+        #     for row in range(0, repeat_start_index):
+        #         if col != 0 and dynamic_table[row][col] < self.dp_score_threshold:
+        #             continue
+        #         state = self.states[row]
+        #         ch = encoded_sequence[col]
+        #         self._update_dynamic_table(row, col, ch, state, vpath_table_row, vpath_table_col, dynamic_table)
+        #
+        #     # Filling out repeat matcher table twice
+        #     for iteration in range(2):
+        #         for row in range(repeat_start_index, repeat_end_index+1):
+        #             if col != 0 and dynamic_table[row][col] < self.dp_score_threshold:
+        #                 continue
+        #             state = self.states[row]
+        #             ch = encoded_sequence[col]
+        #             self._update_dynamic_table(row, col, ch, state, vpath_table_row, vpath_table_col, dynamic_table)
+        #
+        #     # Filling out prefix matcher table once
+        #     for row in range(repeat_end_index+1, len(self.states)):
+        #         if col != 0 and dynamic_table[row][col] < self.dp_score_threshold:
+        #                 continue
+        #         state = self.states[row]
+        #         ch = encoded_sequence[col]
+        #         self._update_dynamic_table(row, col, ch, state, vpath_table_row, vpath_table_col, dynamic_table)
 
         # For the last update
         col = sequence_length
@@ -706,14 +840,13 @@ cdef class Model(object):
         row = self.state_to_index[state]
 
         cdef int neighbor_state_index = 0
-        cdef double prob = 0
-        for neighbor_state in self.transition_map[state]:
-            neighbor_state_index = self.state_to_index[neighbor_state]
-            prob = dynamic_table[row][col] + log(self.transition_map[state][neighbor_state])
+        cdef double log_prob = 0
+        neighbor_indices = self.neighbors[state]
+        for neighbor_state_index in neighbor_indices:
+            log_prob = dynamic_table[row][col] + self.transition_matrix[row][neighbor_state_index]
 
-            if prob - dynamic_table[neighbor_state_index][col] > 1e-10:
-                dynamic_table[neighbor_state_index][col] = prob
-                # update path table
+            if log_prob - dynamic_table[neighbor_state_index][col] > 1e-10:
+                dynamic_table[neighbor_state_index][col] = log_prob
                 vpath_table_row[neighbor_state_index][col] = row
                 vpath_table_col[neighbor_state_index][col] = col
 
@@ -724,46 +857,112 @@ cdef class Model(object):
         vpath.insert(0, (end_index, self.subModels[self.n_subModels-1].end))
         row, col = vpath_table_row[end_index][sequence_length], vpath_table_col[end_index][sequence_length]
 
+        cdef double logp = dynamic_table[self.state_to_index[self.subModels[self.n_subModels-1].end]][sequence_length]
+        if logp == -np.inf:  # no path with satisfying the threshold
+            return logp, vpath
+
         while row != 0 or col != 0:
             vpath.insert(0, (self.state_to_index[self.states[row]], self.states[row]))
             row, col = vpath_table_row[row][col], vpath_table_col[row][col]
         vpath.insert(0, (self.state_to_index[self.states[row]], self.states[row]))
-        cdef double logp = dynamic_table[self.state_to_index[self.subModels[self.n_subModels-1].end]][sequence_length]
-
         return logp, vpath
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cdef void __update_dynamic_table(self,
+                               int row,
+                               int col,
+                               char ch,
+                               State state,
+                               int[::1,:] vpath_table_row,
+                               int[::1,:] vpath_table_col,
+                               double[::1,:] dynamic_table,
+                               Queue current_states,
+                               Queue next_states):
+
+        neighbor_indices = self.neighbors[state]
+        cdef int neighbor_state_index = 0
+        cdef double log_prob = 0
+
+        if state.is_silent():  # Silent state: Stay in the same column
+            for neighbor_state_index in neighbor_indices:
+                log_prob = dynamic_table[row][col] + self.transition_matrix[row][neighbor_state_index]
+
+                if log_prob - dynamic_table[neighbor_state_index][col] > 1e-10 and log_prob >= self.dp_score_threshold:
+                    current_states.append(neighbor_state_index)
+
+                    dynamic_table[neighbor_state_index][col] = log_prob
+                    vpath_table_row[neighbor_state_index][col] = row
+                    vpath_table_col[neighbor_state_index][col] = col
+        else:  # Not a silent state: Emit a character and move to the next column
+            for neighbor_state_index in neighbor_indices:
+                # print("row {} neighbor state index {}".format(row, neighbor_state_index))
+                log_prob = dynamic_table[row][col] + self.transition_matrix[row][neighbor_state_index] + state.distribution[ch]
+
+                if log_prob - dynamic_table[neighbor_state_index][col + 1] > 1e-10 and log_prob >= self.dp_score_threshold:
+                    next_states.append(neighbor_state_index)
+
+                    dynamic_table[neighbor_state_index][col + 1] = log_prob
+                    vpath_table_row[neighbor_state_index][col + 1] = row
+                    vpath_table_col[neighbor_state_index][col + 1] = col
+
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
     cdef void _update_dynamic_table(self,
                                int row,
                                int col,
-                               char* sequence,
+                               char ch,
                                State state,
-                               int[:,:] vpath_table_row,
-                               int[:,:] vpath_table_col,
-                               double[:,:] dynamic_table):
+                               int[::1,:] vpath_table_row,
+                               int[::1,:] vpath_table_col,
+                               double[::1,:] dynamic_table):
+
+        # cdef int neighbor_state_index = 0
+        # cdef double log_prob = 0
+        #
+        # cdef int[:] neighbor_mat = self.neighboring_state_indices[self.state_to_index[state]]
+        # if state.is_silent():  # Silent state: Stay in the same column
+        #     for neighbor_state_index in range(self.n_states):
+        #         if neighbor_mat[neighbor_state_index] == 1:
+        #             log_prob = dynamic_table[row][col] + self.transition_matrix[row][neighbor_state_index]
+        #
+        #             if log_prob - dynamic_table[neighbor_state_index][col] > 1e-10:
+        #                 dynamic_table[neighbor_state_index][col] = log_prob
+        #                 vpath_table_row[neighbor_state_index][col] = row
+        #                 vpath_table_col[neighbor_state_index][col] = col
+        # else:  # Not a silent state: Emit a character and move to the next column
+        #     for neighbor_state_index in range(self.n_states):
+        #         if neighbor_mat[neighbor_state_index] == 1:
+        #             log_prob = dynamic_table[row][col] + self.transition_matrix[row][neighbor_state_index] + state.distribution[ch]
+        #
+        #             if log_prob - dynamic_table[neighbor_state_index][col + 1] > 1e-10:
+        #                 dynamic_table[neighbor_state_index][col + 1] = log_prob
+        #                 vpath_table_row[neighbor_state_index][col + 1] = row
+        #                 vpath_table_col[neighbor_state_index][col + 1] = col
+
 
         neighbor_states = self.transition_map[state]
         cdef int neighbor_state_index = 0
-        cdef double prob = 0
+        cdef double log_prob = 0
 
         if state.is_silent():  # Silent state: Stay in the same column
             for neighbor_state in neighbor_states:
                 neighbor_state_index = self.state_to_index[neighbor_state]
-                prob = dynamic_table[row][col] + log(self.transition_map[state][neighbor_state])
+                # prob = dynamic_table[row][col] + log(self.transition_map[state][neighbor_state])
+                log_prob = dynamic_table[row][col] + self.transition_matrix[row][neighbor_state_index]
 
-                if prob - dynamic_table[neighbor_state_index][col] > 1e-10:
-                    dynamic_table[neighbor_state_index][col] = prob
+                if log_prob - dynamic_table[neighbor_state_index][col] > 1e-10:
+                    dynamic_table[neighbor_state_index][col] = log_prob
                     vpath_table_row[neighbor_state_index][col] = row
                     vpath_table_col[neighbor_state_index][col] = col
         else:  # Not a silent state: Emit a character and move to the next column
             for neighbor_state in neighbor_states:
                 neighbor_state_index = self.state_to_index[neighbor_state]
-                prob = dynamic_table[row][col] + log(self.transition_map[state][neighbor_state]) + \
-                       log(state.distribution[sequence[col]])
+                log_prob = dynamic_table[row][col] + self.transition_matrix[row][neighbor_state_index] + state.distribution[ch]
 
-                if prob - dynamic_table[neighbor_state_index][col + 1] > 1e-10:
-                    dynamic_table[neighbor_state_index][col + 1] = prob
+                if log_prob - dynamic_table[neighbor_state_index][col + 1] > 1e-10:
+                    dynamic_table[neighbor_state_index][col + 1] = log_prob
                     vpath_table_row[neighbor_state_index][col + 1] = row
                     vpath_table_col[neighbor_state_index][col + 1] = col
 
