@@ -1136,6 +1136,50 @@ class VNTRFinder:
         return [scaled_copy_number]
 
     @time_usage
+    def find_repeat_count_from_selected_reads(self, selected_reads, average_coverage=None):
+        logging.debug('finding repeat count from alignment file for %s' % self.reference_vntr.id)
+
+        covered_repeats = []
+        flanking_repeats = []
+        total_counted_vntr_bp = 0
+        for selected_read in selected_reads:
+            repeats = get_number_of_repeats_in_vpath(selected_read.vpath)
+            total_counted_vntr_bp += get_number_of_repeat_bp_matches_in_vpath(selected_read.vpath)
+            logging.debug('logp of read: %s' % str(selected_read.logp))
+            logging.debug('left flankign size: %s' % get_left_flanking_region_size_in_vpath(selected_read.vpath))
+            logging.debug('right flanking size: %s' % get_right_flanking_region_size_in_vpath(selected_read.vpath))
+            logging.debug(selected_read.sequence)
+            visited_states = [state.name for idx, state in selected_read.vpath[1:-1]]
+            if self.read_flanks_repeats_with_confidence(selected_read.vpath):
+                logging.debug('spanning read visited states :%s' % visited_states)
+                logging.debug('repeats: %s' % repeats)
+                covered_repeats.append(repeats)
+            else:
+                logging.debug('flanking read visited states :%s' % visited_states)
+                logging.debug('repeats: %s' % repeats)
+                flanking_repeats.append(repeats)
+        flanking_repeats = sorted(flanking_repeats)
+        logging.info('covered repeats: %s' % covered_repeats)
+        logging.info('flanking repeats: %s' % flanking_repeats)
+        min_valid_flanked = max(covered_repeats) if len(covered_repeats) > 0 else 0
+        max_flanking_repeat = [r for r in flanking_repeats if r == max(flanking_repeats) and r >= min_valid_flanked]
+        if len(max_flanking_repeat) < 5:
+            max_flanking_repeat = []
+
+        exact_genotype, max_prob = self.find_genotype_based_on_observed_repeats(covered_repeats + max_flanking_repeat)
+        if exact_genotype is not None:
+            exact_genotype_log = '/'.join([str(cn) for cn in sorted(exact_genotype)])
+        else:
+            exact_genotype_log = 'None'
+        logging.info('RU count lower bounds: %s' % exact_genotype_log)
+        if average_coverage is None:
+            return GenotypeResult(exact_genotype, len(selected_reads), len(covered_repeats), len(flanking_repeats),
+                                  max_prob)
+
+        pattern_occurrences = sum(flanking_repeats) + sum(covered_repeats)
+        return self.get_ru_count_with_coverage_method(pattern_occurrences, total_counted_vntr_bp, average_coverage)
+
+    @time_usage
     def find_repeat_count_from_alignment_file(self, alignment_file, unmapped_filtered_reads, average_coverage=None,
                                               update=False):
         logging.debug('finding repeat count from alignment file for %s' % self.reference_vntr.id)
