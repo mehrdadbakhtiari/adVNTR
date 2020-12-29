@@ -741,7 +741,7 @@ def get_read_matcher_model_enhanced(left_flanking_region, right_flanking_region,
         dp_score_threshold += (log(0.97) + log(0.99)) * read_length_used_to_build_model  # sequence length * match
         dp_score_threshold += (log(0.01) + log(0.25)) * 2  # allow upto 2 insertions/deletions (transition, emit prob)
         repeat_loop_prob = len(pattern_clusters) / (1.0 + len(pattern_clusters))
-        dp_score_threshold += log(repeat_loop_prob) * (read_length_used_to_build_model / patterns[0])
+        dp_score_threshold += log(repeat_loop_prob) * (read_length_used_to_build_model / len(patterns[0]))
         dp_score_threshold += log(1.0/len(set(patterns)))  # transition from pattern to prefix-start
         dp_score_threshold += log(to_end/total)  # match to end
         dp_score_threshold += (log(0.01) + log(0.01)) * 2  # Margin
