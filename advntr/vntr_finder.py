@@ -1081,7 +1081,7 @@ class VNTRFinder:
             if read.is_unmapped:
                 continue
             if len(read.seq) < int(read_length * 0.9):
-                logging.debug('Rejecting read for short length: %s' % read.seq)
+                logging.debug('Rejected Read, short length: %s' % read.seq)
                 continue
             read_end = read.reference_end if read.reference_end else read.reference_start + len(read.seq)
             if vntr_start - read_length < read.reference_start < vntr_end or vntr_start < read_end < vntr_end:
@@ -1095,10 +1095,10 @@ class VNTRFinder:
                         vpath = rev_vpath
                     length = len(sequence)
                     if logp == -numpy.inf:
-                        logging.debug('Rejected Read: %s' % sequence)
+                        logging.debug('Rejected Read, low likelihood: %s' % sequence)
                         continue
                     if is_low_quality_read(read) and not self.recruit_read(logp, vpath, recruitment_score, length):
-                        logging.debug('Rejected Read: %s' % sequence)
+                        logging.debug('Rejected Read, low quality: %s' % sequence)
                         continue
                     selected_reads.append(SelectedRead(sequence, logp, vpath, read.mapq, read.reference_start))
                 end = min(read_end, vntr_end)
