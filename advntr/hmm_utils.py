@@ -181,7 +181,7 @@ def get_repeating_unit_state_count(visited_states):
 
     if last_end_index == 0 and prev_start_index is None:  # When a read is completely within a repeating unit
         match_count = 0
-        insert_count
+        insert_count = 0
         delete_count = 0
 
         for j in range(len(visited_states)):
