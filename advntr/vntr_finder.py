@@ -1042,26 +1042,6 @@ class VNTRFinder:
     def select_illumina_reads(self, alignment_file, unmapped_filtered_reads, update=False, hmm=None):
         recruitment_score = None
         selected_reads = []
-        vntr_bp_in_unmapped_reads = Value('d', 0.0)
-
-        number_of_reads = 0
-        read_length = 150
-        for read_segment in unmapped_filtered_reads:
-            if number_of_reads == 0:
-                read_length = len(str(read_segment.seq))
-            number_of_reads += 1
-            if not hmm:
-                hmm = self.get_vntr_matcher_hmm(read_length=read_length)
-            if not recruitment_score:
-                recruitment_score = self.get_min_score_to_select_a_read(read_length)
-
-            if len(read_segment.seq) < read_length:
-                continue
-
-            self.process_unmapped_read(None, str(read_segment.seq), hmm, recruitment_score, vntr_bp_in_unmapped_reads,
-                                       selected_reads)
-
-        logging.debug('vntr base pairs in unmapped reads: %s' % vntr_bp_in_unmapped_reads.value)
 
         vntr_bp_in_mapped_reads = 0
         vntr_start = self.reference_vntr.start_point
@@ -1070,14 +1050,20 @@ class VNTRFinder:
         samfile = pysam.AlignmentFile(alignment_file, read_mode, reference_filename=self.reference_filename)
         reference = get_reference_genome_of_alignment_file(samfile)
         chromosome = self.reference_vntr.chromosome if reference == 'HG19' else self.reference_vntr.chromosome[3:]
-        for read in samfile.fetch(chromosome, vntr_start, vntr_end):
-            if not recruitment_score:
-                read_length = len(read.seq)
-                recruitment_score = self.get_min_score_to_select_a_read(read_length)
-            if not hmm:
-                hmm = self.get_vntr_matcher_hmm(read_length=read_length)
-                self.hmm = hmm
 
+        # Setup parameters (read_length, recruitment_score)
+        read_length = 150
+        read_lengths = []
+        for read in samfile.head(5):
+            read_lengths.append(len(read.seq))
+        read_length = sorted(read_lengths)[3]
+
+        recruitment_score = self.get_min_score_to_select_a_read(read_length)
+
+        hmm = self.get_vntr_matcher_hmm(read_length=read_length)
+        self.hmm = hmm
+
+        for read in samfile.fetch(chromosome, vntr_start, vntr_end):
             if read.is_unmapped:
                 continue
             if len(read.seq) < int(read_length * 0.9):
@@ -1105,6 +1091,14 @@ class VNTRFinder:
                 start = max(read.reference_start, vntr_start)
                 vntr_bp_in_mapped_reads += end - start
         logging.debug('vntr base pairs in mapped reads: %s' % vntr_bp_in_mapped_reads)
+
+        vntr_bp_in_unmapped_reads = Value('d', 0.0)
+        for read_segment in unmapped_filtered_reads:
+            if len(read_segment.seq) < read_length:
+                continue
+            self.process_unmapped_read(None, str(read_segment.seq), hmm, recruitment_score, vntr_bp_in_unmapped_reads,
+                                       selected_reads)
+        logging.debug('vntr base pairs in unmapped reads: %s' % vntr_bp_in_unmapped_reads.value)
 
         if update:
             selected_reads = self.iteratively_update_model(alignment_file, unmapped_filtered_reads, selected_reads, hmm)
