@@ -179,19 +179,35 @@ def get_repeating_unit_state_count(visited_states):
         if visited_states[i].startswith('unit_start'):
             prev_start_index = i
 
-    if prev_start_index > last_end_index:
-        # if met unit start but not unit_end - update the length
+    if last_end_index == 0 and prev_start_index is None:  # When a read is completely within a repeating unit
         match_count = 0
-        insert_count = 0
+        insert_count
         delete_count = 0
-        for j in range(prev_start_index, len(visited_states)):
+
+        for j in range(len(visited_states)):
             if visited_states[j].startswith("M"):
                 match_count += 1
             if visited_states[j].startswith("I"):
                 insert_count += 1
             if visited_states[j].startswith("D"):
                 delete_count += 1
-        state_count_for_ru['partial_end'] = {'M': match_count, 'I': insert_count, 'D': delete_count}
+        state_count_for_ru['partial_start'] = {'M': match_count, 'I': insert_count, 'D': delete_count}
+        return state_count_for_ru
+
+    if prev_start_index is not None:
+        if prev_start_index > last_end_index:
+            # if met unit start but not unit_end - update the length
+            match_count = 0
+            insert_count = 0
+            delete_count = 0
+            for j in range(prev_start_index, len(visited_states)):
+                if visited_states[j].startswith("M"):
+                    match_count += 1
+                if visited_states[j].startswith("I"):
+                    insert_count += 1
+                if visited_states[j].startswith("D"):
+                    delete_count += 1
+            state_count_for_ru['partial_end'] = {'M': match_count, 'I': insert_count, 'D': delete_count}
 
     return state_count_for_ru
 
