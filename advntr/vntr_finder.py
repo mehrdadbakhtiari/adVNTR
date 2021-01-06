@@ -673,7 +673,7 @@ class VNTRFinder:
                     first_repeat_unit_index = reference_repeat_order[1]  # L-target-X-X...-X-R
                     logging.info('Frameshift Candidate and Occurrence {}: {}'.format(candidate, mutation_count))
                     if mutation_count < 3:
-                        logging.info('Skipped due to too small number of occurrence {}: {}'.format(state, mutation_count))
+                        logging.info('Skipped due to too small number of occurrence {}: {}'.format(candidate, mutation_count))
                         continue
                     ru_length = hmm_match_count[first_repeat_unit_index]
                     total_bps_in_ru = ru_bp_coverage[first_repeat_unit_index]
@@ -698,7 +698,7 @@ class VNTRFinder:
                     last_repeat_unit_index = reference_repeat_order[-2]  # L-X-X-X...-target-R
                     logging.info('Frameshift Candidate and Occurrence {}: {}'.format(candidate, mutation_count))
                     if mutation_count < 3:
-                        logging.info('Skipped due to too small number of occurrence {}: {}'.format(state, mutation_count))
+                        logging.info('Skipped due to too small number of occurrence {}: {}'.format(candidate, mutation_count))
                         continue
                     ru_length = hmm_match_count[last_repeat_unit_index]
                     total_bps_in_ru = ru_bp_coverage[last_repeat_unit_index]
