@@ -80,19 +80,15 @@ class GenomeAnalyzer:
     def print_genotype_in_vcf(self, vntr_id, genotype_result):
         vntr = self.vntr_finder[vntr_id].reference_vntr
 
-        # CHROM
-        print(vntr.chromosome + "\t"),
         # POS
         start = vntr.start_point
         end = start + vntr.get_length()
-        print(str(vntr.start_point) + "\t"),
         # ID
         id = '.'
-        print(id + "\t"),
         # REF
         ref = ''.join(vntr.get_repeat_segments())
-        print(ref + "\t"),
         # ALT
+        alt = ''
         consensus_seq = vntr.pattern  # TODO use consensus and confidence
         GT = []
         diff_count = 0
@@ -114,18 +110,16 @@ class GenomeAnalyzer:
                     GT.append(0)
 
         if diff_count == 2:
-            print(consensus_seq * genotype_result.copy_numbers[0] + "," + consensus_seq * genotype_result.copy_numbers[1] + "\t"),
+            alt = consensus_seq * genotype_result.copy_numbers[0] + "," + consensus_seq * genotype_result.copy_numbers[1]
         elif diff_count == 1:
-            print(consensus_seq * genotype_result.copy_numbers[diff_index] + "\t"),
+            alt = consensus_seq * genotype_result.copy_numbers[diff_index]
         else:
-            print('.' + "\t"),
+            alt = '.'
 
         # QUAL
         qual = '.'
-        print(qual + "\t"),
         # FILTER
         filter = '.'
-        print(filter + "\t"),
 
         # INFO
         advntr_vntr_ID = vntr_id  # ID
@@ -133,12 +127,10 @@ class GenomeAnalyzer:
         reference_repeat_count = vntr.estimated_repeats  # RC
 
         info_cols = "END=" + str(end) + ";VID=" + str(advntr_vntr_ID) + ";RU=" + reference_repeat_pattern +\
-                    ";RC=" + str(reference_repeat_count) + "\t"
-        print(info_cols),
+                    ";RC=" + str(reference_repeat_count)
 
         # FORMAT
-        format_cols = "GT:DP:SR:FR:ML\t"
-        print(format_cols),
+        format_cols = "GT:DP:SR:FR:ML"
 
         format_string = ""
         # GT
@@ -152,7 +144,8 @@ class GenomeAnalyzer:
         # ML
         format_string += "{0:.4f}".format(genotype_result.maximum_likelihood)
 
-        print(format_string)
+        print("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}".format(vntr.chromosome, vntr.start_point, id,\
+              ref, alt, qual, filter, info_cols, format_cols, format_string))
 
     def print_genotype_in_text_format(self, vntr_id, copy_numbers):
         print(vntr_id)
