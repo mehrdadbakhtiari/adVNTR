@@ -628,7 +628,7 @@ class VNTRFinder:
             logging.info('P-value: %s' % pval)
             if pval < settings.INDEL_MUTATION_MIN_PVALUE:
                 logging.info('ID:{}, There is a mutation at {}'.format(self.reference_vntr.id, state))
-                frameshifts.append(state)
+                frameshifts.append((state, observed_mutation_count, pval))
 
         # Check if prefix or suffix mutation check is required
         # If the last or first nucleotide of VNTR is the same as the first or last nucleotide of flanking region,
@@ -717,7 +717,7 @@ class VNTRFinder:
                     logging.info('P-value: %s' % pval)
                     if pval < settings.INDEL_MUTATION_MIN_PVALUE:
                         logging.info('ID:{}, There is a mutation at {}'.format(self.reference_vntr.id, candidate))
-                        frameshifts.append(candidate)
+                        frameshifts.append((candidate, mutation_count, pval))
 
         return frameshifts if len(frameshifts) > 0 else None
 
