@@ -212,13 +212,13 @@ class GenomeAnalyzer:
         print("Input File: {}".format(alignment_file))
         for vid in self.target_vntr_ids:
             results = self.vntr_finder[vid].find_frameshift_from_alignment_file(alignment_file, [])
-            print(vid)
+            print("VID: {}".format(vid))
             if results is not None:
-                print("Frameshift mutation has detected")
-                for result in results:
-                    print(result)
+                print("Indel mutations have been detected")
+                for state, count, pval in results:
+                    print("State: {}, The number of supporting reads: {}, P-value: {}".format(state, count, pval))
             else:
-                print("No frameshift mutation has detected")
+                print("No mutation has been detected")
 
     def find_repeat_counts_from_alignment_file(self, alignment_file, average_coverage, update=False):
         unmapped_reads_file = extract_unmapped_reads_to_fasta_file(alignment_file, self.working_dir, self.ref_filename)
