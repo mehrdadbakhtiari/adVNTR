@@ -1064,7 +1064,8 @@ class VNTRFinder:
         self.hmm = hmm
 
         for read in samfile.fetch(chromosome, vntr_start, vntr_end):
-            if read.is_unmapped:
+            if read.is_unmapped or read.is_duplicate:
+                logging.debug('Rejected duplicated read')
                 continue
             if len(read.seq) < int(read_length * 0.9):
                 logging.debug('Rejected Read, short length: %s' % read.seq)
