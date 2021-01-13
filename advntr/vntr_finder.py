@@ -657,7 +657,8 @@ class VNTRFinder:
             if not hmm:
                 hmm = self.get_vntr_matcher_hmm(read_length=read_length)
 
-            if read.is_unmapped:
+            if read.is_unmapped or read.is_duplicate:
+                logging.debug('Rejecting duplicated read')
                 continue
             if len(read.seq) < int(read_length * 0.9):
                 logging.debug('Rejecting read for short length: %s' % read.seq)
