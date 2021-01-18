@@ -419,6 +419,7 @@ class VNTRFinder:
 
         for read in selected_reads:
             if self.is_frameshift_mode:
+                # TODO: Read Vpath once
                 read_as_repeat_unit_number, annotated_read, unit_start_points = self.get_repeat_unit_number(read)
 
                 logging.debug("Reference repeat order: {}".format(reference_repeat_order))
@@ -465,6 +466,7 @@ class VNTRFinder:
             logging.debug("VisitedStates:{}".format(visited_states))
             logging.debug("LogProb:{}".format(read.logp))
 
+            # TODO: Read Vpath once
             ru_state_count = get_repeating_unit_state_count(visited_states)
             fully_observed_ru_count = len(ru_state_count)
             if 'partial_start' in ru_state_count:
@@ -568,7 +570,7 @@ class VNTRFinder:
                     is_valid_read = False
                     break
 
-                # TODO If there are run of insertions, the sequence should be different
+                # TODO If there are run of insertions, the emitted character can be different, but now use the first
                 if current_state.startswith('I'):
                     current_state += '_' + get_emitted_basepair_from_visited_states(current_state, visited_states,
                                                                                     read.sequence)
@@ -576,11 +578,55 @@ class VNTRFinder:
                 mutation_count_temp[current_state] += 1
 
             if is_valid_read:
-                for state in mutation_count_temp:
-                    occurrence = mutation_count_temp[state]
-                    if state.startswith('I'):
-                        state += "_LEN{}".format(occurrence)  # Insertion length
-                    mutations[state] += 1
+                # Check if the mutations are adjacent each other
+                # mutation_count_temp is the dictionary of mutations in a repeat unit
+                sorted_temp_mutations = sorted(mutation_count_temp.items(), key=lambda x: x[0])
+                prev_mutation = sorted_temp_mutations[0]
+                mutation_sequence = prev_mutation
+                for i in range(1, len(sorted_temp_mutations)):
+                    temp_mutation = sorted_temp_mutations[i]
+                    current_mutation_index = int(temp_mutation.split("_")[0][1:])
+                    prev_mutation_index = int(prev_mutation.split("_")[0][1:])
+
+                    if temp_mutation.startswith("D"):
+                        # Case 1: D(i-1), D(i),
+                        # In this case, the deletion is connected to the previous mutation sequence and skip
+                        if prev_mutation_index + 1 == current_mutation_index:  # Only possible with D(i-1)
+                            mutation_sequence += '&' + temp_mutation
+                        # Case 2: I/D(j), D(i), j < i-1
+                        # In this case, they are not connected (This should be rare, two separated deletions in a RU)
+                        else:
+                            # Save the previous mutation and initialize it
+                            if mutation_sequence is not None:  # Prev mutation was a deletion
+                                mutations[mutation_sequence] += 1
+                            mutation_sequence = temp_mutation
+
+                    if temp_mutation.startswith("I"):
+                        # Case 3: D(i-1), I(i)
+                        if prev_mutation_index == current_mutation_index:  # Only possible with D(i-1)
+                            # Add the insertion and done
+                            mutation_sequence += "&{}_LEN{}".format(temp_mutation, mutation_count_temp[temp_mutation])
+                            mutations[mutation_sequence] += 1
+                            mutation_sequence = None
+                        # Case 4: I/D(j), I(i), j < i-1
+                        else:
+                            # Save the previous mutation and initialize it
+                            if mutation_sequence is not None:  # Prev mutation was a deletion
+                                mutations[mutation_sequence] += 1
+                            mutations["{}_LEN{}".format(temp_mutation, mutation_count_temp[temp_mutation])] += 1
+                            mutation_sequence = None
+
+                    prev_mutation = temp_mutation
+
+                # Last check (e.g. D1-D2)
+                if mutation_sequence is not None:
+                    mutations[mutation_sequence] += 1
+
+                # for state in mutation_count_temp:
+                #     occurrence = mutation_count_temp[state]
+                #     if state.startswith('I'):
+                #         state += "_LEN{}".format(occurrence)  # Insertion length
+                #     mutations[state] += 1
 
                 # Update only when the pre-/suffix match rate is > 0.9
                 for state in prefix_suffix_mutation_count_temp.keys():
@@ -597,6 +643,8 @@ class VNTRFinder:
                     if state.startswith('I'):
                         state += "_LEN{}".format(occurrence)  # Insertion length
                     prefix_suffix_mutations[state] += 1
+
+                # TODO: Merge in a function (read Vpath once)
                 update_number_of_repeat_bp_matches_in_vpath_for_each_hmm(read.vpath, ru_bp_coverage)
             else:
                 logging.debug(reason_why_rejected)
