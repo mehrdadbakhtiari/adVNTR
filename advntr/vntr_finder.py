@@ -581,10 +581,10 @@ class VNTRFinder:
                 # Check if the mutations are adjacent each other
                 # mutation_count_temp is the dictionary of mutations in a repeat unit
                 sorted_temp_mutations = sorted(mutation_count_temp.items(), key=lambda x: x[0])
-                prev_mutation = sorted_temp_mutations[0]
+                prev_mutation = sorted_temp_mutations[0][0] if mutation_count_temp else None
                 mutation_sequence = prev_mutation
                 for i in range(1, len(sorted_temp_mutations)):
-                    temp_mutation = sorted_temp_mutations[i]
+                    temp_mutation = sorted_temp_mutations[i][0]
                     current_mutation_index = int(temp_mutation.split("_")[0][1:])
                     prev_mutation_index = int(prev_mutation.split("_")[0][1:])
 
@@ -655,7 +655,7 @@ class VNTRFinder:
         frameshifts = []
         for frameshift_candidate in sorted_mutations:
             state = frameshift_candidate[0]
-            pattern_index = state.split("_")[1]
+            pattern_index = state.split("_")[1] if "&" not in state else state.split("&")[0].split("_")[1]
             observed_mutation_count = frameshift_candidate[1]
             logging.info('Frameshift Candidate and Occurrence {}: {}'.format(state, observed_mutation_count))
             if observed_mutation_count < 3:
