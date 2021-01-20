@@ -583,6 +583,9 @@ class VNTRFinder:
                 sorted_temp_mutations = sorted(mutation_count_temp.items(), key=lambda x: x[0])
                 prev_mutation = sorted_temp_mutations[0][0] if mutation_count_temp else None
                 mutation_sequence = prev_mutation
+                if prev_mutation is not None:
+                    if prev_mutation.startswith("I"):
+                      mutation_sequence = prev_mutation + "_LEN{}".format(sorted_temp_mutations[0][1])
                 for i in range(1, len(sorted_temp_mutations)):
                     temp_mutation = sorted_temp_mutations[i][0]
                     current_mutation_index = int(temp_mutation.split("_")[0][1:])
