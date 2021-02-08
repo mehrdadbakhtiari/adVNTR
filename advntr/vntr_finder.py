@@ -577,53 +577,59 @@ class VNTRFinder:
 
                 mutation_count_temp[current_state] += 1
 
-            if is_valid_read:
+            if is_valid_read and len(mutation_count_temp) > 0:
                 # Check if the mutations are adjacent each other
                 # mutation_count_temp is the dictionary of mutations in a repeat unit
-                sorted_temp_mutations = sorted(mutation_count_temp.items(), key=lambda x: x[0])
-                prev_mutation = sorted_temp_mutations[0][0] if mutation_count_temp else None
-                mutation_sequence = prev_mutation
-                if prev_mutation is not None:
-                    if prev_mutation.startswith("I"):
-                      mutation_sequence = prev_mutation + "_LEN{}".format(sorted_temp_mutations[0][1])
-                for i in range(1, len(sorted_temp_mutations)):
-                    temp_mutation = sorted_temp_mutations[i][0]
-                    current_mutation_index = int(temp_mutation.split("_")[0][1:])
-                    prev_mutation_index = int(prev_mutation.split("_")[0][1:])
-
-                    if temp_mutation.startswith("D"):
-                        # Case 1: D(i-1), D(i),
-                        # In this case, the deletion is connected to the previous mutation sequence and skip
-                        if prev_mutation_index + 1 == current_mutation_index:  # Only possible with D(i-1)
-                            mutation_sequence += '&' + temp_mutation
-                        # Case 2: I/D(j), D(i), j < i-1
-                        # In this case, they are not connected (This should be rare, two separated deletions in a RU)
-                        else:
-                            # Save the previous mutation and initialize it
-                            if mutation_sequence is not None:  # Prev mutation was a deletion
-                                mutations[mutation_sequence] += 1
-                            mutation_sequence = temp_mutation
-
+                if len(mutation_count_temp) == 1:  # only one mutation
+                    temp_mutation, count = mutation_count_temp.popitem()
                     if temp_mutation.startswith("I"):
-                        # Case 3: D(i-1), I(i)
-                        if prev_mutation_index == current_mutation_index:  # Only possible with D(i-1)
-                            # Add the insertion and done
-                            mutation_sequence += "&{}_LEN{}".format(temp_mutation, mutation_count_temp[temp_mutation])
-                            mutations[mutation_sequence] += 1
-                            mutation_sequence = None
-                        # Case 4: I/D(j), I(i), j < i-1
-                        else:
-                            # Save the previous mutation and initialize it
-                            if mutation_sequence is not None:  # Prev mutation was a deletion
+                        temp_mutation = temp_mutation + "_LEN{}".format(count)
+                    mutations[temp_mutation] += 1
+                else:
+                    sorted_temp_mutations = sorted(mutation_count_temp.items(), key=lambda x: x[0])
+                    prev_mutation = sorted_temp_mutations[0][0]
+                    mutation_sequence = prev_mutation
+                    if prev_mutation.startswith("I"):
+                        mutation_sequence += "_LEN{}".format(sorted_temp_mutations[0][1])
+
+                    for i in range(1, len(sorted_temp_mutations)):
+                        temp_mutation = sorted_temp_mutations[i][0]
+                        current_mutation_index = int(temp_mutation.split("_")[0][1:])
+                        prev_mutation_index = int(prev_mutation.split("_")[0][1:])
+
+                        if temp_mutation.startswith("D"):
+                            # Case 1: D(i-1), D(i),
+                            # In this case, the deletion is connected to the previous mutation sequence and skip
+                            if prev_mutation_index + 1 == current_mutation_index:  # Only possible with D(i)
+                                mutation_sequence += '&' + temp_mutation
+                            # Case 2: I/D(j), D(i), j < i-1
+                            # In this case, they are not connected (This should be rare, two separated deletions in a RU)
+                            else:
+                                # Save the previous mutation and initialize it
+                                if mutation_sequence is not None:  # Prev mutation was a deletion
+                                    mutations[mutation_sequence] += 1
+                                mutation_sequence = temp_mutation
+
+                        if temp_mutation.startswith("I"):
+                            # Case 3: D(i-1), I(i)
+                            if prev_mutation_index == current_mutation_index:  # Only possible with D(i-1)
+                                # Add the insertion and done
+                                mutation_sequence += "&{}_LEN{}".format(temp_mutation, mutation_count_temp[temp_mutation])
                                 mutations[mutation_sequence] += 1
-                            mutations["{}_LEN{}".format(temp_mutation, mutation_count_temp[temp_mutation])] += 1
-                            mutation_sequence = None
+                                mutation_sequence = None
+                            # Case 4: I/D(j), I(i), j < i-1
+                            else:
+                                # Save the previous mutation and initialize it
+                                if mutation_sequence is not None:  # Prev mutation was a deletion
+                                    mutations[mutation_sequence] += 1
+                                mutations["{}_LEN{}".format(temp_mutation, mutation_count_temp[temp_mutation])] += 1
+                                mutation_sequence = None
 
-                    prev_mutation = temp_mutation
+                        prev_mutation = temp_mutation
 
-                # Last check (e.g. D1-D2)
-                if mutation_sequence is not None:
-                    mutations[mutation_sequence] += 1
+                    # Last check (e.g. D1-D2)
+                    if mutation_sequence is not None:
+                        mutations[mutation_sequence] += 1
 
                 # for state in mutation_count_temp:
                 #     occurrence = mutation_count_temp[state]
