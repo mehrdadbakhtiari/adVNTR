@@ -6,7 +6,7 @@ from Bio.SeqRecord import SeqRecord
 from advntr.profiler import time_usage
 from advntr.sam_utils import extract_unmapped_reads_to_fasta_file
 from advntr.vntr_finder import VNTRFinder
-
+from advntr import settings
 
 class GenomeAnalyzer:
     def __init__(self, ref_vntrs, target_vntr_ids, working_dir='./', outfmt='text', is_haploid=False, ref_filename=None,
@@ -209,16 +209,16 @@ class GenomeAnalyzer:
             self.print_genotype(vid, copy_numbers)
 
     def find_frameshift_from_alignment_file(self, alignment_file):
-        print("Input File: {}".format(alignment_file))
+        print("#Input File: {}".format(alignment_file))
+        print("#Reference file: {}".format(self.ref_filename))
+        print("#P-value cutoff: {}".format(settings.INDEL_MUTATION_MIN_PVALUE))
+        print("#VID\tState\tNumberOfSupportingReads\tMeanCoverage\tPvalue")
         for vid in self.target_vntr_ids:
             results = self.vntr_finder[vid].find_frameshift_from_alignment_file(alignment_file, [])
-            print("VID: {}".format(vid))
             if results is not None:
-                print("Indel mutations have been detected")
-                for state, count, pval in results:
-                    print("State: {}, The number of supporting reads: {}, P-value: {}".format(state, count, pval))
-            else:
-                print("No mutation has been detected")
+                for state, count, avg_bp_coverage, pval in results:
+                    print("{}\t{}\t{}\t{}\t{}".format(vid, state, count, avg_bp_coverage, pval))
+
 
     def find_repeat_counts_from_alignment_file(self, alignment_file, average_coverage, update=False):
         unmapped_reads_file = extract_unmapped_reads_to_fasta_file(alignment_file, self.working_dir, self.ref_filename)
