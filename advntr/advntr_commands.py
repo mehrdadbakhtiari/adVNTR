@@ -104,6 +104,13 @@ def genotype(args, genotype_parser):
     target_vntrs = [ref_vntr.id for ref_vntr in reference_vntrs]
     if args.vntr_id is not None:
         target_vntrs = [int(vid) for vid in args.vntr_id.split(',')]
+    if args.vid_file is not None:
+        target_vids = []
+        with open(args.vid_file, "r") as f:
+            for line in f:
+                target_vids.append(int(line.strip()))
+        target_vntrs = [int(vid) for vid in target_vids]
+
     logging.info('Running adVNTR for %s VNTRs' % len(target_vntrs))
     genome_analyzier = GenomeAnalyzer(reference_vntrs, target_vntrs, working_directory, args.outfmt, args.haploid,
                                       args.reference_filename, input_file, args.frameshift)
@@ -114,10 +121,16 @@ def genotype(args, genotype_parser):
             genome_analyzier.find_repeat_counts_from_pacbio_reads(input_file, args.naive)
     else:
         if args.frameshift:
-            if valid_vntr_for_frameshift(target_vntrs):
-                genome_analyzier.find_frameshift_from_alignment_file(input_file)
-            else:
-                print_error(genotype_parser, '--frameshift is not available for these VNTRs')
+            if args.fullru:
+                settings.USE_ONLY_FULLY_COVERED_RU = True
+            # if valid_vntr_for_frameshift(target_vntrs):
+            genome_analyzier.find_frameshift_from_alignment_file(input_file)
+            if args.aln:
+                from advntr.hmm_alignment import generate_aln
+                ref_vntr_dict = {ref_vntr.id: ref_vntr for ref_vntr in reference_vntrs if ref_vntr.id in target_vntrs}
+                generate_aln(log_file, None, "", None, ref_vntr_dict)
+            # else:
+            #     print_error(genotype_parser, '--frameshift is not available for these VNTRs')
         elif input_is_alignment_file:
             genome_analyzier.find_repeat_counts_from_alignment_file(input_file, average_coverage, args.update)
         else:
