@@ -147,11 +147,14 @@ def get_repeating_unit_state_count(visited_states):
     complete_ru_index = 0
     prev_start_index = None
     last_end_index = 0
+    full_repeat_start = 0  # start index of fully observed repeats
+    full_repeat_end = len(visited_states)-1  # end index of fully observed repeats
     for i in range(len(visited_states)):
         if visited_states[i].startswith('unit_end'):
             last_end_index = i
             if prev_start_index is None:
-                # Haven't seen the start (partially mapped read) Ah only partial start? (error?)
+                # Haven't seen the start (partially mapped read)
+                full_repeat_start = i + 1
                 match_count = 0
                 insert_count = 0
                 delete_count = 0
@@ -197,6 +200,7 @@ def get_repeating_unit_state_count(visited_states):
     if prev_start_index is not None:
         if prev_start_index > last_end_index:
             # if met unit start but not unit_end - update the length
+            full_repeat_end = prev_start_index
             match_count = 0
             insert_count = 0
             delete_count = 0
@@ -209,7 +213,7 @@ def get_repeating_unit_state_count(visited_states):
                     delete_count += 1
             state_count_for_ru['partial_end'] = {'M': match_count, 'I': insert_count, 'D': delete_count}
 
-    return state_count_for_ru
+    return state_count_for_ru, full_repeat_start, full_repeat_end
 
 
 def get_repeat_segments_from_visited_states_and_region(visited_states, region):
@@ -277,12 +281,15 @@ def get_number_of_repeat_bp_matches_in_vpath(vpath):
     return result
 
 
-def update_number_of_repeat_bp_matches_in_vpath_for_each_hmm(vpath, ru_bp_dictionary):
-    visited_states = [state.name for idx, state in vpath[1:-1]]
+def update_number_of_repeat_bp_matches_in_vpath_for_each_hmm(visited_states, ru_bp_dictionary, full_repeat_start, full_repeat_end):
     hmm_id = 0
-    for i in range(len(visited_states)):
-        # if visited_states[i].startswith('unit_start'):
-        hmm_id = visited_states[i].split("_")[-1]  # Allowing partially mapped repeats
+    start = 0
+    end = len(visited_states)
+    if settings.USE_ONLY_FULLY_COVERED_RU:  # Only update the regions fully span repeat units
+        start = full_repeat_start
+        end = full_repeat_end
+    for i in range(start, end):
+        hmm_id = visited_states[i].split("_")[-1]
         if is_matching_state(visited_states[i]) and not visited_states[i].endswith('fix'):
             ru_bp_dictionary[hmm_id] += 1
 
@@ -762,7 +769,6 @@ def get_read_matcher_model_enhanced(left_flanking_region, right_flanking_region,
         dp_score_threshold += log(to_end/total)  # match to end
         dp_score_threshold += (log(0.01) + log(0.01)) * 3  # Margin
         model.bake(merge=None, read_length=read_length_used_to_build_model, dp_score_threshold=dp_score_threshold)
-        print("dp score threshold", dp_score_threshold)
     else:
         model.bake(merge=None, read_length=read_length_used_to_build_model)
 
