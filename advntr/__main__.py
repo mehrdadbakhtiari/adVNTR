@@ -55,6 +55,8 @@ def main():
     outfmt_choices = ['text', 'bed', 'vcf']
     genotype_io_group.add_argument('-of', '--outfmt', metavar='<format>', default='text', choices=outfmt_choices,
                                    help='output format. Allowed values are {'+', '.join(outfmt_choices)+'} [%(default)s]')
+    genotype_io_group.add_argument('-vf', '--vid_file', metavar='<file>', default=None,
+                                          help='file for "\n"-separated target VNTR IDs')
 
     genotype_algortihm_group = genotype_parser.add_argument_group("Algorithm options")
     genotype_algortihm_group.add_argument('-fs', '--frameshift', action='store_true',
@@ -82,6 +84,10 @@ def main():
                                        help='set this flag to iteratively update the model')
     genotype_others_group.add_argument('-vid', '--vntr_id', type=str, metavar='<text>', default=None,
                                        help='comma-separated list of VNTR IDs')
+    genotype_others_group.add_argument('-fru', '--fullru', action='store_true',
+                                       help='use only fully mapped repeat units for mutation calls')
+    genotype_others_group.add_argument('-aln', '--aln', action='store_true',
+                                       help='generates hmm alignments')
 
     viewmodel_parser = subparsers.add_parser('viewmodel', usage='advntr viewmodel [options]', formatter_class=fmt)
     viewmodel_parser.add_argument('-g', '--gene', type=str, default='', metavar='<text>',
