@@ -232,7 +232,7 @@ class VNTRFinder:
             sema.release()
 
     @staticmethod
-    def identify_frameshift(location_coverage, observed_indel_transitions, expected_indels, error_rate=0.01):
+    def identify_frameshift(location_coverage, observed_indel_transitions, expected_indels, error_rate=settings.INDEL_ERROR_RATE):
         if observed_indel_transitions > location_coverage:
             return 0, 1.0, 0
         from scipy.stats import binom
@@ -467,7 +467,7 @@ class VNTRFinder:
             logging.debug("LogProb:{}".format(read.logp))
 
             # TODO: Read Vpath once
-            ru_state_count = get_repeating_unit_state_count(visited_states)
+            ru_state_count, full_repeat_start, full_repeat_end = get_repeating_unit_state_count(visited_states)
             fully_observed_ru_count = len(ru_state_count)
             if 'partial_start' in ru_state_count:
                 fully_observed_ru_count -= 1
@@ -522,6 +522,8 @@ class VNTRFinder:
 
                 # Reads starting with a partially observed repeat unit
                 if current_repeat is None:
+                    if settings.USE_ONLY_FULLY_COVERED_RU:
+                        continue
                     if 'partial_start' in ru_state_count:
                         if ru_state_count['partial_start']['M'] < 5:
                             continue
@@ -535,6 +537,8 @@ class VNTRFinder:
 
                 # Reads ending with a partially observed repeat unit
                 if current_repeat >= fully_observed_ru_count:
+                    if settings.USE_ONLY_FULLY_COVERED_RU:
+                        continue
                     if 'partial_end' in ru_state_count:
                         if ru_state_count['partial_end']['M'] < 5:
                             continue
@@ -577,21 +581,24 @@ class VNTRFinder:
 
                 mutation_count_temp[current_state] += 1
 
-            if is_valid_read and len(mutation_count_temp) > 0:
-                # Check if the mutations are adjacent each other
+            if is_valid_read:
+                # TODO: Merge in a function (read Vpath once)
+                update_number_of_repeat_bp_matches_in_vpath_for_each_hmm(visited_states, ru_bp_coverage,
+                                                                         full_repeat_start, full_repeat_end)
+                if len(mutation_count_temp) == 0:
+                    continue
                 # mutation_count_temp is the dictionary of mutations in a repeat unit
                 if len(mutation_count_temp) == 1:  # only one mutation
                     temp_mutation, count = mutation_count_temp.popitem()
                     if temp_mutation.startswith("I"):
                         temp_mutation = temp_mutation + "_LEN{}".format(count)
                     mutations[temp_mutation] += 1
-                else:
+                else:  # Check if the mutations are adjacent each other
                     sorted_temp_mutations = sorted(mutation_count_temp.items(), key=lambda x: x[0])
                     prev_mutation = sorted_temp_mutations[0][0]
                     mutation_sequence = prev_mutation
                     if prev_mutation.startswith("I"):
                         mutation_sequence += "_LEN{}".format(sorted_temp_mutations[0][1])
-
                     for i in range(1, len(sorted_temp_mutations)):
                         temp_mutation = sorted_temp_mutations[i][0]
                         current_mutation_index = int(temp_mutation.split("_")[0][1:])
@@ -603,7 +610,7 @@ class VNTRFinder:
                             if prev_mutation_index + 1 == current_mutation_index:  # Only possible with D(i)
                                 mutation_sequence += '&' + temp_mutation
                             # Case 2: I/D(j), D(i), j < i-1
-                            # In this case, they are not connected (This should be rare, two separated deletions in a RU)
+                            # In this case, they are not connected (This should be rare, two deletions in a RU)
                             else:
                                 # Save the previous mutation and initialize it
                                 if mutation_sequence is not None:  # Prev mutation was a deletion
@@ -631,12 +638,6 @@ class VNTRFinder:
                     if mutation_sequence is not None:
                         mutations[mutation_sequence] += 1
 
-                # for state in mutation_count_temp:
-                #     occurrence = mutation_count_temp[state]
-                #     if state.startswith('I'):
-                #         state += "_LEN{}".format(occurrence)  # Insertion length
-                #     mutations[state] += 1
-
                 # Update only when the pre-/suffix match rate is > 0.9
                 for state in prefix_suffix_mutation_count_temp.keys():
                     if state.endswith('prefix'):
@@ -652,9 +653,6 @@ class VNTRFinder:
                     if state.startswith('I'):
                         state += "_LEN{}".format(occurrence)  # Insertion length
                     prefix_suffix_mutations[state] += 1
-
-                # TODO: Merge in a function (read Vpath once)
-                update_number_of_repeat_bp_matches_in_vpath_for_each_hmm(read.vpath, ru_bp_coverage)
             else:
                 logging.debug(reason_why_rejected)
 
@@ -667,7 +665,7 @@ class VNTRFinder:
             pattern_index = state.split("_")[1] if "&" not in state else state.split("&")[0].split("_")[1]
             observed_mutation_count = frameshift_candidate[1]
             logging.info('Frameshift Candidate and Occurrence {}: {}'.format(state, observed_mutation_count))
-            if observed_mutation_count < 3:
+            if observed_mutation_count < settings.MIN_SUPPORTING_READ_COUNT:
                 logging.info('Skipped due to too small number of occurrence {}: {}'.format(state, observed_mutation_count))
                 continue
             ru_length = hmm_match_count[pattern_index]  # This should not be zero!
@@ -685,7 +683,7 @@ class VNTRFinder:
             logging.info('P-value: %s' % pval)
             if pval < settings.INDEL_MUTATION_MIN_PVALUE:
                 logging.info('ID:{}, There is a mutation at {}'.format(self.reference_vntr.id, state))
-                frameshifts.append((state, observed_mutation_count, pval))
+                frameshifts.append((state, observed_mutation_count, avg_bp_coverage, pval))
 
         # Check if prefix or suffix mutation check is required
         # If the last or first nucleotide of VNTR is the same as the first or last nucleotide of flanking region,
@@ -729,7 +727,7 @@ class VNTRFinder:
                 if mutation_position >= suffix_mutation_check_boundary:
                     first_repeat_unit_index = reference_repeat_order[1]  # L-target-X-X...-X-R
                     logging.info('Frameshift Candidate and Occurrence {}: {}'.format(candidate, mutation_count))
-                    if mutation_count < 3:
+                    if mutation_count < settings.MIN_SUPPORTING_READ_COUNT:
                         logging.info('Skipped due to too small number of occurrence {}: {}'.format(candidate, mutation_count))
                         continue
                     ru_length = hmm_match_count[first_repeat_unit_index]
@@ -749,12 +747,12 @@ class VNTRFinder:
                     logging.info('P-value: %s' % pval)
                     if pval < settings.INDEL_MUTATION_MIN_PVALUE:
                         logging.info('ID:{}, There is a mutation at {}'.format(self.reference_vntr.id, candidate))
-                        frameshifts.append(candidate)
+                        frameshifts.append((candidate, mutation_count, avg_bp_coverage, pval))
             if 'prefix' in candidate:
                 if mutation_position <= prefix_mutation_check_boundary:  # I0 is always ok
                     last_repeat_unit_index = reference_repeat_order[-2]  # L-X-X-X...-target-R
                     logging.info('Frameshift Candidate and Occurrence {}: {}'.format(candidate, mutation_count))
-                    if mutation_count < 3:
+                    if mutation_count < settings.MIN_SUPPORTING_READ_COUNT:
                         logging.info('Skipped due to too small number of occurrence {}: {}'.format(candidate, mutation_count))
                         continue
                     ru_length = hmm_match_count[last_repeat_unit_index]
@@ -774,7 +772,7 @@ class VNTRFinder:
                     logging.info('P-value: %s' % pval)
                     if pval < settings.INDEL_MUTATION_MIN_PVALUE:
                         logging.info('ID:{}, There is a mutation at {}'.format(self.reference_vntr.id, candidate))
-                        frameshifts.append((candidate, mutation_count, pval))
+                        frameshifts.append((candidate, mutation_count, avg_bp_coverage, pval))
 
         return frameshifts if len(frameshifts) > 0 else None
 
