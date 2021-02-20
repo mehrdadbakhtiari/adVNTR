@@ -100,19 +100,17 @@ def genotype(args, genotype_parser):
     settings.TRAINED_MODELS_DB = models_file
     settings.TRAINED_HMMS_DIR = os.path.dirname(os.path.realpath(settings.TRAINED_MODELS_DB)) + '/'
 
-    reference_vntrs = load_unique_vntrs_data()
-    target_vntrs = [ref_vntr.id for ref_vntr in reference_vntrs]
+    target_vids = []
     if args.vntr_id is not None:
-        target_vntrs = [int(vid) for vid in args.vntr_id.split(',')]
+        target_vids = [int(vid) for vid in args.vntr_id.split(',')]
     if args.vid_file is not None:
-        target_vids = []
         with open(args.vid_file, "r") as f:
             for line in f:
                 target_vids.append(int(line.strip()))
-        target_vntrs = [int(vid) for vid in target_vids]
+    reference_vntrs = load_unique_vntrs_data(target_vids=target_vids)
 
-    logging.info('Running adVNTR for %s VNTRs' % len(target_vntrs))
-    genome_analyzier = GenomeAnalyzer(reference_vntrs, target_vntrs, working_directory, args.outfmt, args.haploid,
+    logging.info('Running adVNTR for %s VNTRs' % len(target_vids))
+    genome_analyzier = GenomeAnalyzer(reference_vntrs, target_vids, working_directory, args.outfmt, args.haploid,
                                       args.reference_filename, input_file, args.frameshift)
     if args.pacbio:
         if input_is_alignment_file:

@@ -121,7 +121,7 @@ def create_vntrs_database(db_file):
     db.close()
 
 
-def load_unique_vntrs_data(db_file=None):
+def load_unique_vntrs_data(db_file=None, target_vids={}):
     vntrs = []
     if db_file is None:
         db_file = settings.TRAINED_MODELS_DB
@@ -143,7 +143,11 @@ def load_unique_vntrs_data(db_file=None):
         vntr = ReferenceVNTR(int(vntr_id), pattern, int(start), chrom, gene, annotation, repeats, scaled_score=score)
         vntr.init_from_xml(repeat_segments, left_flank, right_flank)
         vntr.non_overlapping = True if overlap == 'True' else False
-        vntrs.append(vntr)
+        if len(target_vids) > 0:
+            if vntr_id in target_vids:
+                vntrs.append(vntr)
+        else:
+            vntrs.append(vntr)
 
     return vntrs
 
