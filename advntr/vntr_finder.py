@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import Counter, OrderedDict
 import logging
 import numpy
 import os
@@ -483,8 +483,8 @@ class VNTRFinder:
             # We add the number of bps at the end
 
             # Keep all mutations in a read, update them only if the read is valid
-            mutation_count_temp = defaultdict(int)
-            prefix_suffix_mutation_count_temp = defaultdict(int)
+            mutation_count_temp = OrderedDict()
+            prefix_suffix_mutation_count_temp = OrderedDict()
 
             prefix_match_count = 0
             prefix_mutation_count = 0
@@ -504,7 +504,7 @@ class VNTRFinder:
 
                 if current_state.endswith('fix'):  # Save all mutations observed in prefix or suffix
                     if current_state.startswith('I') or current_state.startswith('D'):
-                        prefix_suffix_mutation_count_temp[current_state] += 1
+                        prefix_suffix_mutation_count_temp[current_state] = prefix_suffix_mutation_count_temp.get(current_state, 0) + 1
                     if current_state.endswith('prefix'):
                         if current_state.startswith('M'):
                             prefix_match_count += 1
@@ -532,7 +532,7 @@ class VNTRFinder:
                                 current_state += '_' + get_emitted_basepair_from_visited_states(current_state,
                                                                                                 visited_states,
                                                                                                 read.sequence)
-                            mutation_count_temp[current_state] += 1
+                            mutation_count_temp[current_state] = mutation_count_temp.get(current_state, 0) + 1
                         continue
 
                 # Reads ending with a partially observed repeat unit
@@ -547,7 +547,7 @@ class VNTRFinder:
                                 current_state += '_' + get_emitted_basepair_from_visited_states(current_state,
                                                                                                 visited_states,
                                                                                                 read.sequence)
-                            mutation_count_temp[current_state] += 1
+                            mutation_count_temp[current_state] = mutation_count_temp.get(current_state, 0) + 1
                         continue
 
                 pattern_index = current_state.split('_')[-1]
@@ -579,7 +579,7 @@ class VNTRFinder:
                     current_state += '_' + get_emitted_basepair_from_visited_states(current_state, visited_states,
                                                                                     read.sequence)
 
-                mutation_count_temp[current_state] += 1
+                mutation_count_temp[current_state] = mutation_count_temp.get(current_state, 0) + 1
 
             if is_valid_read:
                 # TODO: Merge in a function (read Vpath once)
@@ -595,8 +595,9 @@ class VNTRFinder:
                     mutations[temp_mutation] += 1
                 else:  # Check if the mutations are adjacent each other
                     # First sort by repeat index, second sort by the hmm index
-                    sorted_temp_mutations = sorted(mutation_count_temp.items(), key=lambda x: (x[0].split("_")[1],
-                                                                                        int(x[0].split("_")[0][1:])))
+                    # sorted_temp_mutations = sorted(mutation_count_temp.items(), key=lambda x: (x[0].split("_")[1],
+                    #                                                                     int(x[0].split("_")[0][1:])))
+                    sorted_temp_mutations = mutation_count_temp.items()
                     prev_mutation = sorted_temp_mutations[0][0]
                     mutation_sequence = prev_mutation
                     if prev_mutation.startswith("I"):
@@ -611,7 +612,7 @@ class VNTRFinder:
                         if temp_mutation.startswith("D"):
                             # Case 1: D(i-1), D(i),
                             # In this case, the deletion is connected to the previous mutation sequence and skip
-                            if prev_mutation_index + 1 == current_mutation_index:  # Only possible with D(i)
+                            if prev_mutation_index + 1 == current_mutation_index and prev_hmm_index == current_hmm_index:  # Only possible with D(i)
                                 mutation_sequence += '&' + temp_mutation
                             # Case 2: I/D(j), D(i), j < i-1
                             # In this case, they are not connected (This should be rare, two deletions in a RU)
