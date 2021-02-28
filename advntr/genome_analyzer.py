@@ -50,7 +50,7 @@ class GenomeAnalyzer:
         print('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s' % (chromosome, start, end, vntr_id, gene, motif, ref_copy, repeats))
 
     def print_vcf_header(self):
-        vcf_version = "VCFv4.3"
+        vcf_version = "VCFv4.2"
         from advntr import __version__
         print("##fileformat={}".format(vcf_version))
         print("##source=adVNTR ver. {}".format(__version__))
@@ -201,15 +201,19 @@ class GenomeAnalyzer:
 
         if self.outfmt == 'bed':
             self.print_bed_header()
+        if self.outfmt == 'vcf':
+            self.print_vcf_header()
         for vid in self.target_vntr_ids:
             reads = [read for read in filtered_reads if read.id in vntr_reads_ids[vid]]
-            copy_numbers = self.vntr_finder[vid].find_repeat_count_from_pacbio_alignment_file(alignment_file, reads)
-            self.print_genotype(vid, copy_numbers)
+            genotype_result = self.vntr_finder[vid].find_repeat_count_from_pacbio_alignment_file(alignment_file, reads)
+            self.print_genotype(vid, genotype_result)
 
     def find_repeat_counts_from_pacbio_reads(self, read_file, naive=False):
         filtered_reads, vntr_reads_ids = self.get_vntr_filtered_reads_map(read_file, False)
         if self.outfmt == 'bed':
             self.print_bed_header()
+        if self.outfmt == 'vcf':
+            self.print_vcf_header()
         for vid in self.target_vntr_ids:
             unmapped_reads = [read for read in filtered_reads if read.id in vntr_reads_ids[vid]]
             copy_numbers = self.vntr_finder[vid].find_repeat_count_from_pacbio_reads(unmapped_reads, naive)
