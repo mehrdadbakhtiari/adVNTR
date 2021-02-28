@@ -484,7 +484,7 @@ class VNTRFinder:
     def get_dominant_copy_numbers_from_spanning_reads(self, spanning_reads):
         if len(spanning_reads) < 1:
             logging.info('There is no spanning read')
-            return None
+            return None, 0
         max_length = 0
         for read in spanning_reads:
             if len(read) - 100 > max_length:
@@ -538,7 +538,7 @@ class VNTRFinder:
         reverse_complement_str = str(Seq(haplotypes[0]).reverse_complement())
         self.check_if_flanking_regions_align_to_str(reverse_complement_str.upper(), flanking_region_lengths, new_spanning_reads)
         if len(flanking_region_lengths) > 0:
-            return [round(flanking_region_lengths[0] / len(self.reference_vntr.pattern))] * 2
+            return tuple([round(flanking_region_lengths[0] / len(self.reference_vntr.pattern))] * 2)
         else:
             return None
 
@@ -563,18 +563,20 @@ class VNTRFinder:
         mapped_spanning_reads = self.get_spanning_reads_of_aligned_pacbio_reads(alignment_file)
 
         spanning_reads = mapped_spanning_reads + unaligned_spanning_reads
-        copy_numbers = self.get_dominant_copy_numbers_from_spanning_reads(spanning_reads)
-        return copy_numbers
+        copy_numbers, max_prob = self.get_dominant_copy_numbers_from_spanning_reads(spanning_reads)
+
+        return GenotypeResult(copy_numbers, len(spanning_reads), len(spanning_reads), 0, max_prob)
 
     @time_usage
     def find_repeat_count_from_pacbio_reads(self, unmapped_filtered_reads, naive=False):
         logging.debug('finding repeat count from pacbio reads file for %s' % self.reference_vntr.id)
         spanning_reads, length_dist = self.get_spanning_reads_of_unaligned_pacbio_reads(unmapped_filtered_reads)
+        max_prob = 0
         if naive:
-            copy_numbers = self.find_ru_counts_with_naive_approach(length_dist, spanning_reads)
+            copy_numbers = self.find_ru_counts_with_naive_approach(length_dist, spanning_reads)  # No max_prob value
         else:
-            copy_numbers = self.get_dominant_copy_numbers_from_spanning_reads(spanning_reads)
-        return copy_numbers
+            copy_numbers, max_prob = self.get_dominant_copy_numbers_from_spanning_reads(spanning_reads)
+        return GenotypeResult(copy_numbers, len(spanning_reads), len(spanning_reads), 0, max_prob)
 
     @time_usage
     def iteratively_update_model(self, alignment_file, unmapped_filtered_reads, selected_reads, hmm):
