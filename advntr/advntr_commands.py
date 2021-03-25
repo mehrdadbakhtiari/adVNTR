@@ -87,7 +87,19 @@ def genotype(args, genotype_parser):
 
     log_file = working_directory + 'log_%s.log' % os.path.basename(input_file)
     log_format = '%(asctime)s %(levelname)s:%(message)s'
-    logging.basicConfig(format=log_format, filename=log_file, level=logging.DEBUG, filemode='w')
+    processed_vids = []
+    if args.append:
+        logging.basicConfig(format=log_format, filename=log_file, level=logging.DEBUG, filemode='a')
+        logging.info('Append mode, looking for processed vntrs')
+        with open(log_file, "r") as f:
+            for line in f:
+                if "alignment file for" in line:
+                    vid = int(line.strip().split(" ")[-1])
+                if "INFO:find_frameshift_from_alignment" in line:
+                    processed_vids.append(vid)
+        logging.info('Found {} processed vntrs from logfile'.format(len(processed_vids)))
+    else:
+        logging.basicConfig(format=log_format, filename=log_file, level=logging.DEBUG, filemode='w')
 
     if args.outfile:
         sys.stdout = open(args.outfile, 'w')
@@ -102,11 +114,13 @@ def genotype(args, genotype_parser):
 
     target_vids = []
     if args.vntr_id is not None:
-        target_vids = [int(vid) for vid in args.vntr_id.split(',')]
+        target_vids = [int(vid) for vid in args.vntr_id.split(',') if (vid) not in processed_vids]
     if args.vid_file is not None:
         with open(args.vid_file, "r") as f:
             for line in f:
-                target_vids.append(int(line.strip()))
+                vid = int(line.strip())
+                if vid not in processed_vids:
+                    target_vids.append(vid)
     reference_vntrs = load_unique_vntrs_data(target_vids=target_vids)
 
     logging.info('Running adVNTR for %s VNTRs' % len(target_vids))
@@ -125,7 +139,7 @@ def genotype(args, genotype_parser):
             genome_analyzier.find_frameshift_from_alignment_file(input_file)
             if args.aln:
                 from advntr.hmm_alignment import generate_aln
-                ref_vntr_dict = {ref_vntr.id: ref_vntr for ref_vntr in reference_vntrs if ref_vntr.id in target_vntrs}
+                ref_vntr_dict = {ref_vntr.id: ref_vntr for ref_vntr in reference_vntrs if ref_vntr.id in target_vids}
                 generate_aln(log_file, None, "", None, ref_vntr_dict)
             # else:
             #     print_error(genotype_parser, '--frameshift is not available for these VNTRs')
