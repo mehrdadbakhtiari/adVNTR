@@ -1,6 +1,6 @@
 from advntr.models import load_unique_vntrs_data
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from glob import glob
 
 
@@ -217,8 +217,8 @@ def generate_aln(advntr_logfile, output_mutations=None, out_folder="", reference
                 reason_why_rejected = ""
 
                 # Keep all mutations in a read, update them only if the read is valid
-                mutation_count_temp = defaultdict(int)
-                prefix_suffix_mutation_count_temp = defaultdict(int)
+                mutation_count_temp = OrderedDict()
+                prefix_suffix_mutation_count_temp = OrderedDict()
 
                 prefix_match_count = 0
                 prefix_mutation_count = 0
@@ -238,7 +238,7 @@ def generate_aln(advntr_logfile, output_mutations=None, out_folder="", reference
 
                     if current_state.endswith('fix'):  # Save all mutations observed in prefix or suffix
                         if current_state.startswith('I') or current_state.startswith('D'):
-                            prefix_suffix_mutation_count_temp[current_state] += 1
+                            prefix_suffix_mutation_count_temp[current_state] = prefix_suffix_mutation_count_temp.get(current_state, 0) + 1
                         if current_state.endswith('prefix'):
                             if current_state.startswith('M'):
                                 prefix_match_count += 1
@@ -264,7 +264,7 @@ def generate_aln(advntr_logfile, output_mutations=None, out_folder="", reference
                                     current_state += '_' + get_emitted_basepair_from_visited_states(current_state,
                                                                                                 visited_states,
                                                                                                 sequence)
-                            mutation_count_temp[current_state] += 1
+                            mutation_count_temp[current_state] = mutation_count_temp.get(current_state, 0) + 1
                             continue
 
                     # Reads ending with a partially observed repeat unit
@@ -277,7 +277,7 @@ def generate_aln(advntr_logfile, output_mutations=None, out_folder="", reference
                                     current_state += '_' + get_emitted_basepair_from_visited_states(current_state,
                                                                                                     visited_states,
                                                                                                     sequence)
-                                mutation_count_temp[current_state] += 1
+                                mutation_count_temp[current_state] = mutation_count_temp.get(current_state, 0) + 1
                             continue
 
                     pattern_index = current_state.split('_')[-1]
@@ -309,7 +309,7 @@ def generate_aln(advntr_logfile, output_mutations=None, out_folder="", reference
                         current_state += '_' + get_emitted_basepair_from_visited_states(current_state, visited_states,
                                                                                         sequence)
 
-                    mutation_count_temp[current_state] += 1
+                    mutation_count_temp[current_state] = mutation_count_temp.get(current_state, 0) + 1
 
                 if is_valid_read and len(mutation_count_temp) > 0:
                     # Check if the mutations are adjacent each other
@@ -324,7 +324,7 @@ def generate_aln(advntr_logfile, output_mutations=None, out_folder="", reference
                             if temp_mutation in target_mutations:
                                 vid_to_aln_info[vid][temp_mutation].append((sequence, visited_states))
                     else:
-                        sorted_temp_mutations = sorted(mutation_count_temp.items(), key=lambda x: x[0])
+                        sorted_temp_mutations = mutation_count_temp.items()
                         prev_mutation = sorted_temp_mutations[0][0]
                         mutation_sequence = prev_mutation
                         if prev_mutation.startswith("I"):
