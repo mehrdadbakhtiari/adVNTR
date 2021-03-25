@@ -57,6 +57,8 @@ def main():
                                    help='output format. Allowed values are {'+', '.join(outfmt_choices)+'} [%(default)s]')
     genotype_io_group.add_argument('-vf', '--vid_file', metavar='<file>', default=None,
                                           help='file for "\n"-separated target VNTR IDs')
+    genotype_io_group.add_argument('-ad', '--append', action='store_true',
+                                   help='only genotype unprocessed vntrs given target vids and logfile')
 
     genotype_algortihm_group = genotype_parser.add_argument_group("Algorithm options")
     genotype_algortihm_group.add_argument('-fs', '--frameshift', action='store_true',
