@@ -195,7 +195,7 @@ def get_repeating_unit_state_count(visited_states):
             if visited_states[j].startswith("D"):
                 delete_count += 1
         state_count_for_ru['partial_start'] = {'M': match_count, 'I': insert_count, 'D': delete_count}
-        return state_count_for_ru
+        return state_count_for_ru, full_repeat_start, full_repeat_end
 
     if prev_start_index is not None:
         if prev_start_index > last_end_index:
