@@ -241,7 +241,7 @@ class VNTRFinder:
         frameshift_prob = binom.pmf(observed_indel_transitions, location_coverage, expected_indels)
 
         chi_square_val = -2 * numpy.log(sequencing_error_prob / frameshift_prob)
-        pval = 1 - stats.chi2.cdf(chi_square_val, 1)
+        pval = stats.chi2.sf(chi_square_val, 1)
 
         return sequencing_error_prob, frameshift_prob, pval
 
