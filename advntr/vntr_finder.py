@@ -675,9 +675,13 @@ class VNTRFinder:
             total_bps_in_ru = ru_bp_coverage[pattern_index]
             logging.info('Observed repeating base pairs in RU: %s' % total_bps_in_ru)
             # We don't know true RU count. Thus, we use reference to estimate the number of RU
-            avg_bp_coverage = float(total_bps_in_ru) / ru_length / 2 / estimated_ru_count[pattern_index]
+            if self.is_haploid:
+                avg_bp_coverage = float(total_bps_in_ru) / ru_length / estimated_ru_count[pattern_index]
+                expected_indel_transitions = 0.99 / estimated_ru_count[pattern_index]
+            else:
+                avg_bp_coverage = float(total_bps_in_ru) / ru_length / 2 / estimated_ru_count[pattern_index]
+                expected_indel_transitions = 0.99 / (2 * estimated_ru_count[pattern_index])
             logging.info('Average coverage for each base pair in RU: %s' % avg_bp_coverage)
-            expected_indel_transitions = 1.0 / (2 * estimated_ru_count[pattern_index])
 
             seq_err_prob, frameshift_prob, pval = self.identify_frameshift(avg_bp_coverage, observed_mutation_count,
                                                                            expected_indel_transitions)
@@ -737,10 +741,13 @@ class VNTRFinder:
                     total_bps_in_ru = ru_bp_coverage[first_repeat_unit_index]
                     logging.info('Observed repeating base pairs in RU: %s' % total_bps_in_ru)
                     # We don't know true RU count. Thus, we use reference to estimate the number of RU
-                    avg_bp_coverage = float(total_bps_in_ru) / ru_length / 2 / estimated_ru_count[
-                        first_repeat_unit_index]
+                    if self.is_haploid:
+                        avg_bp_coverage = float(total_bps_in_ru) / ru_length / estimated_ru_count[first_repeat_unit_index]
+                        expected_indel_transitions = 0.99 / estimated_ru_count[first_repeat_unit_index]
+                    else:
+                        avg_bp_coverage = float(total_bps_in_ru) / ru_length / 2 / estimated_ru_count[first_repeat_unit_index]
+                        expected_indel_transitions = 0.99 / (2 * estimated_ru_count[first_repeat_unit_index])
                     logging.info('Average coverage for each base pair in RU: %s' % avg_bp_coverage)
-                    expected_indel_transitions = 1.0 / (2 * estimated_ru_count[first_repeat_unit_index])
 
                     seq_err_prob, frameshift_prob, pval = self.identify_frameshift(avg_bp_coverage,
                                                                                    mutation_count,
@@ -762,10 +769,13 @@ class VNTRFinder:
                     total_bps_in_ru = ru_bp_coverage[last_repeat_unit_index]
                     logging.info('Observed repeating base pairs in RU: %s' % total_bps_in_ru)
                     # We don't know true RU count. Thus, we use reference to estimate the number of RU
-                    avg_bp_coverage = float(total_bps_in_ru) / ru_length / 2 / estimated_ru_count[
-                        last_repeat_unit_index]
+                    if self.is_haploid:
+                        avg_bp_coverage = float(total_bps_in_ru) / ru_length / estimated_ru_count[last_repeat_unit_index]
+                        expected_indel_transitions = 0.99 / estimated_ru_count[last_repeat_unit_index]
+                    else:
+                        avg_bp_coverage = float(total_bps_in_ru) / ru_length / 2 / estimated_ru_count[last_repeat_unit_index]
+                        expected_indel_transitions = 0.99 / (2 * estimated_ru_count[last_repeat_unit_index])
                     logging.info('Average coverage for each base pair in RU: %s' % avg_bp_coverage)
-                    expected_indel_transitions = 1.0 / (2 * estimated_ru_count[last_repeat_unit_index])
 
                     seq_err_prob, frameshift_prob, pval = self.identify_frameshift(avg_bp_coverage,
                                                                                    mutation_count,
