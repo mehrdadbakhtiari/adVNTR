@@ -15,6 +15,7 @@ else:
 from math import log
 from collections import defaultdict
 
+
 def path_to_alignment(x, y, path):
     for i, (index, state) in enumerate(path[1:-1]):
         name = state.name
@@ -45,7 +46,7 @@ def get_multiple_alignment_of_viterbi_paths(repeats_sequences, repeats_visited_s
             alignment_states[key] = max(alignment_states[key], value)
 
     alignment_visited_states = []
-    for i in range(multiple_alignment_length+1):
+    for i in range(multiple_alignment_length + 1):
         key = 'M%s' % i
         if key in alignment_states.keys():
             for j in range(alignment_states[key]):
@@ -86,7 +87,7 @@ def extract_repeating_segments_from_read(sequence, visited_states):
             vpath = []
             for j in range(prev_start, sequence_index):
                 repeat += sequence[j]
-            for j in range(prev_start_state+1, i):
+            for j in range(prev_start_state + 1, i):
                 vpath.append(visited_states[j])
             repeats.append(repeat)
             vpaths.append(vpath)
@@ -142,76 +143,97 @@ def get_repeating_pattern_lengths(visited_states):
     return lengths
 
 
-def get_repeating_unit_state_count(visited_states):
-    state_count_for_ru = {}
+def get_repeating_unit_state_count(visited_states, sequence, pattern_clusters):
+    state_count_for_ru = defaultdict(lambda: defaultdict(int))
+    seq_index = 0
     complete_ru_index = 0
     prev_start_index = None
     last_end_index = 0
     full_repeat_start = 0  # start index of fully observed repeats
-    full_repeat_end = len(visited_states)-1  # end index of fully observed repeats
+    full_repeat_end = len(visited_states) - 1  # end index of fully observed repeats
+
     for i in range(len(visited_states)):
+        if visited_states[i].endswith("suffix") or visited_states[i].endswith("prefix"):
+            if visited_states[i].startswith("M") or visited_states[i].startswith("I"):
+                seq_index += 1
+
         if visited_states[i].startswith('unit_end'):
+            pattern_index = int(visited_states[i].split("_")[-1]) - 1  # repeat index is 1-base
             last_end_index = i
-            if prev_start_index is None:
-                # Haven't seen the start (partially mapped read)
+
+            if prev_start_index is None:  # Haven't seen a repeat start (partially mapped read)
                 full_repeat_start = i + 1
-                match_count = 0
-                insert_count = 0
-                delete_count = 0
                 for j in range(0, i):
                     if visited_states[j].startswith("M"):
-                        match_count += 1
+                        state_index = int(visited_states[j].split("_")[0][1:]) - 1
+                        if pattern_clusters[pattern_index][0][state_index] == sequence[seq_index]:
+                            state_count_for_ru['partial_start']['M'] += 1
+                        else:
+                            state_count_for_ru['partial_start']['S'] += 1
+                        seq_index += 1
                     if visited_states[j].startswith("I"):
-                        insert_count += 1
+                        state_count_for_ru['partial_start']['I'] += 1
+                        seq_index += 1
                     if visited_states[j].startswith("D"):
-                        delete_count += 1
-                state_count_for_ru['partial_start'] = {'M': match_count, 'I': insert_count, 'D': delete_count}
+                        state_count_for_ru['partial_start']['D'] += 1
             else:
-                match_count = 0
-                insert_count = 0
-                delete_count = 0
                 for j in range(prev_start_index, i):
                     if visited_states[j].startswith("M"):
-                        match_count += 1
+                        state_index = int(visited_states[j].split("_")[0][1:]) - 1
+                        if pattern_clusters[pattern_index][0][state_index] == sequence[seq_index]:
+                            state_count_for_ru[complete_ru_index]['M'] += 1
+                        else:
+                            state_count_for_ru[complete_ru_index]['S'] += 1
+                        seq_index += 1
                     if visited_states[j].startswith("I"):
-                        insert_count += 1
+                        state_count_for_ru[complete_ru_index]['I'] += 1
+                        seq_index += 1
                     if visited_states[j].startswith("D"):
-                        delete_count += 1
-                state_count_for_ru[complete_ru_index] = {'M': match_count, 'I': insert_count, 'D': delete_count}
+                        state_count_for_ru[complete_ru_index]['D'] += 1
                 complete_ru_index += 1
+
         if visited_states[i].startswith('unit_start'):
             prev_start_index = i
 
     if last_end_index == 0 and prev_start_index is None:  # When a read is completely within a repeating unit
-        match_count = 0
-        insert_count = 0
-        delete_count = 0
+        try:
+            pattern_index = int(visited_states[0].split("_")[-1]) - 1  # repeat index is 1-base
+        except TypeError:
+            pattern_index = int(visited_states[1].split("_")[-1]) - 1
 
         for j in range(len(visited_states)):
             if visited_states[j].startswith("M"):
-                match_count += 1
+                state_index = int(visited_states[j].split("_")[0][1:]) - 1
+                if pattern_clusters[pattern_index][0][state_index] == sequence[seq_index]:
+                    state_count_for_ru['partial_start']['M'] += 1
+                else:
+                    state_count_for_ru['partial_start']['S'] += 1
+                seq_index += 1
             if visited_states[j].startswith("I"):
-                insert_count += 1
+                state_count_for_ru['partial_start']['I'] += 1
+                seq_index += 1
             if visited_states[j].startswith("D"):
-                delete_count += 1
-        state_count_for_ru['partial_start'] = {'M': match_count, 'I': insert_count, 'D': delete_count}
+                state_count_for_ru['partial_start']['D'] += 1
+
+        assert seq_index == len(sequence) - 1, "Should emit all sequence to check mismatch"
         return state_count_for_ru, full_repeat_start, full_repeat_end
 
-    if prev_start_index is not None:
-        if prev_start_index > last_end_index:
-            # if met unit start but not unit_end - update the length
-            full_repeat_end = prev_start_index
-            match_count = 0
-            insert_count = 0
-            delete_count = 0
-            for j in range(prev_start_index, len(visited_states)):
-                if visited_states[j].startswith("M"):
-                    match_count += 1
-                if visited_states[j].startswith("I"):
-                    insert_count += 1
-                if visited_states[j].startswith("D"):
-                    delete_count += 1
-            state_count_for_ru['partial_end'] = {'M': match_count, 'I': insert_count, 'D': delete_count}
+    if prev_start_index is not None and prev_start_index > last_end_index: # when unit start is visited but not unit end
+        pattern_index = int(visited_states[prev_start_index].split("_")[-1]) - 1  # repeat index is 1-base
+        full_repeat_end = prev_start_index
+        for j in range(prev_start_index + 1, len(visited_states)):
+            if visited_states[j].startswith("M"):
+                state_index = int(visited_states[j].split("_")[0][1:]) - 1
+                if pattern_clusters[pattern_index][0][state_index] == sequence[seq_index]:
+                    state_count_for_ru['partial_end']['M'] += 1
+                else:
+                    state_count_for_ru['partial_end']['S'] += 1
+                seq_index += 1
+            if visited_states[j].startswith("I"):
+                state_count_for_ru['partial_end']['I'] += 1
+                seq_index += 1
+            if visited_states[j].startswith("D"):
+                state_count_for_ru['partial_end']['D'] += 1
 
     return state_count_for_ru, full_repeat_start, full_repeat_end
 
@@ -281,7 +303,8 @@ def get_number_of_repeat_bp_matches_in_vpath(vpath):
     return result
 
 
-def update_number_of_repeat_bp_matches_in_vpath_for_each_hmm(visited_states, ru_bp_dictionary, full_repeat_start, full_repeat_end):
+def update_number_of_repeat_bp_matches_in_vpath_for_each_hmm(visited_states, ru_bp_dictionary, full_repeat_start,
+                                                             full_repeat_end):
     hmm_id = 0
     start = 0
     end = len(visited_states)
@@ -345,7 +368,7 @@ def get_prefix_matcher_hmm(pattern):
     unit_start = State(None, name='prefix_start_%s' % hmm_name)
     unit_end = State(None, name='prefix_end_%s' % hmm_name)
     model.add_states(insert_states + match_states + delete_states + [unit_start, unit_end])
-    last = len(delete_states)-1
+    last = len(delete_states) - 1
 
     model.add_transition(model.start, unit_start, 1)
 
@@ -362,28 +385,28 @@ def get_prefix_matcher_hmm(pattern):
     model.add_transition(insert_states[0], match_states[0], 1 - insert_error - delete_error)
 
     model.add_transition(delete_states[last], unit_end, 1 - insert_error)
-    model.add_transition(delete_states[last], insert_states[last+1], insert_error)
+    model.add_transition(delete_states[last], insert_states[last + 1], insert_error)
 
     model.add_transition(match_states[last], unit_end, 1 - insert_error)
-    model.add_transition(match_states[last], insert_states[last+1], insert_error)
+    model.add_transition(match_states[last], insert_states[last + 1], insert_error)
 
-    model.add_transition(insert_states[last+1], insert_states[last+1], insert_error)
-    model.add_transition(insert_states[last+1], unit_end, 1 - insert_error)
+    model.add_transition(insert_states[last + 1], insert_states[last + 1], insert_error)
+    model.add_transition(insert_states[last + 1], unit_end, 1 - insert_error)
 
     for i in range(0, len(pattern)):
-        model.add_transition(match_states[i], insert_states[i+1], insert_error)
-        model.add_transition(delete_states[i], insert_states[i+1], insert_error)
-        model.add_transition(insert_states[i+1], insert_states[i+1], insert_error)
+        model.add_transition(match_states[i], insert_states[i + 1], insert_error)
+        model.add_transition(delete_states[i], insert_states[i + 1], insert_error)
+        model.add_transition(insert_states[i + 1], insert_states[i + 1], insert_error)
         if i < len(pattern) - 1:
-            model.add_transition(insert_states[i+1], match_states[i+1], 1 - insert_error - delete_error)
-            model.add_transition(insert_states[i+1], delete_states[i+1], delete_error)
+            model.add_transition(insert_states[i + 1], match_states[i + 1], 1 - insert_error - delete_error)
+            model.add_transition(insert_states[i + 1], delete_states[i + 1], delete_error)
 
-            model.add_transition(match_states[i], match_states[i+1], 1 - insert_error - delete_error - 0.01)
-            model.add_transition(match_states[i], delete_states[i+1], delete_error)
+            model.add_transition(match_states[i], match_states[i + 1], 1 - insert_error - delete_error - 0.01)
+            model.add_transition(match_states[i], delete_states[i + 1], delete_error)
             model.add_transition(match_states[i], unit_end, 0.01)
 
-            model.add_transition(delete_states[i], delete_states[i+1], delete_error)
-            model.add_transition(delete_states[i], match_states[i+1], 1 - insert_error - delete_error)
+            model.add_transition(delete_states[i], delete_states[i + 1], delete_error)
+            model.add_transition(delete_states[i], match_states[i + 1], 1 - insert_error - delete_error)
 
     model.bake(merge=None)
 
@@ -412,7 +435,7 @@ def get_suffix_matcher_hmm(pattern):
     unit_start = State(None, name='suffix_start_%s' % hmm_name)
     unit_end = State(None, name='suffix_end_%s' % hmm_name)
     model.add_states(insert_states + match_states + delete_states + [unit_start, unit_end])
-    last = len(delete_states)-1
+    last = len(delete_states) - 1
 
     model.add_transition(model.start, unit_start, 1)
 
@@ -430,27 +453,27 @@ def get_suffix_matcher_hmm(pattern):
     model.add_transition(insert_states[0], match_states[0], 1 - insert_error - delete_error)
 
     model.add_transition(delete_states[last], unit_end, 1 - insert_error)
-    model.add_transition(delete_states[last], insert_states[last+1], insert_error)
+    model.add_transition(delete_states[last], insert_states[last + 1], insert_error)
 
     model.add_transition(match_states[last], unit_end, 1 - insert_error)
-    model.add_transition(match_states[last], insert_states[last+1], insert_error)
+    model.add_transition(match_states[last], insert_states[last + 1], insert_error)
 
-    model.add_transition(insert_states[last+1], insert_states[last+1], insert_error)
-    model.add_transition(insert_states[last+1], unit_end, 1 - insert_error)
+    model.add_transition(insert_states[last + 1], insert_states[last + 1], insert_error)
+    model.add_transition(insert_states[last + 1], unit_end, 1 - insert_error)
 
     for i in range(0, len(pattern)):
-        model.add_transition(match_states[i], insert_states[i+1], insert_error)
-        model.add_transition(delete_states[i], insert_states[i+1], insert_error)
-        model.add_transition(insert_states[i+1], insert_states[i+1], insert_error)
+        model.add_transition(match_states[i], insert_states[i + 1], insert_error)
+        model.add_transition(delete_states[i], insert_states[i + 1], insert_error)
+        model.add_transition(insert_states[i + 1], insert_states[i + 1], insert_error)
         if i < len(pattern) - 1:
-            model.add_transition(insert_states[i+1], match_states[i+1], 1 - insert_error - delete_error)
-            model.add_transition(insert_states[i+1], delete_states[i+1], delete_error)
+            model.add_transition(insert_states[i + 1], match_states[i + 1], 1 - insert_error - delete_error)
+            model.add_transition(insert_states[i + 1], delete_states[i + 1], delete_error)
 
-            model.add_transition(match_states[i], match_states[i+1], 1 - insert_error - delete_error)
-            model.add_transition(match_states[i], delete_states[i+1], delete_error)
+            model.add_transition(match_states[i], match_states[i + 1], 1 - insert_error - delete_error)
+            model.add_transition(match_states[i], delete_states[i + 1], delete_error)
 
-            model.add_transition(delete_states[i], delete_states[i+1], delete_error)
-            model.add_transition(delete_states[i], match_states[i+1], 1 - insert_error - delete_error)
+            model.add_transition(delete_states[i], delete_states[i + 1], delete_error)
+            model.add_transition(delete_states[i], match_states[i + 1], 1 - insert_error - delete_error)
 
     model.bake(merge=None)
 
@@ -487,7 +510,7 @@ def get_constant_number_of_repeats_matcher_hmm(patterns, copies, vpaths):
         unit_start = State(None, name='unit_start_%s' % repeat)
         unit_end = State(None, name='unit_end_%s' % repeat)
         model.add_states(insert_states + match_states + delete_states + [unit_start, unit_end])
-        n = len(delete_states)-1
+        n = len(delete_states) - 1
 
         if repeat > 0:
             model.add_transition(last_end, unit_start, 1)
@@ -505,28 +528,28 @@ def get_constant_number_of_repeats_matcher_hmm(patterns, copies, vpaths):
         model.add_transition(insert_states[0], delete_states[0], transitions['I0']['D1'])
         model.add_transition(insert_states[0], match_states[0], transitions['I0']['M1'])
 
-        model.add_transition(delete_states[n], unit_end, transitions['D%s' % (n+1)]['unit_end'])
-        model.add_transition(delete_states[n], insert_states[n+1], transitions['D%s' % (n+1)]['I%s' % (n+1)])
+        model.add_transition(delete_states[n], unit_end, transitions['D%s' % (n + 1)]['unit_end'])
+        model.add_transition(delete_states[n], insert_states[n + 1], transitions['D%s' % (n + 1)]['I%s' % (n + 1)])
 
-        model.add_transition(match_states[n], unit_end, transitions['M%s' % (n+1)]['unit_end'])
-        model.add_transition(match_states[n], insert_states[n+1], transitions['M%s' % (n+1)]['I%s' % (n+1)])
+        model.add_transition(match_states[n], unit_end, transitions['M%s' % (n + 1)]['unit_end'])
+        model.add_transition(match_states[n], insert_states[n + 1], transitions['M%s' % (n + 1)]['I%s' % (n + 1)])
 
-        model.add_transition(insert_states[n+1], insert_states[n+1], transitions['I%s' % (n+1)]['I%s' % (n+1)])
-        model.add_transition(insert_states[n+1], unit_end, transitions['I%s' % (n+1)]['unit_end'])
+        model.add_transition(insert_states[n + 1], insert_states[n + 1], transitions['I%s' % (n + 1)]['I%s' % (n + 1)])
+        model.add_transition(insert_states[n + 1], unit_end, transitions['I%s' % (n + 1)]['unit_end'])
 
-        for i in range(1, len(matches)+1):
-            model.add_transition(match_states[i-1], insert_states[i], transitions['M%s' % i]['I%s' % i])
-            model.add_transition(delete_states[i-1], insert_states[i], transitions['D%s' % i]['I%s' % i])
+        for i in range(1, len(matches) + 1):
+            model.add_transition(match_states[i - 1], insert_states[i], transitions['M%s' % i]['I%s' % i])
+            model.add_transition(delete_states[i - 1], insert_states[i], transitions['D%s' % i]['I%s' % i])
             model.add_transition(insert_states[i], insert_states[i], transitions['I%s' % i]['I%s' % i])
             if i < len(matches):
-                model.add_transition(insert_states[i], match_states[i], transitions['I%s' % i]['M%s' % (i+1)])
-                model.add_transition(insert_states[i], delete_states[i], transitions['I%s' % i]['D%s' % (i+1)])
+                model.add_transition(insert_states[i], match_states[i], transitions['I%s' % i]['M%s' % (i + 1)])
+                model.add_transition(insert_states[i], delete_states[i], transitions['I%s' % i]['D%s' % (i + 1)])
 
-                model.add_transition(match_states[i-1], match_states[i], transitions['M%s' % i]['M%s' % (i+1)])
-                model.add_transition(match_states[i-1], delete_states[i], transitions['M%s' % i]['D%s' % (i+1)])
+                model.add_transition(match_states[i - 1], match_states[i], transitions['M%s' % i]['M%s' % (i + 1)])
+                model.add_transition(match_states[i - 1], delete_states[i], transitions['M%s' % i]['D%s' % (i + 1)])
 
-                model.add_transition(delete_states[i-1], match_states[i], transitions['D%s' % i]['M%s' % (i+1)])
-                model.add_transition(delete_states[i-1], delete_states[i], transitions['D%s' % i]['D%s' % (i+1)])
+                model.add_transition(delete_states[i - 1], match_states[i], transitions['D%s' % i]['M%s' % (i + 1)])
+                model.add_transition(delete_states[i - 1], delete_states[i], transitions['D%s' % i]['D%s' % (i + 1)])
 
         last_end = unit_end
 
@@ -715,10 +738,11 @@ def get_read_matcher_model(left_flanking_region, right_flanking_region, patterns
 
 
 @time_usage
-def get_read_matcher_model_enhanced(left_flanking_region, right_flanking_region, patterns, copies=1, vpaths=None, is_frameshift_mode=False):
+def get_read_matcher_model_enhanced(left_flanking_region, right_flanking_region, patterns, copies=1, vpaths=None,
+                                    is_frameshift_mode=False):
     model = get_suffix_matcher_hmm(left_flanking_region)
     if is_frameshift_mode:
-        pattern_clusters = [[pattern]*patterns.count(pattern) for pattern in sorted(list(set(patterns)))]
+        pattern_clusters = [[pattern] * patterns.count(pattern) for pattern in sorted(list(set(patterns)))]
     else:
         pattern_clusters = get_pattern_clusters(patterns)
     repeats_matcher = get_repeat_matcher_enhanced_hmm(pattern_clusters, copies, vpaths)
@@ -727,7 +751,7 @@ def get_read_matcher_model_enhanced(left_flanking_region, right_flanking_region,
     # Connect suffix matcher with repeat matcher
     model.concatenate(repeats_matcher, transition_probability=1.0)
     # Connect repeat matcher with prefix matcher
-    model.concatenate(right_flanking_matcher, transition_probability=1.0/(1.0+len(pattern_clusters)))
+    model.concatenate(right_flanking_matcher, transition_probability=1.0 / (1.0 + len(pattern_clusters)))
 
     # 1. Setting start to matches
     repeats_matcher_model = model.subModels[1]
@@ -751,9 +775,9 @@ def get_read_matcher_model_enhanced(left_flanking_region, right_flanking_region,
         for next_state in repeats_matcher_model.transition_map[match_state]:
             if repeats_matcher_model.transition_map[match_state][next_state] != 0:
                 prob = repeats_matcher_model.transition_map[match_state][next_state]
-                repeats_matcher_model.set_transition(match_state, next_state, prob/total)
+                repeats_matcher_model.set_transition(match_state, next_state, prob / total)
 
-        repeats_matcher_model.set_transition(match_state, right_flanking_matcher.end, to_end/total)
+        repeats_matcher_model.set_transition(match_state, right_flanking_matcher.end, to_end / total)
 
     read_length_used_to_build_model = len(left_flanking_region)
 
@@ -765,8 +789,8 @@ def get_read_matcher_model_enhanced(left_flanking_region, right_flanking_region,
         dp_score_threshold += (log(0.01) + log(0.25)) * 2  # allow upto 2 insertions/deletions (transition, emit prob)
         repeat_loop_prob = len(pattern_clusters) / (1.0 + len(pattern_clusters))
         dp_score_threshold += log(repeat_loop_prob) * (read_length_used_to_build_model / len(patterns[0]))
-        dp_score_threshold += log(1.0/len(set(patterns)))  # transition from pattern to prefix-start
-        dp_score_threshold += log(to_end/total)  # match to end
+        dp_score_threshold += log(1.0 / len(set(patterns)))  # transition from pattern to prefix-start
+        dp_score_threshold += log(to_end / total)  # match to end
         dp_score_threshold += (log(0.01) + log(0.01)) * 3  # Margin
         model.bake(merge=None, read_length=read_length_used_to_build_model, dp_score_threshold=dp_score_threshold)
     else:
@@ -802,7 +826,7 @@ def build_reference_repeat_finder_hmm(patterns, copies=1):
         unit_start = State(None, name='unit_start_%s' % repeat)
         unit_end = State(None, name='unit_end_%s' % repeat)
         model.add_states(insert_states + match_states + delete_states + [unit_start, unit_end])
-        last = len(delete_states)-1
+        last = len(delete_states) - 1
 
         if repeat > 0:
             model.add_transition(last_end, unit_start, 0.5)
@@ -827,27 +851,27 @@ def build_reference_repeat_finder_hmm(patterns, copies=1):
         model.add_transition(insert_states[0], match_states[0], 0.98)
 
         model.add_transition(delete_states[last], unit_end, 0.99)
-        model.add_transition(delete_states[last], insert_states[last+1], 0.01)
+        model.add_transition(delete_states[last], insert_states[last + 1], 0.01)
 
         model.add_transition(match_states[last], unit_end, 0.99)
-        model.add_transition(match_states[last], insert_states[last+1], 0.01)
+        model.add_transition(match_states[last], insert_states[last + 1], 0.01)
 
-        model.add_transition(insert_states[last+1], insert_states[last+1], 0.01)
-        model.add_transition(insert_states[last+1], unit_end, 0.99)
+        model.add_transition(insert_states[last + 1], insert_states[last + 1], 0.01)
+        model.add_transition(insert_states[last + 1], unit_end, 0.99)
 
         for i in range(0, len(pattern)):
-            model.add_transition(match_states[i], insert_states[i+1], 0.01)
-            model.add_transition(delete_states[i], insert_states[i+1], 0.01)
-            model.add_transition(insert_states[i+1], insert_states[i+1], 0.01)
+            model.add_transition(match_states[i], insert_states[i + 1], 0.01)
+            model.add_transition(delete_states[i], insert_states[i + 1], 0.01)
+            model.add_transition(insert_states[i + 1], insert_states[i + 1], 0.01)
             if i < len(pattern) - 1:
-                model.add_transition(insert_states[i+1], match_states[i+1], 0.98)
-                model.add_transition(insert_states[i+1], delete_states[i+1], 0.01)
+                model.add_transition(insert_states[i + 1], match_states[i + 1], 0.98)
+                model.add_transition(insert_states[i + 1], delete_states[i + 1], 0.01)
 
-                model.add_transition(match_states[i], match_states[i+1], 0.98)
-                model.add_transition(match_states[i], delete_states[i+1], 0.01)
+                model.add_transition(match_states[i], match_states[i + 1], 0.98)
+                model.add_transition(match_states[i], delete_states[i + 1], 0.01)
 
-                model.add_transition(delete_states[i], delete_states[i+1], 0.01)
-                model.add_transition(delete_states[i], match_states[i+1], 0.98)
+                model.add_transition(delete_states[i], delete_states[i + 1], 0.01)
+                model.add_transition(delete_states[i], match_states[i + 1], 0.98)
 
         last_end = unit_end
 
