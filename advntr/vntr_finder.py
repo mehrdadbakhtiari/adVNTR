@@ -39,12 +39,13 @@ class GenotypeResult:
 
 
 class SelectedRead:
-    def __init__(self, sequence, logp, vpath, mapq=None, reference_start=None):
+    def __init__(self, sequence, logp, vpath, mapq=None, reference_start=None, query_name=None):
         self.sequence = sequence
         self.logp = logp
         self.vpath = vpath
         self.mapq = mapq
         self.is_mapped = reference_start is not None
+        self.query_name = query_name
 
     def is_mapped(self):
         return self.is_mapped
@@ -246,9 +247,8 @@ class VNTRFinder:
         return sequencing_error_prob, frameshift_prob, pval
 
     @staticmethod
-    def get_reference_repeat_order(patterns):
+    def get_reference_repeat_order(patterns, unique_repeat_units):
         reference_repeat_order = ['L']
-        unique_repeat_units = sorted(list(set(patterns)))
         for repeat_unit in patterns:
             for i, unique_repeat_unit in enumerate(unique_repeat_units):
                 if repeat_unit == unique_repeat_unit:
@@ -404,7 +404,7 @@ class VNTRFinder:
             patterns = self.reference_vntr.get_repeat_segments()
             sorted_unique_patterns = sorted(list(set(patterns)))
             pattern_clusters = [[pattern] * patterns.count(pattern) for pattern in sorted_unique_patterns]
-            reference_repeat_order = self.get_reference_repeat_order(patterns)
+            reference_repeat_order = self.get_reference_repeat_order(patterns, sorted_unique_patterns)
         else:
             pattern_clusters = get_pattern_clusters(self.reference_vntr.get_repeat_segments())
 
@@ -413,9 +413,10 @@ class VNTRFinder:
             estimated_ru_count[str(i + 1)] = len(pattern_clusters[i])
             hmm_match_count[str(i + 1)] = len(pattern_clusters[i][0])  # sequence length itself
 
-        # Build reference repeat order table for a quick lookup
-        valid_repeat_orders_in_reference = self.get_valid_repeat_orders(reference_repeat_order)
-        max_covered_repeat = self.hmm.read_length_used_to_build_model / len(self.reference_vntr.pattern)
+        if self.is_frameshift_mode:
+            # Build reference repeat order table once for a quick lookup
+            valid_repeat_orders_in_reference = self.get_valid_repeat_orders(reference_repeat_order)
+            max_covered_repeat = self.hmm.read_length_used_to_build_model / len(self.reference_vntr.pattern)
 
         for read in selected_reads:
             if self.is_frameshift_mode:
@@ -462,12 +463,13 @@ class VNTRFinder:
 
             visited_states = [state.name for idx, state in read.vpath[1:-1]]
             # Logging
+            logging.debug("ReadName:{}".format(read.query_name))
             logging.debug("Read:{}".format(read.sequence))
             logging.debug("VisitedStates:{}".format(visited_states))
             logging.debug("LogProb:{}".format(read.logp))
 
             # TODO: Read Vpath once
-            ru_state_count, full_repeat_start, full_repeat_end = get_repeating_unit_state_count(visited_states)
+            ru_state_count, full_repeat_start, full_repeat_end = get_repeating_unit_state_count(visited_states, read.sequence, pattern_clusters)
             fully_observed_ru_count = len(ru_state_count)
             if 'partial_start' in ru_state_count:
                 fully_observed_ru_count -= 1
@@ -520,29 +522,17 @@ class VNTRFinder:
                 if not current_state.startswith('I') and not current_state.startswith('D'):
                     continue
 
-                # Reads starting with a partially observed repeat unit
-                if current_repeat is None:
+                # Reads starting/ending with a partially observed repeat unit
+                if current_repeat is None or current_repeat >= fully_observed_ru_count:
                     if settings.USE_ONLY_FULLY_COVERED_RU:
                         continue
-                    if 'partial_start' in ru_state_count:
-                        if ru_state_count['partial_start']['M'] < 5:
+                    if 'partial_start' in ru_state_count or 'partial_end' in ru_state_count:
+                        cur_repeat = 'partial_start' if current_repeat is None else 'partial_end'
+                        if ru_state_count[cur_repeat]['M'] < 5:
                             continue
-                        if ru_state_count['partial_start']['I'] != ru_state_count['partial_start']['D']:
-                            if current_state.startswith('I'):
-                                current_state += '_' + get_emitted_basepair_from_visited_states(current_state,
-                                                                                                visited_states,
-                                                                                                read.sequence)
-                            mutation_count_temp[current_state] = mutation_count_temp.get(current_state, 0) + 1
-                        continue
-
-                # Reads ending with a partially observed repeat unit
-                if current_repeat >= fully_observed_ru_count:
-                    if settings.USE_ONLY_FULLY_COVERED_RU:
-                        continue
-                    if 'partial_end' in ru_state_count:
-                        if ru_state_count['partial_end']['M'] < 5:
+                        if ru_state_count[cur_repeat]['S'] >= 4:
                             continue
-                        if ru_state_count['partial_end']['I'] != ru_state_count['partial_end']['D']:
+                        if ru_state_count[cur_repeat]['I'] != ru_state_count[cur_repeat]['D']:
                             if current_state.startswith('I'):
                                 current_state += '_' + get_emitted_basepair_from_visited_states(current_state,
                                                                                                 visited_states,
@@ -551,7 +541,6 @@ class VNTRFinder:
                         continue
 
                 pattern_index = current_state.split('_')[-1]
-
                 # ru_state_count is a dictionary of [repeat][M/I/D]
                 # This check is okay because insertion and deletion at a different position in a RU is very rare
                 if ru_state_count[current_repeat]['I'] == ru_state_count[current_repeat]['D']:
@@ -562,15 +551,20 @@ class VNTRFinder:
                     ru_state_count[current_repeat]['M'] + ru_state_count[current_repeat]['I'] - pattern_length)
 
                 if inserted_bp > pattern_length / 2:
-                    reason_why_rejected = "Rejected read: #M + #I - len(pattern) > {} bp in pattern {}, inserted {} bps".format(
-                        pattern_length / 2, pattern_index, inserted_bp)
+                    logging.debug("Rejected read: #M + #I - len(pattern) > {} bp in pattern {}, inserted {} bps".format(
+                        pattern_length / 2, pattern_index, inserted_bp))
                     is_valid_read = False
                     break
 
                 indel_mutation_count = ru_state_count[current_repeat]['I'] + ru_state_count[current_repeat]['D']
                 if indel_mutation_count > pattern_length / 2:
-                    reason_why_rejected = "Rejected read: #I + #D > {} in pattern {}, diff {}".format(
-                        pattern_length / 2, pattern_index, indel_mutation_count)
+                    logging.debug("Rejected read: #I + #D > {} in pattern {}, diff {}".format(
+                        pattern_length / 2, pattern_index, indel_mutation_count))
+                    is_valid_read = False
+                    break
+
+                if ru_state_count[current_repeat]['S'] >= 4:
+                    logging.debug("Rejected read: mismatches >= 4 in pattern {}".format(pattern_index))
                     is_valid_read = False
                     break
 
@@ -613,6 +607,12 @@ class VNTRFinder:
                             # Case 1: D(i-1), D(i),
                             # In this case, the deletion is connected to the previous mutation sequence and skip
                             if prev_mutation_index + 1 == current_mutation_index and prev_hmm_index == current_hmm_index:  # Only possible with D(i)
+                                if mutation_sequence is None:
+                                    # I(i-1), D(i)
+                                    # This is invalid read. Contiguous mutations in same RU, but different position.
+                                    # TODO: Use a queue and handle it state by state (not merging into a dict)
+                                    logging.debug("Invalid mutations: Contiguous mutations from different positions")
+                                    break
                                 mutation_sequence += '&' + temp_mutation
                             # Case 2: I/D(j), D(i), j < i-1
                             # In this case, they are not connected (This should be rare, two deletions in a RU)
@@ -658,8 +658,6 @@ class VNTRFinder:
                     if state.startswith('I'):
                         state += "_LEN{}".format(occurrence)  # Insertion length
                     prefix_suffix_mutations[state] += 1
-            else:
-                logging.debug(reason_why_rejected)
 
         sorted_mutations = sorted(mutations.items(), key=lambda x: x[1])
         logging.debug('sorted mutations: %s ' % sorted_mutations)
@@ -679,18 +677,18 @@ class VNTRFinder:
             # We don't know true RU count. Thus, we use reference to estimate the number of RU
             avg_bp_coverage = float(total_bps_in_ru) / ru_length / 2 / estimated_ru_count[pattern_index]
             logging.info('Average coverage for each base pair in RU: %s' % avg_bp_coverage)
-
             expected_indel_transitions = 1.0 / (2 * estimated_ru_count[pattern_index])
+
             seq_err_prob, frameshift_prob, pval = self.identify_frameshift(avg_bp_coverage, observed_mutation_count,
                                                                            expected_indel_transitions)
             logging.info('Sequencing error prob: %s' % seq_err_prob)
             logging.info('Frame-shift prob: %s' % frameshift_prob)
             logging.info('P-value: %s' % pval)
             if pval < settings.INDEL_MUTATION_MIN_PVALUE:
-                logging.info('ID:{}, There is a mutation at {}'.format(self.reference_vntr.id, state))
+                logging.info('VID:{}, There is a mutation at {}'.format(self.reference_vntr.id, state))
                 frameshifts.append((state, observed_mutation_count, avg_bp_coverage, pval))
 
-        # Check if prefix or suffix mutation check is required
+        # Check if any mutations in prefix or suffix states can be interpreted as mutations in repeats
         # If the last or first nucleotide of VNTR is the same as the first or last nucleotide of flanking region,
         # the mutations occurred in those region should be regarded as same as the mutations in repeat units
         # because it is indistinguishable
@@ -742,8 +740,8 @@ class VNTRFinder:
                     avg_bp_coverage = float(total_bps_in_ru) / ru_length / 2 / estimated_ru_count[
                         first_repeat_unit_index]
                     logging.info('Average coverage for each base pair in RU: %s' % avg_bp_coverage)
-
                     expected_indel_transitions = 1.0 / (2 * estimated_ru_count[first_repeat_unit_index])
+
                     seq_err_prob, frameshift_prob, pval = self.identify_frameshift(avg_bp_coverage,
                                                                                    mutation_count,
                                                                                    expected_indel_transitions)
@@ -751,7 +749,7 @@ class VNTRFinder:
                     logging.info('Frame-shift prob: %s' % frameshift_prob)
                     logging.info('P-value: %s' % pval)
                     if pval < settings.INDEL_MUTATION_MIN_PVALUE:
-                        logging.info('ID:{}, There is a mutation at {}'.format(self.reference_vntr.id, candidate))
+                        logging.info('VID:{}, There is a mutation at {}'.format(self.reference_vntr.id, candidate))
                         frameshifts.append((candidate, mutation_count, avg_bp_coverage, pval))
             if 'prefix' in candidate:
                 if mutation_position <= prefix_mutation_check_boundary:  # I0 is always ok
@@ -767,8 +765,8 @@ class VNTRFinder:
                     avg_bp_coverage = float(total_bps_in_ru) / ru_length / 2 / estimated_ru_count[
                         last_repeat_unit_index]
                     logging.info('Average coverage for each base pair in RU: %s' % avg_bp_coverage)
-
                     expected_indel_transitions = 1.0 / (2 * estimated_ru_count[last_repeat_unit_index])
+
                     seq_err_prob, frameshift_prob, pval = self.identify_frameshift(avg_bp_coverage,
                                                                                    mutation_count,
                                                                                    expected_indel_transitions)
@@ -1147,7 +1145,7 @@ class VNTRFinder:
                     if is_low_quality_read(read) and not self.recruit_read(logp, vpath, recruitment_score, length):
                         logging.debug('Rejected Read, low quality: %s' % sequence)
                         continue
-                    selected_reads.append(SelectedRead(sequence, logp, vpath, read.mapq, read.reference_start))
+                    selected_reads.append(SelectedRead(sequence, logp, vpath, read.mapq, read.reference_start, read.query_name))
                 end = min(read_end, vntr_end)
                 start = max(read.reference_start, vntr_start)
                 vntr_bp_in_mapped_reads += end - start
