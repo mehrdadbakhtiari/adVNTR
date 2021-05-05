@@ -215,7 +215,6 @@ def get_repeating_unit_state_count(visited_states, sequence, pattern_clusters):
             if visited_states[j].startswith("D"):
                 state_count_for_ru['partial_start']['D'] += 1
 
-        assert seq_index == len(sequence) - 1, "Should emit all sequence to check mismatch"
         return state_count_for_ru, full_repeat_start, full_repeat_end
 
     if prev_start_index is not None and prev_start_index > last_end_index: # when unit start is visited but not unit end
