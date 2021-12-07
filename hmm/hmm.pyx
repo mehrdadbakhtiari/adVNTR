@@ -685,15 +685,18 @@ cdef class Model(object):
                 neighbor_state_index = 0
                 log_prob = 0
                 for neighbor_state in neighbor_states:
-                    neighbor_state_index = self.state_to_index[neighbor_state] - repeat_start_index
-                    if neighbor_state_index > repeat_end_index - repeat_start_index:
+                    #neighbor_state_index = self.state_to_index[neighbor_state] - repeat_start_index
+                    neighbor_state_index = self.state_to_index[neighbor_state]
+                    #if neighbor_state_index > repeat_end_index - repeat_start_index:
+                    if neighbor_state_index > repeat_end_index:
                         continue
-                    log_prob = dynamic_table[row][col] + self.transition_matrix[row][neighbor_state_index]
+                    log_prob = dynamic_table[row][col] + self.transition_matrix[row_index][neighbor_state_index]
+                    zero_based_neighbor_index = self.state_to_index[neighbor_state] - repeat_start_index
 
-                    if log_prob - dynamic_table[neighbor_state_index][col] > 1e-10:
-                        dynamic_table[neighbor_state_index][col] = log_prob
-                        vpath_table_row[neighbor_state_index][col] = row
-                        vpath_table_col[neighbor_state_index][col] = col
+                    if log_prob - dynamic_table[zero_based_neighbor_index][col] > 1e-10:
+                        dynamic_table[zero_based_neighbor_index][col] = log_prob
+                        vpath_table_row[zero_based_neighbor_index][col] = row
+                        vpath_table_col[zero_based_neighbor_index][col] = col
 
         # Back tracking viterbi path from the Prefix Matcher End
         cdef list vpath = []
@@ -701,15 +704,14 @@ cdef class Model(object):
         row, col = vpath_table_row[state_count-1][sequence_length], vpath_table_col[state_count-1][sequence_length]
         row_index = row + repeat_start_index
 
-        # print(row, col)
         while row != 0 or col != 0:
-            # print(row, col)
-            # print(self.states[row_index].name)
             vpath.insert(0, (self.state_to_index[self.states[row_index]], self.states[row_index]))
             row, col = vpath_table_row[row][col], vpath_table_col[row][col]
             row_index = row + repeat_start_index
 
         vpath.insert(0, (self.state_to_index[self.states[row_index]], self.states[row_index]))
+        ## TODO
+        # Try to match with the previous one and get the score, and update the score
         # cdef double logp = dynamic_table[self.state_to_index[self.subModels[self.n_subModels-1].end]][sequence_length]
 
         return 0, vpath
@@ -729,30 +731,38 @@ cdef class Model(object):
 
         neighbor_states = self.transition_map[state]
         cdef int neighbor_state_index = 0
+        cdef int zero_based_neighbor_index = 0
         cdef double log_prob = 0
+        cdef int row_index = repeat_start_index + row
 
         if state.is_silent():  # Silent state: Stay in the same column
             for neighbor_state in neighbor_states:
-                neighbor_state_index = self.state_to_index[neighbor_state] - repeat_start_index
-                if neighbor_state_index > repeat_end_index - repeat_start_index:
+                #neighbor_state_index = self.state_to_index[neighbor_state] - repeat_start_index
+                neighbor_state_index = self.state_to_index[neighbor_state]
+                #if neighbor_state_index > repeat_end_index - repeat_start_index:
+                if neighbor_state_index > repeat_end_index:
                     continue
-                log_prob = dynamic_table[row][col] + self.transition_matrix[row][neighbor_state_index]
+                log_prob = dynamic_table[row][col] + self.transition_matrix[row_index][neighbor_state_index]
+                zero_based_neighbor_index = neighbor_state_index - repeat_start_index
 
-                if log_prob - dynamic_table[neighbor_state_index][col] > 1e-10:
-                    dynamic_table[neighbor_state_index][col] = log_prob
-                    vpath_table_row[neighbor_state_index][col] = row
-                    vpath_table_col[neighbor_state_index][col] = col
+                if log_prob - dynamic_table[zero_based_neighbor_index][col] > 1e-10:
+                    dynamic_table[zero_based_neighbor_index][col] = log_prob
+                    vpath_table_row[zero_based_neighbor_index][col] = row
+                    vpath_table_col[zero_based_neighbor_index][col] = col
         else:  # Not a silent state: Emit a character and move to the next column
             for neighbor_state in neighbor_states:
-                neighbor_state_index = self.state_to_index[neighbor_state] - repeat_start_index
-                if neighbor_state_index > repeat_end_index - repeat_start_index:
+                #neighbor_state_index = self.state_to_index[neighbor_state] - repeat_start_index
+                neighbor_state_index = self.state_to_index[neighbor_state]
+                #if neighbor_state_index > repeat_end_index - repeat_start_index:
+                if neighbor_state_index > repeat_end_index:
                     continue
-                log_prob = dynamic_table[row][col] + self.transition_matrix[row][neighbor_state_index] + state.distribution[ch]
+                log_prob = dynamic_table[row][col] + self.transition_matrix[row_index][neighbor_state_index] + state.distribution[ch]
+                zero_based_neighbor_index = neighbor_state_index - repeat_start_index
 
-                if log_prob - dynamic_table[neighbor_state_index][col + 1] > 1e-10:
-                    dynamic_table[neighbor_state_index][col + 1] = log_prob
-                    vpath_table_row[neighbor_state_index][col + 1] = row
-                    vpath_table_col[neighbor_state_index][col + 1] = col
+                if log_prob - dynamic_table[zero_based_neighbor_index][col + 1] > 1e-10:
+                    dynamic_table[zero_based_neighbor_index][col + 1] = log_prob
+                    vpath_table_row[zero_based_neighbor_index][col + 1] = row
+                    vpath_table_col[zero_based_neighbor_index][col + 1] = col
 
     cpdef get_encoded_sequence(self, sequence):
         key_map = {'A':0, 'C':1, 'G':2, 'T':3}
