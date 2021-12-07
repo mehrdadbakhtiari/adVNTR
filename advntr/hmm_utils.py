@@ -785,12 +785,18 @@ def get_read_matcher_model_enhanced(left_flanking_region, right_flanking_region,
         dp_score_threshold = 0
         dp_score_threshold += log(0.3)  # model-start to match < to suffix-start
         dp_score_threshold += (log(0.97) + log(0.99)) * read_length_used_to_build_model  # sequence length * match
-        dp_score_threshold += (log(0.01) + log(0.25)) * 2  # allow upto 2 insertions/deletions (transition, emit prob)
-        repeat_loop_prob = len(pattern_clusters) / (1.0 + len(pattern_clusters))
+        dp_score_threshold += (log(0.001) + log(0.01)) * (len(patterns[0])/2)  # allow indels of 50% of pattern length
+
+        # Max end to start loop
+        repeat_loop_prob = len(pattern_clusters) / (1.0 + len(pattern_clusters))  # end to start
         dp_score_threshold += log(repeat_loop_prob) * (read_length_used_to_build_model / len(patterns[0]))
+        # Max start to unit_n loop
+        repeating_unit_transition_prob = 1.0 / len(pattern_clusters)  # ru-start to unit_n
+        dp_score_threshold += log(repeating_unit_transition_prob) * (read_length_used_to_build_model/len(patterns[0]))
+
         dp_score_threshold += log(1.0 / len(set(patterns)))  # transition from pattern to prefix-start
         dp_score_threshold += log(to_end / total)  # match to end
-        dp_score_threshold += (log(0.01) + log(0.01)) * 3  # Margin
+
         model.bake(merge=None, read_length=read_length_used_to_build_model, dp_score_threshold=dp_score_threshold)
     else:
         model.bake(merge=None, read_length=read_length_used_to_build_model)

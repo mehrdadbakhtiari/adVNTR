@@ -419,7 +419,7 @@ class VNTRFinder:
             max_covered_repeat = self.hmm.read_length_used_to_build_model / len(self.reference_vntr.pattern)
 
         for read in selected_reads:
-            if self.is_frameshift_mode:
+            if settings.USE_REF_ALIGNMENT:
                 # TODO: Read Vpath once
                 read_as_repeat_unit_number, annotated_read, unit_start_points = self.get_repeat_unit_number(read)
 
@@ -444,7 +444,8 @@ class VNTRFinder:
                             # Don't modify if the wrong match is in the first and last repeat unit
                             if mutated_repeat_indices[0] != 0 and mutated_repeat_indices[0] != len(
                                     read_as_repeat_unit_number) - 1:
-                                logging.debug("Realign on mutated repeat unit")
+                                logging.debug("Realign on mutated repeat unit {} to {}".format(mutated_repeats[0],
+                                                                                               correct_repeats[0]))
                                 # Get the corresponding sequence for the mutated repeat units
                                 subsequence_with_repeat_number_conflict = annotated_read[mutated_repeat_indices[0]]
 

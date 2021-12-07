@@ -59,6 +59,8 @@ def main():
                                           help='file for "\n"-separated target VNTR IDs')
     genotype_io_group.add_argument('-ad', '--append', action='store_true',
                                    help='only genotype unprocessed vntrs given target vids and logfile')
+    genotype_io_group.add_argument('-noref_aln', '--noref_aln', action='store_true', default=True,
+                                   help='Not use reference order alignment method. Only works with frameshift mode')
 
     genotype_algortihm_group = genotype_parser.add_argument_group("Algorithm options")
     genotype_algortihm_group.add_argument('-fs', '--frameshift', action='store_true',

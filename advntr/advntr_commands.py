@@ -133,6 +133,8 @@ def genotype(args, genotype_parser):
             genome_analyzier.find_repeat_counts_from_pacbio_reads(input_file, args.naive)
     else:
         if args.frameshift:
+            if args.noref_aln:
+                settings.USE_REF_ALIGNMENT = False
             if args.fullru:
                 settings.USE_ONLY_FULLY_COVERED_RU = True
             # if valid_vntr_for_frameshift(target_vntrs):
