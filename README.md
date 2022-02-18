@@ -2,23 +2,19 @@
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/advntr/badges/downloads.svg)](https://anaconda.org/bioconda/advntr)
 [![Documentation Status](https://readthedocs.org/projects/pip/badge/?version=stable)](http://pip.pypa.io/en/stable/?badge=stable)
 
-adVNTR - A tool for genotyping VNTRs
+code-adVNTR - A tool for genotyping VNTRs
 ------------------------------------
-[adVNTR](https://github.com/mehrdadbakhtiari/adVNTR/) is a tool for genotyping Variable Number Tandem Repeats (VNTR)
+[code-adVNTR](https://github.com/mehrdadbakhtiari/adVNTR/) is a tool for genotyping Variable Number Tandem Repeats (VNTR)
 from sequence data. It works with both NGS short reads (Illumina HiSeq) and SMRT reads (PacBio) and finds
 diploid repeating counts for VNTRs and identifies possible mutations in the VNTR sequences.
 
 Installation
 ------------
-If you are using the conda packaging manager (e.g. [miniconda](https://docs.conda.io/en/latest/miniconda.html) or anaconda),
-you can install adVNTR from the [bioconda  channel](https://bioconda.github.io/):
-
-    conda config --add channels bioconda
-    conda install advntr
+Currently, you can only install code-adVNTR from source [install the adVNTR from source](http://advntr.readthedocs.io/en/latest/installation.html#install-from-source-not-recommended) with dependencies.
 
 adVNTR could be invoked from command line with ``advntr``
 
-Alternatively, you can install dependencies and [install the adVNTR from source](http://advntr.readthedocs.io/en/latest/installation.html#install-from-source-not-recommended).
+code-adVNTR will be merged into the master branch.
 
 
 Data Requirements
@@ -39,7 +35,7 @@ Use following command to see the help for running the tool.
 
     advntr --help
 
-The program outputs the RU count genotypes of trained VNTRs. To specify a single VNTR by its ID use ``--vntr_id <id>`` option.
+The program outputs either the RU count genotypes or small variants of trained VNTRs. To specify a single VNTR by its ID use ``--vntr_id <id>`` option.
 The list of some known VNTRs and their ID is available at [Disease-linked-VNTRs page](https://github.com/mehrdadbakhtiari/adVNTR/wiki/Disease-linked-VNTRs) in wiki.
 
 See the demo below or [Quickstart](http://advntr.readthedocs.io/en/latest/quickstart.html) page to see an example
