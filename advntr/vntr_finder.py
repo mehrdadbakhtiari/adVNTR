@@ -750,7 +750,7 @@ class VNTRFinder:
         estimated_genotype = self.get_ru_count_with_coverage_method(pattern_occurrences, total_counted_vntr_bp,
                                                                     average_coverage)
         return GenotypeResult(estimated_genotype, len(selected_reads), len(covered_repeats), len(flanking_repeats),
-                              max_prob=0)  # No probability for the estimated genotype
+                              0)  # No probability for the estimated genotype
 
     def find_repeat_count_from_short_reads(self, short_read_files, working_directory='./'):
         """

@@ -331,7 +331,7 @@ def _generate_pairwise_aln(log_file, aln_outfile, ref_vntrs, vid_list=None, sort
 
     with open(aln_outfile, "w") as af:
         for vid in sorted(vid_to_aln_info.keys()):
-            if ref_vntrs[vid] is None:
+            if ref_vntrs.get(vid) is None:
                 print("ERROR: The reference VNTR is not in the DB, VID: {}".format(vid))
                 af.write("ERROR: The reference VNTR is not in the DB, VID: {}\n".format(vid))
                 continue
