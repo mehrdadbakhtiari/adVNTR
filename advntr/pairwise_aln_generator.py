@@ -36,11 +36,7 @@ def get_consensus_pattern(patterns):
             chr_counter[aligned_patterns[pattern_idx][seq_idx]] += 1
 
         most_common_chr = chr_counter.most_common(1)[0][0]
-        if most_common_chr == '-':
-            if chr_counter.most_common(1)[0][1] < len(aligned_patterns) * 0.5:
-                consensus_seq += chr_counter.most_common(2)[1][0]
-        else:
-            consensus_seq += most_common_chr
+        consensus_seq += most_common_chr
 
     return consensus_seq
 
@@ -324,7 +320,7 @@ def _generate_pairwise_aln(log_file, aln_outfile, ref_vntrs, vid_list=None, sort
                     min_valid_flanked = max(spanning_repeats) if len(spanning_repeats) > 0 else 0
                     max_flanking_repeat = [r for r in flanking_repeats if
                                            r == max(flanking_repeats) and r >= min_valid_flanked]
-                    vid_flanking_repeats_used_in_genotyping[vid] = max(flanking_repeats) if len(max_flanking_repeat) >= 5 else -1
+                    vid_flanking_repeats_used_in_genotyping[vid] = max(flanking_repeats) if len(max_flanking_repeat) >= 5 else None
 
     if sort_by_repeat:
         vid_to_aln_info = {k: v for k, v in sorted(vid_to_aln_info.items(), key=lambda k_v: k_v[1])}
