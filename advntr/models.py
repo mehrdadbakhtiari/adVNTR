@@ -6,6 +6,7 @@ from multiprocessing import Process, Semaphore, Manager
 from Bio import Seq, SeqRecord, SeqIO
 
 from advntr.reference_vntr import ReferenceVNTR
+
 from advntr.vntr_annotation import get_gene_name_and_annotation_of_vntr, is_vntr_close_to_gene, get_genes_info
 from advntr import settings
 from advntr.utils import get_chromosome_reference_sequence
@@ -147,7 +148,10 @@ def load_unique_vntrs_data(db_file=None):
             else:
                 new_row.append(element)
         vntr_id, overlap, chrom, start, gene, annotation, pattern, left_flank, right_flank, segments, score = new_row
-        repeat_segments = segments.split(',')
+        if "," in segments:
+            repeat_segments = segments.split(',')
+        else:
+            repeat_segments = []
         repeats = len(repeat_segments)
         vntr = ReferenceVNTR(int(vntr_id), pattern, int(start), chrom, gene, annotation, repeats, scaled_score=score)
         vntr.init_from_xml(repeat_segments, left_flank, right_flank)
@@ -206,9 +210,10 @@ def save_reference_vntr_to_database(ref_vntr, db_file=None):
     db = sqlite3.connect(db_file)
     cursor = db.cursor()
     segments = ','.join(ref_vntr.get_repeat_segments())
+    non_overlapping = "True" if ref_vntr.non_overlapping else "False"
     cursor.execute('''INSERT INTO vntrs(id, nonoverlapping, chromosome, ref_start, gene_name, annotation, pattern,
                    left_flanking, right_flanking, repeats, scaled_score) VALUES(?,?,?,?,?,?,?,?,?,?,?)''',
-                   (ref_vntr.id, ref_vntr.non_overlapping, ref_vntr.chromosome, ref_vntr.start_point,
+                   (ref_vntr.id, non_overlapping, ref_vntr.chromosome, ref_vntr.start_point,
                     ref_vntr.gene_name, ref_vntr.annotation, ref_vntr.pattern, ref_vntr.left_flanking_region,
                     ref_vntr.right_flanking_region, segments, ref_vntr.scaled_score))
     db.commit()
@@ -325,6 +330,57 @@ def fill_vntr_database():
         database_file = PROCESSING_DIR + 'GRCh38_VNTRs_%s.db' % chrom
         create_vntrs_database(database_file)
         save_vntrs_to_database(processed_vntrs, database_file)
+
+def test_load_save_vntrs_basic():
+    from pprint import pprint
+
+    db_file = os.path.join(os.getcwd(), "test_db_file.db")
+    vntrs = []
+    vntr_0 = ReferenceVNTR(vntr_id=0, pattern="ACC", start_point=10,
+                         chromosome="chr1", gene_name="test_gene",
+                         annotation="promoter", estimated_repeats=0,
+                         scaled_score=0.2)
+    vntrs.append(vntr_0)
+    vntr_1 = ReferenceVNTR(vntr_id=1, pattern="ACCTTTGG", start_point=5,
+                         chromosome="chr22", gene_name="test_gene",
+                         annotation="promoter", estimated_repeats=0,
+                         scaled_score=0.1)
+    vntr_1.non_overlapping = False
+    vntrs.append(vntr_1)
+    vntr_2 = ReferenceVNTR(vntr_id=3, pattern="CA", start_point=300,
+                         chromosome="chrX", gene_name="test_gene",
+                         annotation="enhancer", estimated_repeats=2,
+                         scaled_score=0.6)
+    vntr_2.repeat_segments = ["CA", "CAC"]
+    vntrs.append(vntr_2)
+    vntr_3 = ReferenceVNTR(vntr_id=4, pattern="CA", start_point=105,
+                         chromosome="chrX", gene_name="test_gene",
+                         annotation="enhancer", estimated_repeats=0,
+                         scaled_score=0.6)
+
+    vntr_3.left_flanking_region = "CAAA"
+    vntr_3.right_flanking_region = "CCCC"
+    vntrs.append(vntr_3)
+    # Empty the db_file and create a fresh database.
+    open(db_file, "w").close()
+    create_vntrs_database(db_file=db_file)
+    # Save the test vntrs on the db_file.
+    for vntr in vntrs:
+        save_reference_vntr_to_database(ref_vntr=vntr, db_file=db_file)
+    # Load the vntrs from the db_file.
+    loaded_vntrs = load_unique_vntrs_data(db_file=db_file)
+
+    # Compare the list of vntrs, not caring about the order.
+    assert(len(vntrs) == len(loaded_vntrs))
+    for i in range(len(vntrs)):
+        try:
+            assert(loaded_vntrs[i] == vntrs[i])
+        except AssertionError:
+            print("Assertion failed for index {}".format(i))
+            print("loaded_vntrs[{}]: ".format(i))
+            pprint(vars(loaded_vntrs[i]))
+            print("vntrs[{}]: ".format(i))
+            pprint(vars(vntrs[i]))
 
 if __name__ == "__main__":
     import sys

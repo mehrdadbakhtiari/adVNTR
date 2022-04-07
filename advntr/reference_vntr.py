@@ -22,6 +22,24 @@ class ReferenceVNTR:
         self.chromosome_sequence = chromosome_sequence
         self.scaled_score = scaled_score
 
+    def __eq__(self, other):
+        if not isinstance(other, ReferenceVNTR):
+            return False
+        # Not checking has_homologous for equality.
+        return (self.non_overlapping == other.non_overlapping and
+                self.id == other.id and
+                self.pattern == other.pattern and
+                self.start_point == other.start_point and
+                self.chromosome == other.chromosome and
+                self.gene_name == other.gene_name and
+                self.annotation == other.annotation and
+                self.estimated_repeats == other.estimated_repeats and
+                sorted(self.repeat_segments) == sorted(other.repeat_segments) and
+                self.left_flanking_region == other.left_flanking_region and
+                self.right_flanking_region == other.right_flanking_region and
+                self.chromosome_sequence == other.chromosome_sequence and
+                self.scaled_score == other.scaled_score)
+
     def init_from_vntrseek_data(self):
         corresponding_region_in_ref = self.get_corresponding_region_in_ref()
         repeat_segments = self.find_repeat_segments(corresponding_region_in_ref)
@@ -33,7 +51,11 @@ class ReferenceVNTR:
     def init_from_xml(self, repeat_segments, left_flanking_region, right_flanking_region):
         self.repeat_segments = repeat_segments
         self.left_flanking_region = left_flanking_region
+        if left_flanking_region == 'None':
+            self.left_flanking_region = None
         self.right_flanking_region = right_flanking_region
+        if right_flanking_region == 'None':
+            self.right_flanking_region = None
 
     def is_non_overlapping(self):
         return self.non_overlapping
