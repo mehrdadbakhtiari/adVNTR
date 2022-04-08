@@ -408,6 +408,9 @@ class VNTRFinder:
         chromosome = self.reference_vntr.chromosome if reference == 'HG19' else self.reference_vntr.chromosome[3:]
         process_list = []
         for read in samfile.fetch(chromosome, region_start, region_end):
+            if len(read.get_reference_positions()) == 0:
+                logging.debug('no reference positions for read. skipping self.check_if_pacbio_mapped_read_spans_vntr for this read')
+                continue
             sema.acquire()
             p = Process(target=self.check_if_pacbio_mapped_read_spans_vntr, args=(sema, read, length_distribution,
                                                                                   mapped_spanning_reads))
@@ -481,7 +484,7 @@ class VNTRFinder:
         logging.info('Maximum probability for genotyping: %s' % max_prob)
         return result, max_prob
 
-    def get_dominant_copy_numbers_from_spanning_reads(self, spanning_reads):
+    def get_dominant_copy_numbers_from_spanning_reads(self, spanning_reads, log_pacbio_reads):
         if len(spanning_reads) < 1:
             logging.info('There is no spanning read')
             return None, 0
@@ -499,7 +502,16 @@ class VNTRFinder:
             if logp < rev_logp:
                 vpath = rev_vpath
             observed_copy_numbers.append(get_number_of_repeats_in_vpath(vpath))
-
+            if log_pacbio_reads:
+                repeats = get_number_of_repeats_in_vpath(vpath)
+                logging.debug(str(Seq(haplotype)))
+                visited_states = [state.name for idx, state in vpath[1:-1]]
+                if self.read_flanks_repeats_with_confidence(vpath):
+                    logging.debug('spanning read visited states :%s' % visited_states)
+                    logging.debug('repeats: %s' % repeats)
+                else:
+                    logging.debug('flanking read visited states :%s' % visited_states)
+                    logging.debug('repeats: %s' % repeats)
         logging.info('flanked repeats: %s' % observed_copy_numbers)
         return self.find_genotype_based_on_observed_repeats(observed_copy_numbers)
 
@@ -556,26 +568,26 @@ class VNTRFinder:
         return copy_numbers
 
     @time_usage
-    def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, unmapped_filtered_reads):
+    def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, unmapped_filtered_reads, log_pacbio_reads):
         logging.debug('finding repeat count from pacbio alignment file for %s' % self.reference_vntr.id)
 
         unaligned_spanning_reads, length_dist = self.get_spanning_reads_of_unaligned_pacbio_reads(unmapped_filtered_reads)
         mapped_spanning_reads = self.get_spanning_reads_of_aligned_pacbio_reads(alignment_file)
 
         spanning_reads = mapped_spanning_reads + unaligned_spanning_reads
-        copy_numbers, max_prob = self.get_dominant_copy_numbers_from_spanning_reads(spanning_reads)
+        copy_numbers, max_prob = self.get_dominant_copy_numbers_from_spanning_reads(spanning_reads, log_pacbio_reads)
 
         return GenotypeResult(copy_numbers, len(spanning_reads), len(spanning_reads), 0, max_prob)
 
     @time_usage
-    def find_repeat_count_from_pacbio_reads(self, unmapped_filtered_reads, naive=False):
+    def find_repeat_count_from_pacbio_reads(self, unmapped_filtered_reads, log_pacbio_reads, naive=False):
         logging.debug('finding repeat count from pacbio reads file for %s' % self.reference_vntr.id)
         spanning_reads, length_dist = self.get_spanning_reads_of_unaligned_pacbio_reads(unmapped_filtered_reads)
         max_prob = 0
         if naive:
             copy_numbers = self.find_ru_counts_with_naive_approach(length_dist, spanning_reads)  # No max_prob value
         else:
-            copy_numbers, max_prob = self.get_dominant_copy_numbers_from_spanning_reads(spanning_reads)
+            copy_numbers, max_prob = self.get_dominant_copy_numbers_from_spanning_reads(spanning_reads, log_pacbio_reads)
         return GenotypeResult(copy_numbers, len(spanning_reads), len(spanning_reads), 0, max_prob)
 
     @time_usage

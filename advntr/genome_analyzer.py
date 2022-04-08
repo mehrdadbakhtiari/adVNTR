@@ -195,7 +195,7 @@ class GenomeAnalyzer:
 
         return reads, vntr_read_ids
 
-    def find_repeat_counts_from_pacbio_alignment_file(self, alignment_file):
+    def find_repeat_counts_from_pacbio_alignment_file(self, alignment_file, log_pacbio_reads):
         unmapped_reads_file = extract_unmapped_reads_to_fasta_file(alignment_file, self.working_dir, self.ref_filename)
         filtered_reads, vntr_reads_ids = self.get_vntr_filtered_reads_map(unmapped_reads_file, False)
 
@@ -205,10 +205,10 @@ class GenomeAnalyzer:
             self.print_vcf_header()
         for vid in self.target_vntr_ids:
             reads = [read for read in filtered_reads if read.id in vntr_reads_ids[vid]]
-            genotype_result = self.vntr_finder[vid].find_repeat_count_from_pacbio_alignment_file(alignment_file, reads)
+            genotype_result = self.vntr_finder[vid].find_repeat_count_from_pacbio_alignment_file(alignment_file, reads, log_pacbio_reads)
             self.print_genotype(vid, genotype_result)
 
-    def find_repeat_counts_from_pacbio_reads(self, read_file, naive=False):
+    def find_repeat_counts_from_pacbio_reads(self, read_file, log_pacbio_reads, naive=False):
         filtered_reads, vntr_reads_ids = self.get_vntr_filtered_reads_map(read_file, False)
         if self.outfmt == 'bed':
             self.print_bed_header()
@@ -216,7 +216,7 @@ class GenomeAnalyzer:
             self.print_vcf_header()
         for vid in self.target_vntr_ids:
             unmapped_reads = [read for read in filtered_reads if read.id in vntr_reads_ids[vid]]
-            copy_numbers = self.vntr_finder[vid].find_repeat_count_from_pacbio_reads(unmapped_reads, naive)
+            copy_numbers = self.vntr_finder[vid].find_repeat_count_from_pacbio_reads(unmapped_reads, log_pacbio_reads, naive)
             self.print_genotype(vid, copy_numbers)
 
     def find_frameshift_from_alignment_file(self, alignment_file):
