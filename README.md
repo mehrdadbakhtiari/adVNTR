@@ -1,21 +1,30 @@
-[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat-square)](http://bioconda.github.io/recipes/advntr/README.html)
-[![Anaconda-Server Badge](https://anaconda.org/bioconda/advntr/badges/downloads.svg)](https://anaconda.org/bioconda/advntr)
+<!-- [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat-square)](http://bioconda.github.io/recipes/advntr/README.html) -->
+<!-- [![Anaconda-Server Badge](https://anaconda.org/bioconda/advntr/badges/downloads.svg)](https://anaconda.org/bioconda/advntr) -->
 [![Documentation Status](https://readthedocs.org/projects/pip/badge/?version=stable)](http://pip.pypa.io/en/stable/?badge=stable)
 
-code-adVNTR - A tool for genotyping VNTRs
+code-adVNTR - A tool for genotyping coding VNTRs
 ------------------------------------
-[code-adVNTR](https://github.com/mehrdadbakhtiari/adVNTR/) is a tool for genotyping Variable Number Tandem Repeats (VNTR)
-from sequence data. It works with both NGS short reads (Illumina HiSeq) and SMRT reads (PacBio) and finds
-diploid repeating counts for VNTRs and identifies possible mutations in the VNTR sequences.
+[code-adVNTR](https://github.com/mehrdadbakhtiari/adVNTR/edit/enhanced_hmm) is a tool for genotyping Variable Number Tandem Repeats (VNTR)
+from sequence data. 
+
+code-adVNTR utilizes multiple motif HMMs to identify small variants within motifs and estimate diploid repeat counts for VNTRs. 
+It takes short reads, and a pre-trained HMM model for reference VNTRs as input and outputs either estimated diploid repeat count or small variants within the target VNTRs. 
 
 Installation
 ------------
-Currently, you can only install code-adVNTR from source [install the adVNTR from source](http://advntr.readthedocs.io/en/latest/installation.html#install-from-source-not-recommended) with dependencies.
+Currently, you can install code-adVNTR from source [install the adVNTR from source](http://advntr.readthedocs.io/en/latest/installation.html#install-from-source-not-recommended) with dependencies.
 
-adVNTR could be invoked from command line with ``advntr``
+code-adVNTR could be invoked from command line with ``advntr``. In the future, code-adVNTR will be merged into the master branch of adVNTR for easy access.
 
-code-adVNTR will be merged into the master branch.
+Here are the instructions to install from source:
 
+0) Prepare a directory that you want to download code-adVNTR and go to the directory, `cd "directory_name"`
+1) Download the source code using the following command, `git clone https://github.com/mehrdadbakhtiari/adVNTR.git --branch enhanced_hmm`
+2) Go to the directory that you downloaded the source code, `cd adVNTR`
+3) Install adVNTR using the following command, `python setup install`
+4) Download the reference VNTRs from this link below.
+5) Run adVNTR for a VNTR using the following command, `advntr genotype -fs --vntr_id [id] --alignment_file [bam_file] -m [reference_vntr] --working_directory [working_dir]`
+-fs is a parameter for variant detection, --vntr_id option is for specifying the target VNTR. For example 25561 for MUC1 VNTR with hg19 reference VNTRs.
 
 Data Requirements
 -----------------
@@ -49,12 +58,6 @@ Demo input in BAM format
     advntr genotype --alignment_file aligned_illumina_reads.bam --working_directory ./log_dir/
 ```
 
-* With ``--pacbio``, adVNTR assumes the alignment file contains PacBio sequencing data:
-
-```sh
-    advntr genotype --alignment_file aligned_pacbio_reads.bam --working_directory ./log_dir/ --pacbio
-```
-
 * Use ``--frameshift`` to find the possible frameshifts in VNTR:
 
 ```sh
@@ -69,4 +72,3 @@ See [Quickstart](http://advntr.readthedocs.io/en/latest/quickstart.html) page to
 
 Citation:
 ---------
-Bakhtiari, M., Shleizer-Burko, S., Gymrek, M., Bansal, V. and Bafna, V., 2018. [Targeted genotyping of variable number tandem repeats with adVNTR](https://genome.cshlp.org/content/28/11/1709). Genome Research, 28(11), pp.1709-1719.
