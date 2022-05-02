@@ -4,7 +4,7 @@
 
 code-adVNTR - A tool for genotyping coding VNTRs
 ------------------------------------
-[code-adVNTR](https://github.com/mehrdadbakhtiari/adVNTR/edit/enhanced_hmm) is a tool for genotyping Variable Number Tandem Repeats (VNTR)
+[code-adVNTR](https://github.com/mehrdadbakhtiari/adVNTR/tree/enhanced_hmm) is a tool for genotyping Variable Number Tandem Repeats (VNTR)
 from sequence data. 
 
 code-adVNTR utilizes multiple motif HMMs to identify small variants within motifs and estimate diploid repeat counts for VNTRs. 
