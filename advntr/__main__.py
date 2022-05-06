@@ -53,13 +53,13 @@ def main():
                                    help='file to write results. '
                                         'adVNTR writes output to stdout if oufile is not specified.')
     outfmt_choices = ['text', 'bed', 'vcf']
-    genotype_io_group.add_argument('-of', '--outfmt', metavar='<format>', default='text', choices=outfmt_choices,
+    genotype_io_group.add_argument('--of', '--outfmt', metavar='<format>', default='text', choices=outfmt_choices,
                                    help='output format. Allowed values are {'+', '.join(outfmt_choices)+'} [%(default)s]')
-    genotype_io_group.add_argument('-vf', '--vid_file', metavar='<file>', default=None,
+    genotype_io_group.add_argument('--vid_file', metavar='<file>', default=None,
                                           help='file for "\n"-separated target VNTR IDs')
-    genotype_io_group.add_argument('-ad', '--append', action='store_true',
+    genotype_io_group.add_argument('--append', action='store_true',
                                    help='only genotype unprocessed vntrs given target vids and logfile')
-    genotype_io_group.add_argument('-noref_aln', '--noref_aln', action='store_true', default=True,
+    genotype_io_group.add_argument('--noref_aln', action='store_true', default=False,
                                    help='Not use reference order alignment method. Only works with frameshift mode')
 
     genotype_algortihm_group = genotype_parser.add_argument_group("Algorithm options")
@@ -88,7 +88,7 @@ def main():
                                        help='set this flag to iteratively update the model')
     genotype_others_group.add_argument('-vid', '--vntr_id', type=str, metavar='<text>', default=None,
                                        help='comma-separated list of VNTR IDs')
-    genotype_others_group.add_argument('-fru', '--fullru', action='store_true',
+    genotype_others_group.add_argument('--fullru', action='store_true',
                                        help='use only fully mapped repeat units for mutation calls')
     genotype_others_group.add_argument('-aln', '--aln', action='store_true',
                                        help='generates hmm alignments')
