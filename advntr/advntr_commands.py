@@ -126,6 +126,10 @@ def genotype(args, genotype_parser):
     logging.info('Running adVNTR for %s VNTRs' % len(target_vids))
     genome_analyzier = GenomeAnalyzer(reference_vntrs, target_vids, working_directory, args.outfmt, args.haploid,
                                       args.reference_filename, input_file, args.frameshift)
+
+    if args.min_read_length is not None:
+        settings.MIN_READ_LENGTH = args.min_read_length
+
     if args.pacbio:
         if input_is_alignment_file:
             genome_analyzier.find_repeat_counts_from_pacbio_alignment_file(input_file)
@@ -137,7 +141,6 @@ def genotype(args, genotype_parser):
                 settings.USE_REF_ALIGNMENT = False
             if args.fullru:
                 settings.USE_ONLY_FULLY_COVERED_RU = True
-            # if valid_vntr_for_frameshift(target_vntrs):
             genome_analyzier.find_frameshift_from_alignment_file(input_file)
             if args.aln:
                 from advntr.hmm_alignment import generate_aln

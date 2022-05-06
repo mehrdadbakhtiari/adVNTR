@@ -61,6 +61,9 @@ def main():
                                    help='only genotype unprocessed vntrs given target vids and logfile')
     genotype_io_group.add_argument('--noref_aln', action='store_true', default=False,
                                    help='Not use reference order alignment method. Only works with frameshift mode')
+    genotype_io_group.add_argument('--min_read_length', type=int, metavar='<int>',
+                                   help='set the minimum length of read for filtering.' 
+                                        'Reads shorter than min_read_length will be filtered out')
 
     genotype_algortihm_group = genotype_parser.add_argument_group("Algorithm options")
     genotype_algortihm_group.add_argument('-fs', '--frameshift', action='store_true',
