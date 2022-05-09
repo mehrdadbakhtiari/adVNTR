@@ -53,7 +53,7 @@ def main():
                                    help='file to write results. '
                                         'adVNTR writes output to stdout if oufile is not specified.')
     outfmt_choices = ['text', 'bed', 'vcf']
-    genotype_io_group.add_argument('--of', '--outfmt', metavar='<format>', default='text', choices=outfmt_choices,
+    genotype_io_group.add_argument('--outfmt', metavar='<format>', default='text', choices=outfmt_choices,
                                    help='output format. Allowed values are {'+', '.join(outfmt_choices)+'} [%(default)s]')
     genotype_io_group.add_argument('--vid_file', metavar='<file>', default=None,
                                           help='file for "\n"-separated target VNTR IDs')
