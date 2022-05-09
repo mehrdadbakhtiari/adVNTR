@@ -1126,6 +1126,9 @@ class VNTRFinder:
         for read in samfile.head(5):
             read_lengths.append(len(read.seq))
         read_length = sorted(read_lengths)[3]
+        MIN_READ_LENGTH = int(read_length * 0.9)
+        if settings.MIN_READ_LENGTH is not None:
+            MIN_READ_LENGTH = settings.MIN_READ_LENGTH
 
         recruitment_score = self.get_min_score_to_select_a_read(read_length)
 
@@ -1136,7 +1139,7 @@ class VNTRFinder:
             if read.is_unmapped or read.is_duplicate:
                 logging.debug('Rejected duplicated read')
                 continue
-            if len(read.seq) < int(read_length * 0.9):
+            if len(read.seq) < MIN_READ_LENGTH:
                 logging.debug('Rejected Read, short length: %s' % read.seq)
                 continue
             read_end = read.reference_end if read.reference_end else read.reference_start + len(read.seq)
