@@ -111,9 +111,9 @@ def genotype(args, genotype_parser):
                                       args.reference_filename, input_file)
     if args.pacbio:
         if input_is_alignment_file:
-            genome_analyzier.find_repeat_counts_from_pacbio_alignment_file(input_file)
+            genome_analyzier.find_repeat_counts_from_pacbio_alignment_file(input_file, args.log_pacbio_reads)
         else:
-            genome_analyzier.find_repeat_counts_from_pacbio_reads(input_file, args.naive)
+            genome_analyzier.find_repeat_counts_from_pacbio_reads(input_file, args.log_pacbio_reads, args.naive)
     else:
         if args.frameshift:
             if valid_vntr_for_frameshift(target_vntrs):
