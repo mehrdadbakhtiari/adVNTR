@@ -8,6 +8,10 @@ adVNTR - A tool for genotyping VNTRs
 from sequence data. It works with both NGS short reads (Illumina HiSeq) and SMRT reads (PacBio) and finds
 diploid repeating counts for VNTRs and identifies possible mutations in the VNTR sequences.
 
+[code-adVNTR](https://github.com/mehrdadbakhtiari/adVNTR/tree/enhanced_hmm), a tool specialized in detecting small indel variants within motifs using short reads is now available. 
+It utilizes multiple motif HMMs to identify small variants within motifs and estimate diploid repeat counts for VNTRs in coding regions.
+For more details, please check out this [link](https://github.com/mehrdadbakhtiari/adVNTR/tree/enhanced_hmm).
+
 Installation
 ------------
 If you are using the conda packaging manager (e.g. [miniconda](https://docs.conda.io/en/latest/miniconda.html) or anaconda),
