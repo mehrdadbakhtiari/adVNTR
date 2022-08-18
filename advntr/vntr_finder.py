@@ -509,10 +509,9 @@ class VNTRFinder:
                 visited_states = [state.name for idx, state in vpath[1:-1]]
                 if self.read_flanks_repeats_with_confidence(vpath, read_sequence):
                     logging.debug('spanning read visited states :%s' % visited_states)
-                    logging.debug('repeats: %s' % repeats)
                 else:
                     logging.debug('flanking read visited states :%s' % visited_states)
-                    logging.debug('repeats: %s' % repeats)
+                logging.debug('repeats: %s' % repeats)
         logging.info('flanked repeats: %s' % observed_copy_numbers)
         return self.find_genotype_based_on_observed_repeats(observed_copy_numbers)
 
