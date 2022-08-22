@@ -47,7 +47,7 @@ def main():
                                    help='Fasta file containing raw reads',)
     genotype_io_group.add_argument('-p', '--pacbio', action='store_true',
                                    help='set this flag if input file contains PacBio reads instead of Illumina reads')
-    genotype_io_group.add_argument('--log-pacbio-reads', action='store_true',
+    genotype_io_group.add_argument('--log_pacbio_reads', action='store_true',
                                    help='set this flag to store the PacBio read information for genotyping in the log files.'
                                         ' Note that it might lead to very large log files due to the length of the PacBio reads.')
     genotype_io_group.add_argument('-n', '--nanopore', action='store_true',
