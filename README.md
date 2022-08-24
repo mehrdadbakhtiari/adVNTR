@@ -79,10 +79,18 @@ See [Quickstart](http://advntr.readthedocs.io/en/latest/quickstart.html) page to
 
 Citation:
 ---------
+- code-adVNTR:
+
+    Jonghun Park, Mehrdad Bakhtiari, Bernt Popp, Michael Wiesener, Vineet Bafna.
+    <b>[Detecting tandem repeat variants in coding regions using code-adVNTR](https://doi.org/10.1016/j.isci.2022.104785) </b> iScience vol. 25,8 104785. (2022),
+
 - adVNTR-NN (v1.4.0):
 
-    Mehrdad Bakhtiari, Jonghun Park, Yuan-Chun Ding, Sharona Shleizer-Burko, Susan L. Neuhausen, Bjarni V. Halldorsson, Kari Stefansson, Melissa Gymrek, Vineet Bafna. Variable Number Tandem Repeats mediate the expression of proximal genes. bioRxiv 2020.05.25.114082; doi: https://doi.org/10.1101/2020.05.25.114082
+    Mehrdad Bakhtiari, Jonghun Park, Yuan-Chun Ding, Sharona Shleizer-Burko, Susan L. Neuhausen, Bjarni V. Halldorsson, 
+    Kari Stefansson, Melissa Gymrek, Vineet Bafna. <b>[Variable Number Tandem Repeats mediate the expression of proximal genes](https://doi.org/10.1038/s41467-021-22206-z) </b> 
+    Nature Communications 12, 2075 (2021).
 
-- Original publication:
+- Original publication (adVNTR):
 
-    Bakhtiari, M., Shleizer-Burko, S., Gymrek, M., Bansal, V. and Bafna, V., 2018. [Targeted genotyping of variable number tandem repeats with adVNTR](https://genome.cshlp.org/content/28/11/1709). Genome Research, 28(11), pp.1709-1719.
+    Bakhtiari, M., Shleizer-Burko, S., Gymrek, M., Bansal, V. and Bafna, V., 2018. 
+    <b>[Targeted genotyping of variable number tandem repeats with adVNTR](https://genome.cshlp.org/content/28/11/1709). </b> Genome research vol. 28,11 (2018)
