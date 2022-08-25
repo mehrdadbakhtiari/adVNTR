@@ -106,6 +106,7 @@ def genotype(args, genotype_parser):
     if args.vntr_id is not None:
         target_vntrs = [int(vid) for vid in args.vntr_id.split(',')]
     logging.info('adVNTR %s' % __version__)
+    logging.info('Reference VNTR DB: {}'.format(settings.TRAINED_HMMS_DIR))
     logging.info('Running adVNTR for %s VNTRs' % len(target_vntrs))
     genome_analyzier = GenomeAnalyzer(reference_vntrs, target_vntrs, working_directory, args.outfmt, args.haploid,
                                       args.reference_filename, input_file)
