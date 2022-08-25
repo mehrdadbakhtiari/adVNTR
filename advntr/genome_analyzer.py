@@ -209,12 +209,10 @@ class GenomeAnalyzer:
                 genotype_result = self.vntr_finder[vid].find_repeat_count_from_pacbio_alignment_file(alignment_file, reads, log_pacbio_reads)
                 self.print_genotype(vid, genotype_result)
             except UnboundLocalError as unbound_local_error:
-                error_message = "UnboundLocalError when finding repeat count for vntr id {}: {}. Skipping genotyping for this VNTR.".format(vid, unbound_local_error)
-                print(error_message)
+                error_message = "UnboundLocalError when finding repeat count from pacbio alignment file for vntr id {}: {}. Skipping genotyping for this VNTR.".format(vid, unbound_local_error)
                 logging.warning(error_message)
             except Exception as error:
-                error_message = "Error when finding repeat count for vntr id {}: {}. Skipping genotyping for this VNTR.".format(vid, error)
-                print(error_message)
+                error_message = "Error when finding repeat count from pacbio alignment file for vntr id {}: {}. Skipping genotyping for this VNTR.".format(vid, error)
                 logging.warning(error_message)
 
     def find_repeat_counts_from_pacbio_reads(self, read_file, log_pacbio_reads, naive=False):
@@ -225,14 +223,28 @@ class GenomeAnalyzer:
             self.print_vcf_header()
         for vid in self.target_vntr_ids:
             unmapped_reads = [read for read in filtered_reads if read.id in vntr_reads_ids[vid]]
-            copy_numbers = self.vntr_finder[vid].find_repeat_count_from_pacbio_reads(unmapped_reads, log_pacbio_reads, naive)
-            self.print_genotype(vid, copy_numbers)
+            try:
+                copy_numbers = self.vntr_finder[vid].find_repeat_count_from_pacbio_reads(unmapped_reads, log_pacbio_reads, naive)
+                self.print_genotype(vid, copy_numbers)
+            except UnboundLocalError as unbound_local_error:
+                error_message = "UnboundLocalError when finding repeat count from pacbio reads for vntr id {}: {}. Skipping genotyping for this VNTR.".format(vid, unbound_local_error)
+                logging.warning(error_message)
+            except Exception as error:
+                error_message = "Error when finding repeat count from pacbio reads for vntr id {}: {}. Skipping genotyping for this VNTR.".format(vid, error)
+                logging.warning(error_message)
 
     def find_frameshift_from_alignment_file(self, alignment_file):
         for vid in self.target_vntr_ids:
-            result = self.vntr_finder[vid].find_frameshift_from_alignment_file(alignment_file, [])
-            print(vid)
-            print(result)
+            try:
+                result = self.vntr_finder[vid].find_frameshift_from_alignment_file(alignment_file, [])
+                print(vid)
+                print(result)
+            except UnboundLocalError as unbound_local_error:
+                error_message = "UnboundLocalError when finding frameshift from alignment file for vntr id {}: {}. Skipping genotyping for this VNTR.".format(vid, unbound_local_error)
+                logging.warning(error_message)
+            except Exception as error:
+                error_message = "Error when finding frameshift from alignment file for vntr id {}: {}. Skipping genotyping for this VNTR.".format(vid, error)
+                logging.warning(error_message)
 
     def find_repeat_counts_from_alignment_file(self, alignment_file, average_coverage, update=False):
         unmapped_reads_file = extract_unmapped_reads_to_fasta_file(alignment_file, self.working_dir, self.ref_filename)
@@ -243,9 +255,16 @@ class GenomeAnalyzer:
             self.print_vcf_header()
         for vid in self.target_vntr_ids:
             unmapped_reads = [read for read in filtered_reads if read.id in vntr_reads_ids[vid]]
-            genotype_result = self.vntr_finder[vid].find_repeat_count_from_alignment_file(alignment_file, unmapped_reads,
+            try:
+                genotype_result = self.vntr_finder[vid].find_repeat_count_from_alignment_file(alignment_file, unmapped_reads,
                                                                                       average_coverage, update)
-            self.print_genotype(vid, genotype_result)
+                self.print_genotype(vid, genotype_result)
+            except UnboundLocalError as unbound_local_error:
+                error_message = "UnboundLocalError when finding repeat count from alignment file (illumina) for vntr id {}: {}. Skipping genotyping for this VNTR.".format(vid, unbound_local_error)
+                logging.warning(error_message)
+            except Exception as error:
+                error_message = "Error when finding repeat count from alignment file (illumina) for vntr id {}: {}. Skipping genotyping for this VNTR.".format(vid, error)
+                logging.warning(error_message)
 
     def find_repeat_counts_from_short_reads(self, read_file):
         if self.outfmt == 'bed':
@@ -253,5 +272,12 @@ class GenomeAnalyzer:
         if self.outfmt == 'vcf':
             self.print_vcf_header()
         for vid in self.target_vntr_ids:
-            copy_number = self.vntr_finder[vid].find_repeat_count_from_short_reads(read_file)
-            self.print_genotype(vid, copy_number)
+            try:
+                copy_number = self.vntr_finder[vid].find_repeat_count_from_short_reads(read_file)
+                self.print_genotype(vid, copy_number)
+            except UnboundLocalError as unbound_local_error:
+                error_message = "UnboundLocalError when finding repeat count for vntr id {}: {}. Skipping genotyping for this VNTR.".format(vid, unbound_local_error)
+                logging.warning(error_message)
+            except Exception as error:
+                error_message = "Error when finding repeat count for vntr id {}: {}. Skipping genotyping for this VNTR.".format(vid, error)
+                logging.warning(error_message)
