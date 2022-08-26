@@ -7,6 +7,8 @@ from random import random
 
 from keras.models import Sequential, load_model
 import pysam
+from enum import Enum
+
 from Bio import pairwise2
 from Bio.Seq import Seq
 from Bio import SeqIO
@@ -29,6 +31,15 @@ class GenotypeResult:
         self.spanning_reads_count = spanning_reads_count
         self.flanking_reads_count = flanking_reads_count
         self.maximum_likelihood = max_likelihood
+
+class LoggedRead:
+    class Source(Enum):
+        MAPPED = 1 # Mapped read from alignment file
+        UNMAPPED = 2 # Unmapped read from alignment file
+    def __init__(self, sequence, read_id, source):
+        self.sequence = sequence
+        self.read_id = read_id
+        self.source = source
 
 
 class SelectedRead:
@@ -305,7 +316,7 @@ class VNTRFinder:
                 return True
         return False
 
-    def check_if_flanking_regions_align_to_str(self, read_str, length_distribution, spanning_reads):
+    def check_if_flanking_regions_align_to_str(self, read_str, read_id, length_distribution, spanning_reads):
         flanking_region_size = 100
         left_flanking = self.reference_vntr.left_flanking_region[-flanking_region_size:]
         right_flanking = self.reference_vntr.right_flanking_region[:flanking_region_size]
@@ -343,13 +354,15 @@ class VNTRFinder:
 
         if right_align[3] < left_align[3]:
             return
-        spanning_reads.append(read_str[left_align[3]:right_align[3]+flanking_region_size])
+        spanning_reads.append(LoggedRead(sequence=read_str[left_align[3]:right_align[3]+flanking_region_size],
+                                         read_id=read_id,
+                                         source=LoggedRead.Source.UNMAPPED))
         length_distribution.append(right_align[3] - (left_align[3] + flanking_region_size))
 
     def check_if_pacbio_read_spans_vntr(self, sema, read, length_distribution, spanning_reads):
-        self.check_if_flanking_regions_align_to_str(str(read.seq).upper(), length_distribution, spanning_reads)
+        self.check_if_flanking_regions_align_to_str(str(read.seq).upper(), read.query_name, length_distribution, spanning_reads)
         reverse_complement_str = str(Seq(str(read.seq)).reverse_complement())
-        self.check_if_flanking_regions_align_to_str(reverse_complement_str.upper(), length_distribution, spanning_reads)
+        self.check_if_flanking_regions_align_to_str(reverse_complement_str.upper(), read.query_name, length_distribution, spanning_reads)
         sema.release()
 
     def check_if_pacbio_mapped_read_spans_vntr(self, sema, read, length_distribution, spanning_reads):
@@ -365,11 +378,13 @@ class VNTRFinder:
                 if ref_pos >= region_end and read_region_end is None:
                     read_region_end = read_pos
             if read_region_start is not None and read_region_end is not None:
-                result = read.seq[read_region_start:read_region_end+flanking_region_size]
+                result_seq = read.seq[read_region_start:read_region_end+flanking_region_size]
                 if read.is_reverse:
-                    result = str(Seq(result).reverse_complement())
-                spanning_reads.append(result)
-                length_distribution.append(len(result) - flanking_region_size * 2)
+                    result_seq = str(Seq(result_seq).reverse_complement())
+                spanning_reads.append(LoggedRead(sequence=result_seq,
+                                                 read_id=read.query_name,
+                                                 source=LoggedRead.Source.MAPPED))
+                length_distribution.append(len(result_seq) - flanking_region_size * 2)
         sema.release()
 
     @time_usage
@@ -490,13 +505,15 @@ class VNTRFinder:
             return None, 0
         max_length = 0
         for read in spanning_reads:
-            if len(read) - 100 > max_length:
-                max_length = len(read) - 100
+            read_len = len(read.sequence)
+            if read_len - 100 > max_length:
+                max_length = read_len - 100
         max_copies = int(round(max_length / float(len(self.reference_vntr.pattern))))
         # max_copies = min(max_copies, 2 * len(self.reference_vntr.get_repeat_segments()))
         vntr_matcher = self.build_vntr_matcher_hmm(max_copies)
         observed_copy_numbers = []
-        for haplotype in spanning_reads:
+        for spanning_read in spanning_reads:
+            haplotype = spanning_read.sequence
             logp, vpath = vntr_matcher.viterbi(haplotype)
             rev_logp, rev_vpath = vntr_matcher.viterbi(str(Seq(haplotype).reverse_complement()))
             if logp < rev_logp:
@@ -508,9 +525,9 @@ class VNTRFinder:
                 logging.debug(read_sequence)
                 visited_states = [state.name for idx, state in vpath[1:-1]]
                 if self.read_flanks_repeats_with_confidence(vpath, read_sequence):
-                    logging.debug('spanning read visited states :%s' % visited_states)
+                    logging.debug('spanning read %s sourced from %s visited states :%s' % (spanning_read.read_id, spanning_read.source.name, visited_states))
                 else:
-                    logging.debug('flanking read visited states :%s' % visited_states)
+                    logging.debug('flanking read %s sourced from %s visited states :%s' % (spanning_read.read_id, spanning_read.source.name, visited_states))
                 logging.debug('repeats: %s' % repeats)
         logging.info('flanked repeats: %s' % observed_copy_numbers)
         return self.find_genotype_based_on_observed_repeats(observed_copy_numbers)
@@ -546,9 +563,9 @@ class VNTRFinder:
         new_spanning_reads = []
         if len(haplotypes) == 0:
             return None
-        self.check_if_flanking_regions_align_to_str(haplotypes[0].upper(), flanking_region_lengths, new_spanning_reads)
+        self.check_if_flanking_regions_align_to_str(haplotypes[0].upper(), read.read_id, flanking_region_lengths, new_spanning_reads)
         reverse_complement_str = str(Seq(haplotypes[0]).reverse_complement())
-        self.check_if_flanking_regions_align_to_str(reverse_complement_str.upper(), flanking_region_lengths, new_spanning_reads)
+        self.check_if_flanking_regions_align_to_str(reverse_complement_str.upper(), read.read_id, flanking_region_lengths, new_spanning_reads)
         if len(flanking_region_lengths) > 0:
             return tuple([round(flanking_region_lengths[0] / len(self.reference_vntr.pattern))] * 2)
         else:
