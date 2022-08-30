@@ -312,11 +312,11 @@ def _generate_pairwise_aln(log_file, aln_outfile, ref_vntrs, vid_list=None, sort
                             is_spanning_read = False
                         else:
                             flanking_repeats.append(repeats)
-                    elif "DEBUG:spanning read visited states" in line:
+                    elif "DEBUG:spanning read" in line:
                         is_spanning_read = True
                         visited = line[line.index('[') + 1:-2]
                         visited_states = [item[1:-1] for item in visited.split(', ')]
-                    elif "DEBUG:flanking read visited states" in line:
+                    elif "DEBUG:flanking read" in line:
                         visited = line[line.index('[') + 1:-2]
                         visited_states = [item[1:-1] for item in visited.split(', ')]
                     else:
@@ -448,7 +448,7 @@ def _get_flanking_region_error_rate(log_file, ref_vntrs, vid_list):
                     repeats = int(line.strip().split(" ")[-1])
                     _update_count_dictionary(ref_vntrs[vid], repeats, visited_states, sequence,
                                              vid_repeat_flanking_errcount[vid], vid_repeat_flanking_bpcount[vid])
-                if "DEBUG:spanning read visited states" in line or "DEBUG:[" in line:
+                if "DEBUG:spanning read" in line or "DEBUG:[" in line:
                     visited = line[line.index('[') + 1:-2]
                     split = visited.split(', ')
                     split = [item[1:-1] for item in split]
@@ -459,7 +459,7 @@ def _get_flanking_region_error_rate(log_file, ref_vntrs, vid_list):
     return vid_repeat_flanking_errcount, vid_repeat_flanking_bpcount
 
 
-def get_flakning_region_error_rate(log_file, out_file, ref_vntr_db, vntr_ids):
+def get_flanking_region_error_rate(log_file, out_file, ref_vntr_db, vntr_ids):
     # Load reference VNTRs
     reference_vntrs = load_unique_vntrs_data(ref_vntr_db)
     ref_vntrs = {ref_vntr.id: ref_vntr for ref_vntr in reference_vntrs}
@@ -546,7 +546,7 @@ def main():
         if arg_dict['o'] is None:
             print("ERROR: Please specify the output file name")
             exit(-1)
-        get_flakning_region_error_rate(arg_dict['i'], arg_dict['o'], arg_dict['db'], vntr_ids=target_vntrs_ids)
+        get_flanking_region_error_rate(arg_dict['i'], arg_dict['o'], arg_dict['db'], vntr_ids=target_vntrs_ids)
     else:
         generate_pairwise_aln(arg_dict['i'], arg_dict['o'], arg_dict['db'], vntr_ids=target_vntrs_ids, sort_by_repeat=True)
 
