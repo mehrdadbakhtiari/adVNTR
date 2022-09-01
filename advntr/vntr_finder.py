@@ -379,8 +379,6 @@ class VNTRFinder:
                     read_region_end = read_pos
             if read_region_start is not None and read_region_end is not None:
                 result_seq = read.seq[read_region_start:read_region_end+flanking_region_size]
-                if read.is_reverse:
-                    result_seq = str(Seq(result_seq).reverse_complement())
                 spanning_reads.append(LoggedRead(sequence=result_seq,
                                                  read_id=read.query_name,
                                                  source=LoggedRead.Source.MAPPED))
@@ -513,15 +511,11 @@ class VNTRFinder:
         vntr_matcher = self.build_vntr_matcher_hmm(max_copies)
         observed_copy_numbers = []
         for spanning_read in spanning_reads:
-            haplotype = spanning_read.sequence
-            logp, vpath = vntr_matcher.viterbi(haplotype)
-            rev_logp, rev_vpath = vntr_matcher.viterbi(str(Seq(haplotype).reverse_complement()))
-            if logp < rev_logp:
-                vpath = rev_vpath
+            read_sequence = spanning_read.sequence
+            logp, vpath = vntr_matcher.viterbi(read_sequence)
             repeats = get_number_of_repeats_in_vpath(vpath)
             observed_copy_numbers.append(repeats)
             if log_pacbio_reads:
-                read_sequence = str(Seq(haplotype))
                 logging.debug(read_sequence)
                 visited_states = [state.name for idx, state in vpath[1:-1]]
                 if self.read_flanks_repeats_with_confidence(vpath, read_sequence):
@@ -699,11 +693,6 @@ class VNTRFinder:
                 if read.seq.count('N') <= 0:
                     sequence = str(read.seq).upper()
                     logp, vpath = hmm.viterbi(sequence)
-                    rev_logp, rev_vpath = hmm.viterbi(str(Seq(read.seq).reverse_complement()).upper())
-                    if logp < rev_logp:
-                        sequence = str(Seq(read.seq).reverse_complement()).upper()
-                        logp = rev_logp
-                        vpath = rev_vpath
                     if is_low_quality_read(read) or not self.recruit_read(logp, vpath, recruitment_score, sequence):
                         logging.debug('Rejected Aligned Read: %s' % sequence)
                         continue
