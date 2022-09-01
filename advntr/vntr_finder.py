@@ -361,6 +361,8 @@ class VNTRFinder:
 
     def check_if_pacbio_read_spans_vntr(self, sema, read, length_distribution, spanning_reads):
         self.check_if_flanking_regions_align_to_str(str(read.seq).upper(), read.query_name, length_distribution, spanning_reads)
+        reverse_complement_str = str(Seq(str(read.seq)).reverse_complement())
+        self.check_if_flanking_regions_align_to_str(reverse_complement_str.upper(), read.query_name, length_distribution, spanning_reads)
         sema.release()
 
     def check_if_pacbio_mapped_read_spans_vntr(self, sema, read, length_distribution, spanning_reads):
