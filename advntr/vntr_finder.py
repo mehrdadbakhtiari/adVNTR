@@ -32,10 +32,11 @@ class GenotypeResult:
         self.flanking_reads_count = flanking_reads_count
         self.maximum_likelihood = max_likelihood
 
+class ReadSource(Enum):
+    MAPPED = 1 # Mapped read from alignment file
+    UNMAPPED = 2 # Unmapped read from alignment file
+
 class LoggedRead:
-    class Source(Enum):
-        MAPPED = 1 # Mapped read from alignment file
-        UNMAPPED = 2 # Unmapped read from alignment file
     def __init__(self, sequence, read_id, source):
         self.sequence = sequence
         self.read_id = read_id
@@ -356,7 +357,7 @@ class VNTRFinder:
             return
         spanning_reads.append(LoggedRead(sequence=read_str[left_align[3]:right_align[3]+flanking_region_size],
                                          read_id=read_id,
-                                         source=LoggedRead.Source.UNMAPPED))
+                                         source=ReadSource.UNMAPPED))
         length_distribution.append(right_align[3] - (left_align[3] + flanking_region_size))
 
     def check_if_pacbio_read_spans_vntr(self, sema, read, length_distribution, spanning_reads):
@@ -410,8 +411,8 @@ class VNTRFinder:
                 result_seq = read.seq[read_region_start: read_region_end + right_flanking_bp]
                 spanning_reads.append(LoggedRead(sequence=result_seq,
                                                  read_id=read.query_name,
-                                                 source=LoggedRead.Source.MAPPED))
-                length_distribution.append(len(result_seq) - left_flanking_bp - right_flanking_bp)
+                                                 source=ReadSource.MAPPED))
+                length_distribution.append(len(result_seq) - flanking_region_size * 2)
         sema.release()
 
     @time_usage

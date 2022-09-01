@@ -8,3 +8,4 @@ scipy
 joblib
 scikit-learn
 keras
+enum34
