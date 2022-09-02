@@ -366,23 +366,52 @@ class VNTRFinder:
         sema.release()
 
     def check_if_pacbio_mapped_read_spans_vntr(self, sema, read, length_distribution, spanning_reads):
-        flanking_region_size = 100
-        region_start = self.reference_vntr.start_point - flanking_region_size
-        region_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
-        if read.get_reference_positions()[0] < region_start and read.get_reference_positions()[-1] > region_end:
+        hmm_flanking_region_size = 100
+        min_flanking_bp = 10
+        vntr_start = self.reference_vntr.start_point
+        vntr_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
+
+        region_start = vntr_start - hmm_flanking_region_size
+
+        first_aligned_position = read.get_reference_positions()[0]
+        last_aligned_position = read.get_reference_positions()[-1]
+        if first_aligned_position <= vntr_start - min_flanking_bp and vntr_end + min_flanking_bp < last_aligned_position:
             read_region_start = None
             read_region_end = None
-            for read_pos, ref_pos in enumerate(read.get_reference_positions()):
-                if ref_pos >= region_start and read_region_start is None:
-                    read_region_start = read_pos
-                if ref_pos >= region_end and read_region_end is None:
-                    read_region_end = read_pos
+
+            tr_spanning_bp = 0
+            left_flanking_bp = 0
+            right_flanking_bp = 0
+            for read_pos, ref_pos in enumerate(read.get_reference_positions(full_length=True)):
+                if ref_pos is None:  # soft-clip or insertions
+                    continue
+                if ref_pos > vntr_end + hmm_flanking_region_size:  # Boundary check
+                    break
+
+                if region_start <= ref_pos < vntr_end + hmm_flanking_region_size:  # HMM-modeled VNTR region
+                    if region_start <= ref_pos < vntr_start:
+                        if read_region_start is None:
+                            read_region_start = read_pos
+                        left_flanking_bp += 1
+                    elif vntr_start <= ref_pos < vntr_end:
+                        tr_spanning_bp += 1
+                    else:  # vntr_end <= ref_pos < vntr_end + hmm_flanking_region_size
+                        if read_region_end is None:
+                            read_region_end = read_pos
+                        right_flanking_bp += 1
+
+            if left_flanking_bp < min_flanking_bp or right_flanking_bp < min_flanking_bp:
+                logging.debug("Rejecting the read {} due to short spanning regions".format(read.query_name))
+                sema.release()
+                return
+
             if read_region_start is not None and read_region_end is not None:
-                result_seq = read.seq[read_region_start:read_region_end+flanking_region_size]
+                # If deletion occurred on the right flanking region, we only get the remaining sequence.
+                result_seq = read.seq[read_region_start: read_region_end + right_flanking_bp]
                 spanning_reads.append(LoggedRead(sequence=result_seq,
                                                  read_id=read.query_name,
                                                  source=LoggedRead.Source.MAPPED))
-                length_distribution.append(len(result_seq) - flanking_region_size * 2)
+                length_distribution.append(len(result_seq) - hmm_flanking_region_size * 2)
         sema.release()
 
     @time_usage
@@ -523,7 +552,7 @@ class VNTRFinder:
                 else:
                     logging.debug('flanking read %s sourced from %s visited states :%s' % (spanning_read.read_id, spanning_read.source.name, visited_states))
                 logging.debug('repeats: %s' % repeats)
-        logging.info('flanked repeats: %s' % observed_copy_numbers)
+        logging.info('observed repeats: %s' % observed_copy_numbers)
         return self.find_genotype_based_on_observed_repeats(observed_copy_numbers)
 
     @time_usage
