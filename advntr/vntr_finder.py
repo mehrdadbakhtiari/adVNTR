@@ -411,7 +411,7 @@ class VNTRFinder:
                 spanning_reads.append(LoggedRead(sequence=result_seq,
                                                  read_id=read.query_name,
                                                  source=LoggedRead.Source.MAPPED))
-                length_distribution.append(len(result_seq) - hmm_flanking_region_size * 2)
+                length_distribution.append(len(result_seq) - left_flanking_bp - right_flanking_bp)
         sema.release()
 
     @time_usage
@@ -558,7 +558,7 @@ class VNTRFinder:
 
         genotype_string = '/'.join([str(cn) for cn in sorted(copy_numbers)]) if copy_numbers is not None else 'None'
         logging.info('RU count lower bounds: %s' % genotype_string)
-        
+
         return copy_numbers, max_prob
 
     @time_usage
