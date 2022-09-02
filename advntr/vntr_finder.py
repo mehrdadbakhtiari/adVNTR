@@ -553,7 +553,13 @@ class VNTRFinder:
                     logging.debug('flanking read %s sourced from %s visited states :%s' % (spanning_read.read_id, spanning_read.source.name, visited_states))
                 logging.debug('repeats: %s' % repeats)
         logging.info('observed repeats: %s' % observed_copy_numbers)
-        return self.find_genotype_based_on_observed_repeats(observed_copy_numbers)
+
+        copy_numbers, max_prob = self.find_genotype_based_on_observed_repeats(observed_copy_numbers)
+
+        genotype_string = '/'.join([str(cn) for cn in sorted(copy_numbers)]) if copy_numbers is not None else 'None'
+        logging.info('RU count lower bounds: %s' % genotype_string)
+        
+        return copy_numbers, max_prob
 
     @time_usage
     def get_haplotype_copy_numbers_from_spanning_reads(self, spanning_reads):
