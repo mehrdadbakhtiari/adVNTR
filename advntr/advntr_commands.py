@@ -89,6 +89,8 @@ def genotype(args, genotype_parser):
     log_file = working_directory + 'log_%s.log' % os.path.basename(input_file)
     log_format = '%(asctime)s %(levelname)s:%(message)s'
     logging.basicConfig(format=log_format, filename=log_file, level=logging.DEBUG, filemode='w')
+    if args.disable_logging:
+        logging.disable(level=logging.CRITICAL)
 
     if args.outfile:
         sys.stdout = open(args.outfile, 'w')

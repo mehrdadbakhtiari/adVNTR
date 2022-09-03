@@ -58,6 +58,8 @@ def main():
     outfmt_choices = ['text', 'bed', 'vcf']
     genotype_io_group.add_argument('-of', '--outfmt', metavar='<format>', default='text', choices=outfmt_choices,
                                    help='output format. Allowed values are {'+', '.join(outfmt_choices)+'} [%(default)s]')
+    genotype_io_group.add_argument('--disable_logging', action='store_true', default=False,
+                                   help='set this flag to stop writing to log file except for critical errors.')
 
     genotype_algortihm_group = genotype_parser.add_argument_group("Algorithm options")
     genotype_algortihm_group.add_argument('-fs', '--frameshift', action='store_true',
