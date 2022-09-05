@@ -412,7 +412,7 @@ class VNTRFinder:
                 spanning_reads.append(LoggedRead(sequence=result_seq,
                                                  read_id=read.query_name,
                                                  source=ReadSource.MAPPED))
-                length_distribution.append(len(result_seq) - flanking_region_size * 2)
+                length_distribution.append(len(result_seq) - left_flanking_bp - right_flanking_bp)
         sema.release()
 
     @time_usage
