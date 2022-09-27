@@ -328,14 +328,22 @@ def _generate_pairwise_aln(log_file, aln_outfile, ref_vntrs, vid_list=None, sort
 
                         split_line = line.split(" ")
                         read_id = split_line[4]
-                        read_source = split_line[7]  # either "MAPPED" or "UNMAPPED"
+                        if read_id == 'visited':  # read id and source is not available in this log file
+                            read_id = ""
+                            read_source = ""
+                        else:
+                            read_source = split_line[7]  # either "MAPPED" or "UNMAPPED"
 
                         visited = line[line.index('[') + 1:-2]
                         visited_states = [item[1:-1] for item in visited.split(', ')]
                     elif "DEBUG:flanking read" in line:
                         split_line = line.split(" ")
                         read_id = split_line[4]
-                        read_source = split_line[7]  # either "MAPPED" or "UNMAPPED"
+                        if read_id == 'visited':  # read id and source is not available in this log file
+                            read_id = ""
+                            read_source = ""
+                        else:
+                            read_source = split_line[7]  # either "MAPPED" or "UNMAPPED"
 
                         visited = line[line.index('[') + 1:-2]
                         visited_states = [item[1:-1] for item in visited.split(', ')]
