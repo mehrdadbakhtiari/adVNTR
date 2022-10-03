@@ -672,37 +672,8 @@ class VNTRFinder:
 
     @time_usage
     def select_illumina_reads(self, alignment_file, unmapped_filtered_reads, update=False, hmm=None):
-        recruitment_score = None
-        dnn_model = None
+        """ Recruit reads from mapped and unmapped reads """
         selected_reads = []
-        vntr_bp_in_unmapped_reads = Value('d', 0.0)
-
-        number_of_reads = 0
-        read_length = 150
-
-        for read_segment in unmapped_filtered_reads:
-            if number_of_reads == 0:
-                read_length = len(str(read_segment.seq))
-            number_of_reads += 1
-            if not hmm:
-                hmm = self.get_vntr_matcher_hmm(read_length=read_length)
-            if not recruitment_score:
-                recruitment_score = self.get_min_score_to_select_a_read(read_length)
-                model_file = settings.DNN_MODELS_DIR + '/%s.hd5' % self.reference_vntr.id
-                if os.path.exists(model_file):
-                    dnn_model = load_model(model_file)
-
-            if len(read_segment.seq) < read_length:
-                continue
-
-            if dnn_model is None:
-                self.process_unmapped_read(None, str(read_segment.seq), hmm, recruitment_score,
-                                           vntr_bp_in_unmapped_reads, selected_reads)
-            else:
-                self.process_unmapped_read_with_dnn(str(read_segment.seq), hmm, recruitment_score,
-                                                    vntr_bp_in_unmapped_reads, selected_reads, True, dnn_model)
-
-        logging.debug('vntr base pairs in unmapped reads: %s' % vntr_bp_in_unmapped_reads.value)
 
         vntr_bp_in_mapped_reads = 0
         vntr_start = self.reference_vntr.start_point
@@ -711,17 +682,26 @@ class VNTRFinder:
         samfile = pysam.AlignmentFile(alignment_file, read_mode, reference_filename=self.reference_filename)
         reference = get_reference_genome_of_alignment_file(samfile)
         chromosome = self.reference_vntr.chromosome if reference == 'HG19' else self.reference_vntr.chromosome[3:]
-        for read in samfile.fetch(chromosome, vntr_start, vntr_end):
-            if not recruitment_score:
-                read_length = len(read.seq)
-                recruitment_score = self.get_min_score_to_select_a_read(read_length)
-            if not hmm:
-                hmm = self.get_vntr_matcher_hmm(read_length=read_length)
 
+        # Setup parameters (read_length, recruitment_score)
+        read_length = 150
+        mapped_read_lengths = []
+        for read in samfile.head(5):
+            mapped_read_lengths.append(len(read.seq))
+        read_length = sorted(mapped_read_lengths)[len(mapped_read_lengths)//2]
+        min_read_length = int(read_length * 0.9)
+        if settings.MIN_READ_LENGTH is not None:
+            min_read_length = settings.MIN_READ_LENGTH
+
+        recruitment_score = self.get_min_score_to_select_a_read(read_length)
+
+        hmm = self.get_vntr_matcher_hmm(read_length=read_length)
+
+        for read in samfile.fetch(chromosome, vntr_start, vntr_end):
             if read.is_unmapped or read.is_duplicate:
                 logging.debug('Rejecting duplicated read')
                 continue
-            if len(read.seq) < int(read_length * 0.9):
+            if len(read.seq) < min_read_length:
                 logging.debug('Rejecting read for short length: %s' % read.seq)
                 continue
             read_end = read.reference_end if read.reference_end else read.reference_start + len(read.seq)
@@ -738,9 +718,26 @@ class VNTRFinder:
                 vntr_bp_in_mapped_reads += end - start
         logging.debug('vntr base pairs in mapped reads: %s' % vntr_bp_in_mapped_reads)
 
+        dnn_model = None
+        vntr_bp_in_unmapped_reads = Value('d', 0.0)
+        model_file = settings.DNN_MODELS_DIR + '/%s.hd5' % self.reference_vntr.id
+
+        for read_segment in unmapped_filtered_reads:
+            if os.path.exists(model_file):
+                dnn_model = load_model(model_file)
+            if len(read_segment.seq) < read_length:
+                continue
+            if dnn_model is None:
+                self.process_unmapped_read(None, str(read_segment.seq), hmm, recruitment_score,
+                                           vntr_bp_in_unmapped_reads, selected_reads)
+            else:
+                self.process_unmapped_read_with_dnn(str(read_segment.seq), hmm, recruitment_score,
+                                                    vntr_bp_in_unmapped_reads, selected_reads, True, dnn_model)
+
+        logging.debug('vntr base pairs in unmapped reads: %s' % vntr_bp_in_unmapped_reads.value)
+
         if update:
             selected_reads = self.iteratively_update_model(alignment_file, unmapped_filtered_reads, selected_reads, hmm)
-
         return selected_reads
 
     @time_usage
@@ -778,7 +775,7 @@ class VNTRFinder:
                 logging.debug('spanning read visited states :%s' % visited_states)
                 logging.debug('repeats: %s' % repeats)
                 covered_repeats.append(repeats)
-            else:
+            else:  # This may be read spanning VNTR region, but with poor alignment on flanking region.
                 logging.debug('flanking read visited states :%s' % visited_states)
                 logging.debug('repeats: %s' % repeats)
                 flanking_repeats.append(repeats)
