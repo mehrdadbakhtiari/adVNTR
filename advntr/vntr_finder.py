@@ -783,7 +783,7 @@ class VNTRFinder:
                 read_source = ReadSource.UNMAPPED
             logged_read = LoggedRead(sequence=selected_read.sequence,
                                      read_id=selected_read.query_name,
-                                     source=source)
+                                     source=read_source)
             if self.read_flanks_repeats_with_confidence(selected_read.vpath, selected_read.sequence):
                 logging.debug('spanning read %s sourced from %s visited states :%s' % (
                         logged_read.read_id, logged_read.source.name, visited_states))
