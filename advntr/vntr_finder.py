@@ -44,12 +44,13 @@ class LoggedRead:
 
 
 class SelectedRead:
-    def __init__(self, sequence, logp, vpath, mapq=None, reference_start=None):
+    def __init__(self, sequence, logp, vpath, mapq=None, reference_start=None, query_name=None):
         self.sequence = sequence
         self.logp = logp
         self.vpath = vpath
         self.mapq = mapq
         self.is_mapped = reference_start is not None
+        self.query_name = query_name
 
     def is_mapped(self):
         return self.is_mapped
@@ -712,7 +713,12 @@ class VNTRFinder:
                     if is_low_quality_read(read) or not self.recruit_read(logp, vpath, recruitment_score, sequence):
                         logging.debug('Rejected Aligned Read: %s' % sequence)
                         continue
-                    selected_reads.append(SelectedRead(sequence, logp, vpath, read.mapq, read.reference_start))
+                    selected_reads.append(SelectedRead(sequence=sequence,
+                                                       logp=logp,
+                                                       vpath=vpath,
+                                                       mapq=read.mapq,
+                                                       reference_start=read.reference_start,
+                                                       query_name=read.query_name))
                 end = min(read_end, vntr_end)
                 start = max(read.reference_start, vntr_start)
                 vntr_bp_in_mapped_reads += end - start
@@ -771,12 +777,21 @@ class VNTRFinder:
             logging.debug('right flanking size: %s' % get_right_flanking_region_size_in_vpath(selected_read.vpath))
             logging.debug(selected_read.sequence)
             visited_states = [state.name for idx, state in selected_read.vpath[1:-1]]
+            if selected_read.is_mapped:
+                read_source = ReadSource.MAPPED
+            else:
+                read_source = ReadSource.UNMAPPED
+            logged_read = LoggedRead(sequence=selected_read.sequence,
+                                     read_id=selected_read.query_name,
+                                     source=read_source)
             if self.read_flanks_repeats_with_confidence(selected_read.vpath, selected_read.sequence):
-                logging.debug('spanning read visited states :%s' % visited_states)
+                logging.debug('spanning read %s sourced from %s visited states :%s' % (
+                        logged_read.read_id, logged_read.source.name, visited_states))
                 logging.debug('repeats: %s' % repeats)
                 covered_repeats.append(repeats)
             else:  # This may be read spanning VNTR region, but with poor alignment on flanking region.
-                logging.debug('flanking read visited states :%s' % visited_states)
+                logging.debug('flanking read %s sourced from %s visited states :%s' % (
+                        logged_read.read_id, logged_read.source.name, visited_states))
                 logging.debug('repeats: %s' % repeats)
                 flanking_repeats.append(repeats)
         flanking_repeats = sorted(flanking_repeats)
