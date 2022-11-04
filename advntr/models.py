@@ -161,7 +161,7 @@ def load_unique_vntrs_data(db_file=None):
     return vntrs
 
 
-def save_vntrs_to_database(processed_vntrs, db_file):
+def save_vntrs_to_database(processed_vntrs, db_file, vntr_length_threshold=10000):
     with open(processed_vntrs) as input_file:
         lines = input_file.readlines()
     db = sqlite3.connect(db_file)
@@ -171,6 +171,8 @@ def save_vntrs_to_database(processed_vntrs, db_file):
     for line in lines:
         line = line.strip()
         vntr_id, overlap, chromosome, start, gene, annotation, pattern, left_flank, right_flank, segments = line.split()
+        if len(segments.replace(',', '')) > vntr_length_threshold:
+                    continue
         cursor.execute('''INSERT INTO vntrs(id, nonoverlapping, chromosome, ref_start, gene_name, annotation, pattern,
                        left_flanking, right_flanking, repeats, scaled_score) VALUES(?,?,?,?,?,?,?,?,?,?,?)''',
                        (vntr_id, overlap, chromosome, start, gene, annotation, pattern, left_flank, right_flank,
