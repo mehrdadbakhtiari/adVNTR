@@ -172,7 +172,7 @@ def save_vntrs_to_database(processed_vntrs, db_file, vntr_length_threshold=10000
         line = line.strip()
         vntr_id, overlap, chromosome, start, gene, annotation, pattern, left_flank, right_flank, segments = line.split()
         if len(segments.replace(',', '')) > vntr_length_threshold:
-                    continue
+            continue
         cursor.execute('''INSERT INTO vntrs(id, nonoverlapping, chromosome, ref_start, gene_name, annotation, pattern,
                        left_flanking, right_flanking, repeats, scaled_score) VALUES(?,?,?,?,?,?,?,?,?,?,?)''',
                        (vntr_id, overlap, chromosome, start, gene, annotation, pattern, left_flank, right_flank,
