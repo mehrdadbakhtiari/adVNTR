@@ -24,7 +24,7 @@ Here are the instructions to install from source:
 3) Install adVNTR using the following command, `python setup install`
 4) Download the reference VNTRs from this link below.
 5) Run adVNTR for a VNTR using the following command, `advntr genotype -fs --vntr_id [id] --alignment_file [bam_file] -m [reference_vntr] --working_directory [working_dir]`
--fs is a parameter for variant detection, --vntr_id option is for specifying the target VNTR. For example 25561 for MUC1 VNTR with hg19 reference VNTRs.
+-fs is a parameter for variant detection, --vntr_id option is for specifying the target VNTR. For example **25561** for MUC1 VNTR with [hg19 reference VNTRs](https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data_genic_loci.zip).
 
 Data Requirements
 -----------------
@@ -72,3 +72,5 @@ See [Quickstart](http://advntr.readthedocs.io/en/latest/quickstart.html) page to
 
 Citation:
 ---------
+Jonghun Park, Mehrdad Bakhtiari, Bernt Popp, Michael Wiesener, Vineet Bafna.
+    <b>[Detecting tandem repeat variants in coding regions using code-adVNTR](https://doi.org/10.1016/j.isci.2022.104785) </b> iScience vol. 25,8 104785. (2022)
