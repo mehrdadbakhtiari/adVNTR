@@ -26,6 +26,9 @@ Here are the instructions to install from source:
 5) Run adVNTR for a VNTR using the following command, `advntr genotype -fs --vntr_id [id] --alignment_file [bam_file] -m [reference_vntr] --working_directory [working_dir]`
 -fs is a parameter for variant detection, --vntr_id option is for specifying the target VNTR. For example **25561** for MUC1 VNTR with [hg19 reference VNTRs](https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data_genic_loci.zip).
 
+If you encounter an error about muscle, please install the following version.
+```conda install muscle=3.8.1551```
+
 Data Requirements
 -----------------
 In order to genotype VNTRs, you need to either train models for loci of interest or use pre-trained models (recommended):
