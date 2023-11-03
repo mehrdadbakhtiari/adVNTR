@@ -34,6 +34,7 @@ In order to genotype VNTRs, you need to either train models for loci of interest
     and Pacbio (8960 loci) sequencing data. You can use [vntr_data_recommended_loci_hg38.zip](https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data_recommended_loci_hg38.zip) for VNTRs in GRCh38.
     - You can also download and use [vntr_data_genic_loci.zip](https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data_genic_loci.zip)
     for 158522 VNTRs in hg19 that results in having much longer running time.
+    - Alternatively you can download the BED file for gene-proximal VNTRs [gene_proximal_vntrs.bed](https://drive.google.com/file/d/1DetpBQySPNe2YAJa4FsjHn9qiRNS3wEV/view?usp=share_link) for VNTRs in GRCh38.
 
 Alternatively, you can add model for custom VNTR. See [Add Custom VNTR](http://advntr.readthedocs.io/en/latest/tutorial.html#add-custom-vntr-label) for more information about training models for custom VNTRs.
 
