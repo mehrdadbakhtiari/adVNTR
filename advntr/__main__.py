@@ -50,6 +50,12 @@ def main():
     genotype_io_group.add_argument('--log_pacbio_reads', action='store_true',
                                    help='set this flag to store the PacBio read information for genotyping in the log files.'
                                         ' Note that it might lead to very large log files due to the length of the PacBio reads.')
+    genotype_io_group.add_argument('--accuracy_filter', action='store_true',
+                                   help='Set this flag to get accurate genotype based on spanning reads,'
+                                   ' rather than estimated genotype based on spanning and flanking reads.'
+                                   ' Note that setting this flag, more VNTRs might have None genotype if'
+                                   ' not enough supporting spanning reads are observed, compared to not setting this flag.'
+                                   ' This flag works for both Illumina and PacBio reads.')
     genotype_io_group.add_argument('-n', '--nanopore', action='store_true',
                                    help='set this flag if input file contains Nanopore MinION reads instead of Illumina')
     genotype_io_group.add_argument('-o', '--outfile', metavar='<file>', default=None,

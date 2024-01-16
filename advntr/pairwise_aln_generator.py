@@ -269,7 +269,6 @@ def write_alignment(af, vntr_id, repeat_seq_dict, ref_vntr, read_length=151, is_
 
             processed_read_count += 1
 
-    
     if processed_read_count == 0:
         af.write("No read was used in genotyping.")
 
@@ -332,7 +331,7 @@ def _generate_pairwise_aln(log_file, aln_outfile, ref_vntrs, vid_list=None, sort
                             read_id = ""
                             read_source = ""
                         else:
-                            read_source = split_line[7]  # either "MAPPED" or "UNMAPPED"
+                            read_source = split_line[6]  # either "MAPPED" or "UNMAPPED"
 
                         visited = line[line.index('[') + 1:-2]
                         visited_states = [item[1:-1] for item in visited.split(', ')]
@@ -343,12 +342,17 @@ def _generate_pairwise_aln(log_file, aln_outfile, ref_vntrs, vid_list=None, sort
                             read_id = ""
                             read_source = ""
                         else:
-                            read_source = split_line[7]  # either "MAPPED" or "UNMAPPED"
+                            read_source = split_line[6]  # either "MAPPED" or "UNMAPPED"
 
                         visited = line[line.index('[') + 1:-2]
                         visited_states = [item[1:-1] for item in visited.split(', ')]
                     else:
-                        sequence = line[30:].strip()
+                        # Make sure it is a sequence string
+                        tentative_sequence = line[30:].strip()
+                        # Make sure there are only 4 characters are ACTG
+                        # Otherwise, it is an unrelated log line.
+                        if "".join(sorted(set(list(tentative_sequence)))) == "ACGT":
+                            sequence = tentative_sequence
 
             if "RU count lower bounds" in line:
                 if print_only_informative_flanking_read:

@@ -114,9 +114,16 @@ def genotype(args, genotype_parser):
                                       args.reference_filename, input_file)
     if args.pacbio:
         if input_is_alignment_file:
-            genome_analyzier.find_repeat_counts_from_pacbio_alignment_file(input_file, args.log_pacbio_reads)
+            genome_analyzier.find_repeat_counts_from_pacbio_alignment_file(
+                                input_file,
+                                args.log_pacbio_reads,
+                                args.accuracy_filter)
         else:
-            genome_analyzier.find_repeat_counts_from_pacbio_reads(input_file, args.log_pacbio_reads, args.naive)
+            genome_analyzier.find_repeat_counts_from_pacbio_reads(
+                                input_file,
+                                args.log_pacbio_reads,
+                                args.accuracy_filter,
+                                args.naive)
     else:
         if args.frameshift:
             if valid_vntr_for_frameshift(target_vntrs):
@@ -124,9 +131,15 @@ def genotype(args, genotype_parser):
             else:
                 print_error(genotype_parser, '--frameshift is not available for these VNTRs')
         elif input_is_alignment_file:
-            genome_analyzier.find_repeat_counts_from_alignment_file(input_file, average_coverage, args.update)
+            genome_analyzier.find_repeat_counts_from_alignment_file(
+                    alignment_file=input_file,
+                    accuracy_filter=args.accuracy_filter,
+                    average_coverage=average_coverage,
+                    update=args.update)
         else:
-            genome_analyzier.find_repeat_counts_from_short_reads(input_file)
+            genome_analyzier.find_repeat_counts_from_short_reads(
+                read_file=input_file,
+                accuracy_filter=args.accuracy_filter)
 
 
 def print_models(reference_vntrs):
