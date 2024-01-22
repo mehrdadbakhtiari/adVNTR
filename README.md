@@ -9,8 +9,7 @@ from sequence data. It works with both NGS short reads (Illumina HiSeq) and SMRT
 diploid repeating counts for VNTRs and identifies possible mutations in the VNTR sequences.
 
 [code-adVNTR](https://github.com/mehrdadbakhtiari/adVNTR/tree/enhanced_hmm), a tool specialized in detecting small indel variants within motifs using short reads is now available. 
-It utilizes multiple motif HMMs to identify small variants within motifs and estimate diploid repeat counts for VNTRs in coding regions.
-For more details, please check out this [link](https://github.com/mehrdadbakhtiari/adVNTR/tree/enhanced_hmm).
+This tool employs multiple motif Hidden Markov Models (HMMs) to identify small variants within motifs and estimate diploid repeat counts for VNTRs specifically in coding regions. For more details, please refer to this [readme](https://github.com/mehrdadbakhtiari/adVNTR/tree/enhanced_hmm).
 
 Installation
 ------------
@@ -35,6 +34,7 @@ In order to genotype VNTRs, you need to either train models for loci of interest
     - You can also download and use [vntr_data_genic_loci.zip](https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data_genic_loci.zip)
     for 158522 VNTRs in hg19 that results in having much longer running time.
     - Alternatively you can download the BED file for gene-proximal VNTRs [gene_proximal_vntrs.bed](https://drive.google.com/file/d/1DetpBQySPNe2YAJa4FsjHn9qiRNS3wEV/view?usp=share_link) for VNTRs in GRCh38.
+    - The VNTR coordinates (GRCh38) utilized for GIAB TR benchmarking can be downloaded from [this link](https://drive.google.com/file/d/1FCk4HeXQMBiwnXeLucmIgSrz2qcmEcts/view?usp=drive_link).
 
 Alternatively, you can add model for custom VNTR. See [Add Custom VNTR](http://advntr.readthedocs.io/en/latest/tutorial.html#add-custom-vntr-label) for more information about training models for custom VNTRs.
 
