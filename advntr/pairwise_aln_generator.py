@@ -351,7 +351,8 @@ def _generate_pairwise_aln(log_file, aln_outfile, ref_vntrs, vid_list=None, sort
                         tentative_sequence = line[30:].strip()
                         # Make sure there are only 4 characters are ACTG
                         # Otherwise, it is an unrelated log line.
-                        if "".join(sorted(set(list(tentative_sequence)))) == "ACGT":
+                        tentative_sequence_set = set(list(tentative_sequence))
+                        if tentative_sequence_set.issubset(set("ACGT")):
                             sequence = tentative_sequence
 
             if "RU count lower bounds" in line:

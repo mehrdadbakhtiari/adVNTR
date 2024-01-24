@@ -543,8 +543,8 @@ class VNTRFinder:
         max_copies = int(round(max_length / float(len(self.reference_vntr.pattern))))
         if accuracy_filter:
             # Apply more strict conditions on flanking size than normal.
-            self.minimum_left_flanking_size = 10
-            self.minimum_right_flanking_size = 10
+            self.minimum_left_flanking_size = settings.ACCURACY_FILTER_MIN_LEFT_FLANKING_SIZE
+            self.minimum_right_flanking_size = settings.ACCURACY_FILTER_MIN_RIGHT_FLANKING_SIZE
         # max_copies = min(max_copies, 2 * len(self.reference_vntr.get_repeat_segments()))
         vntr_matcher = self.build_vntr_matcher_hmm(max_copies)
         observed_copy_numbers = []
@@ -565,7 +565,7 @@ class VNTRFinder:
 
         if accuracy_filter:
             # If accuracy_filter is set, remove repeat counts if there is less than the threshold spanning reads.
-            sr_min_support = 3
+            sr_min_support = settings.ACCURACY_FILTER_SR_MIN_SUPPORT
             modified_copy_numbers = []
             cn_counter = Counter(observed_copy_numbers)
             for key , count in cn_counter.most_common():

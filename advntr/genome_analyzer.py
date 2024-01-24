@@ -78,7 +78,7 @@ class GenomeAnalyzer:
             chromosome = ref_vntr.chromosome[3:]
             contigs.add(chromosome)
         for contig in sorted(list(contigs)):
-            print('##contig=<ID=chr{}>'.format(contig))
+            print('##contig=<ID={}>'.format(contig))
 
         sample = self.input_file.strip().split("/")[-1].split(".")[0]
         print("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" + sample)
@@ -227,11 +227,11 @@ class GenomeAnalyzer:
             except UnboundLocalError as unbound_local_error:
                 error_message = "UnboundLocalError when finding repeat count from pacbio alignment file for vntr id {}: {}. Skipping genotyping for this VNTR.".format(vid, unbound_local_error)
                 logging.error(error_message)
-                self.print_genotype(vid, genotype_result=GenotypeResult(None, 0, 0, 0, 0), encountries=True)
+                self.print_genotype(vid, genotype_result=GenotypeResult(None, 0, 0, 0, 0), encountered_error=True)
             except Exception as error:
                 error_message = "Error when finding repeat count from pacbio alignment file for vntr id {}: {}. Skipping genotyping for this VNTR.".format(vid, error)
                 logging.error(error_message)
-                self.print_genotype(vid, genotype_result=GenotypeResult(None, 0, 0, 0, 0), encountries=True)
+                self.print_genotype(vid, genotype_result=GenotypeResult(None, 0, 0, 0, 0), encountered_error=True)
 
     def find_repeat_counts_from_pacbio_reads(self, read_file, log_pacbio_reads, accuracy_filter, naive=False):
         filtered_reads, vntr_reads_ids = self.get_vntr_filtered_reads_map(read_file, False)
