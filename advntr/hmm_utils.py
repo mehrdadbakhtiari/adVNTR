@@ -1,5 +1,6 @@
 import numpy as np
 
+import logging
 from pomegranate import DiscreteDistribution, State
 from pomegranate import HiddenMarkovModel as Model
 from advntr.profile_hmm import build_profile_hmm_for_repeats, build_profile_hmm_pseudocounts_for_alignment
@@ -205,13 +206,12 @@ def get_number_of_repeat_bp_matches_in_vpath(vpath):
     return result
 
 
-def get_flanking_regions_matching_rate(vpath, sequence, left_flank, right_flank):
+def get_flanking_regions_matching_rate(vpath, sequence, left_flank, right_flank, accuracy_filter=False, verbose=False):
     visited_states = [state.name for idx, state in vpath[1:-1]]
     right_flanking_matches = 0
     right_flanking_basepairs = 0
     left_flanking_matches = 0
     left_flanking_basepairs = 0
-
     seq_index = 0
     max_hmm_index = -1
     prev_state = visited_states[0]
@@ -220,24 +220,50 @@ def get_flanking_regions_matching_rate(vpath, sequence, left_flank, right_flank)
             max_hmm_index = int(prev_state.split("_")[0][1:])
             break
         prev_state = state
+    if verbose:
+        logging.debug("len visited_states {}".format(len(visited_states)))
     for i in range(len(visited_states)):
-        if 'start' in state or 'end' in state:
+        if 'start' in visited_states[i] or 'end' in visited_states[i]:
             continue
         hmm_state = int(visited_states[i].split("_")[0][1:])
-        if visited_states[i].endswith('prefix') and hmm_state < 35:
-            if is_match_state(visited_states[i]) and sequence[seq_index] == right_flank[hmm_index - 1]:
+        if visited_states[i].endswith('prefix'):
+            if verbose:
+                logging.debug("state {} is matching {} seq_index {} sequence[seq_index] {} right_flank[hmm_state - 1] {} is emitting {}".format(
+                          visited_states[i],
+                          is_match_state(visited_states[i]),
+                          seq_index,
+                          sequence[seq_index],
+                          right_flank[hmm_state - 1],
+                          is_emitting_state(visited_states[i])))
+            if is_match_state(visited_states[i]) and sequence[seq_index] == right_flank[hmm_state - 1]:
                 right_flanking_matches += 1
             if is_emitting_state(visited_states[i]):
                 right_flanking_basepairs += 1
-        if visited_states[i].endswith('suffix') and max_hmm_index - hmm_state < 35:
-            if is_match_state(visited_states[i]) and sequence[seq_index] == left_flank[-(max_hmm_index - hmm_index + 1)]:
+        if visited_states[i].endswith('suffix'):
+            if verbose:
+                logging.debug("state {} is matching {} seq_index {} sequence[seq_index] {} left_flank[-(max_hmm_index - hmm_state + 1)] {} is emitting {}".format(
+                          visited_states[i],
+                          is_match_state(visited_states[i]),
+                          seq_index,
+                          sequence[seq_index],
+                          left_flank[-(max_hmm_index - hmm_state + 1)],
+                          is_emitting_state(visited_states[i])))
+            if is_match_state(visited_states[i]) and sequence[seq_index] == left_flank[-(max_hmm_index - hmm_state + 1)]:
                 left_flanking_matches += 1
             if is_emitting_state(visited_states[i]):
                 left_flanking_basepairs += 1
         if is_emitting_state(visited_states[i]):
             seq_index += 1
-    right_rate = float(right_flanking_matches) / right_flanking_basepairs if right_flanking_basepairs != 0 else 1
-    left_rate = float(left_flanking_matches) / left_flanking_basepairs if left_flanking_basepairs != 0 else 1
+    if accuracy_filter:
+        # If accuracy filter is set, we want to be conservative in read recruiting.
+        # Therefore, in case of zero bp right (or left) flanking match, read is not confidently spanning the VNTR, so return 0.
+        epsilon = 0.00001
+        right_rate = float(right_flanking_matches) / right_flanking_basepairs if right_flanking_basepairs != 0 else epsilon
+        left_rate = float(left_flanking_matches) / left_flanking_basepairs if left_flanking_basepairs != 0 else epsilon
+    else:
+        right_rate = float(right_flanking_matches) / right_flanking_basepairs if right_flanking_basepairs != 0 else 1
+        left_rate = float(left_flanking_matches) / left_flanking_basepairs if left_flanking_basepairs != 0 else 1
+
     result = min(right_rate, left_rate)
     return result
 

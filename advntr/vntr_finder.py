@@ -311,6 +311,9 @@ class VNTRFinder:
     def read_flanks_repeats_with_confidence(self, vpath, read_sequence):
         right_flank = self.reference_vntr.right_flanking_region
         left_flank = self.reference_vntr.left_flanking_region
+        logging.debug('get_flanking_regions_matching_rate: accuracy filter T {} F {}'.format(
+                get_flanking_regions_matching_rate(vpath, read_sequence, left_flank, right_flank, accuracy_filter=True),
+                get_flanking_regions_matching_rate(vpath, read_sequence, left_flank, right_flank, accuracy_filter=False)))
         if get_flanking_regions_matching_rate(vpath, read_sequence, left_flank, right_flank) < 0.95:
             return False
         if get_left_flanking_region_size_in_vpath(vpath) > self.minimum_left_flanking_size:
@@ -407,7 +410,7 @@ class VNTRFinder:
                 sema.release()
                 return
 
-            if read_region_start is not None and read_region_end is not None:
+            if read_region_start is not None and read_region_end is not None and read.seq is not None:
                 # If deletion occurred on the right flanking region, we only get the remaining sequence.
                 result_seq = read.seq[read_region_start: read_region_end + right_flanking_bp]
                 spanning_reads.append(LoggedRead(sequence=result_seq,
@@ -528,7 +531,7 @@ class VNTRFinder:
         logging.info('Maximum probability for genotyping: %s' % max_prob)
         return result, max_prob
 
-    def get_dominant_copy_numbers_from_spanning_reads(self, spanning_reads, log_pacbio_reads):
+    def get_dominant_copy_numbers_from_spanning_reads(self, spanning_reads, log_pacbio_reads, accuracy_filter):
         if len(spanning_reads) < 1:
             logging.info('There is no spanning read')
             return None, 0
@@ -538,6 +541,10 @@ class VNTRFinder:
             if read_len - 100 > max_length:
                 max_length = read_len - 100
         max_copies = int(round(max_length / float(len(self.reference_vntr.pattern))))
+        if accuracy_filter:
+            # Apply more strict conditions on flanking size than normal.
+            self.minimum_left_flanking_size = settings.ACCURACY_FILTER_MIN_LEFT_FLANKING_SIZE
+            self.minimum_right_flanking_size = settings.ACCURACY_FILTER_MIN_RIGHT_FLANKING_SIZE
         # max_copies = min(max_copies, 2 * len(self.reference_vntr.get_repeat_segments()))
         vntr_matcher = self.build_vntr_matcher_hmm(max_copies)
         observed_copy_numbers = []
@@ -555,6 +562,20 @@ class VNTRFinder:
                     logging.debug('flanking read %s sourced from %s visited states :%s' % (spanning_read.read_id, spanning_read.source.name, visited_states))
                 logging.debug('repeats: %s' % repeats)
         logging.info('observed repeats: %s' % observed_copy_numbers)
+
+        if accuracy_filter:
+            # If accuracy_filter is set, remove repeat counts if there is less than the threshold spanning reads.
+            sr_min_support = settings.ACCURACY_FILTER_SR_MIN_SUPPORT
+            modified_copy_numbers = []
+            cn_counter = Counter(observed_copy_numbers)
+            for key , count in cn_counter.most_common():
+                if count >= sr_min_support:
+                    modified_copy_numbers.extend([key] * count)
+            if sorted(modified_copy_numbers) != sorted(observed_copy_numbers):
+                logging.debug("Modifying repeat counts in dominant_copy function. observed: {} modified: {}".format(
+                              Counter(observed_copy_numbers), Counter(modified_copy_numbers)))
+            observed_copy_numbers = modified_copy_numbers
+
 
         copy_numbers, max_prob = self.find_genotype_based_on_observed_repeats(observed_copy_numbers)
 
@@ -616,26 +637,31 @@ class VNTRFinder:
         return copy_numbers
 
     @time_usage
-    def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, unmapped_filtered_reads, log_pacbio_reads):
+    def find_repeat_count_from_pacbio_alignment_file(self, alignment_file, unmapped_filtered_reads, log_pacbio_reads, accuracy_filter):
         logging.debug('finding repeat count from pacbio alignment file for %s' % self.reference_vntr.id)
 
         unaligned_spanning_reads, length_dist = self.get_spanning_reads_of_unaligned_pacbio_reads(unmapped_filtered_reads)
         mapped_spanning_reads = self.get_spanning_reads_of_aligned_pacbio_reads(alignment_file)
 
         spanning_reads = mapped_spanning_reads + unaligned_spanning_reads
-        copy_numbers, max_prob = self.get_dominant_copy_numbers_from_spanning_reads(spanning_reads, log_pacbio_reads)
+        copy_numbers, max_prob = self.get_dominant_copy_numbers_from_spanning_reads(spanning_reads,
+                                                                                    log_pacbio_reads,
+                                                                                    accuracy_filter)
 
         return GenotypeResult(copy_numbers, len(spanning_reads), len(spanning_reads), 0, max_prob)
 
     @time_usage
-    def find_repeat_count_from_pacbio_reads(self, unmapped_filtered_reads, log_pacbio_reads, naive=False):
+    def find_repeat_count_from_pacbio_reads(self, unmapped_filtered_reads, log_pacbio_reads, accuracy_filter, naive=False):
         logging.debug('finding repeat count from pacbio reads file for %s' % self.reference_vntr.id)
+        logging.debug('accuracy filter is {}'.format(accuracy_filter))
         spanning_reads, length_dist = self.get_spanning_reads_of_unaligned_pacbio_reads(unmapped_filtered_reads)
         max_prob = 0
         if naive:
             copy_numbers = self.find_ru_counts_with_naive_approach(length_dist, spanning_reads)  # No max_prob value
         else:
-            copy_numbers, max_prob = self.get_dominant_copy_numbers_from_spanning_reads(spanning_reads, log_pacbio_reads)
+            copy_numbers, max_prob = self.get_dominant_copy_numbers_from_spanning_reads(spanning_reads,
+                                                                                        log_pacbio_reads,
+                                                                                        accuracy_filter)
         return GenotypeResult(copy_numbers, len(spanning_reads), len(spanning_reads), 0, max_prob)
 
     @time_usage
@@ -760,22 +786,42 @@ class VNTRFinder:
         return estimate
 
     @time_usage
-    def find_repeat_count_from_alignment_file(self, alignment_file, unmapped_filtered_reads, average_coverage=None,
+    def find_repeat_count_from_alignment_file(self, alignment_file, unmapped_filtered_reads,
+                                              accuracy_filter,
+                                              average_coverage=None,
                                               update=False):
         logging.debug('finding repeat count from alignment file for %s' % self.reference_vntr.id)
+        logging.debug('accuracy filter is {}'.format(accuracy_filter))
+        logging.debug('left and right min flanking size: {} {}'.format(
+            self.minimum_left_flanking_size,
+            self.minimum_right_flanking_size))
 
         selected_reads = self.select_illumina_reads(alignment_file, unmapped_filtered_reads, update)
 
+        # Skipping the strict conditions on flanking size for illumina reads.
+        #if accuracy_filter:
+        #    # Apply more strict conditions on flanking size than normal.
+        #    self.minimum_left_flanking_size = 10
+        #    self.minimum_right_flanking_size = 10
+        logging.debug("number of recruited reads: {}".format(len(selected_reads)))
         covered_repeats = []
         flanking_repeats = []
         total_counted_vntr_bp = 0
         for selected_read in selected_reads:
             repeats = get_number_of_repeats_in_vpath(selected_read.vpath)
             total_counted_vntr_bp += get_number_of_repeat_bp_matches_in_vpath(selected_read.vpath)
+            left_flanking_size_vpath = get_left_flanking_region_size_in_vpath(selected_read.vpath)
+            right_flanking_size_vpath = get_right_flanking_region_size_in_vpath(selected_read.vpath)
             logging.debug('logp of read: %s' % str(selected_read.logp))
-            logging.debug('left flankign size: %s' % get_left_flanking_region_size_in_vpath(selected_read.vpath))
-            logging.debug('right flanking size: %s' % get_right_flanking_region_size_in_vpath(selected_read.vpath))
+            logging.debug('left flanking size: %s' % left_flanking_size_vpath)
+            logging.debug('right flanking size: %s' % right_flanking_size_vpath)
             logging.debug(selected_read.sequence)
+            # Skipping the strict conditions on flanking size for illumina reads.
+            #if accuracy_filter and \
+            #    (left_flanking_size_vpath < self.minimum_left_flanking_size \
+            #    or right_flanking_size_vpath < self.minimum_right_flanking_size):
+            #        logging.debug('skipping read due to short left or right flanking size')
+            #        continue
             visited_states = [state.name for idx, state in selected_read.vpath[1:-1]]
             if selected_read.is_mapped:
                 read_source = ReadSource.MAPPED
@@ -789,11 +835,16 @@ class VNTRFinder:
                         logged_read.read_id, logged_read.source.name, visited_states))
                 logging.debug('repeats: %s' % repeats)
                 covered_repeats.append(repeats)
-            else:  # This may be read spanning VNTR region, but with poor alignment on flanking region.
+            elif not accuracy_filter:
+                # This may be read spanning VNTR region, but with poor alignment on flanking region.
+                # If accuracy_filter is true, we do not want to include spanning reads with
+                # poor alignment in flanking regions.
                 logging.debug('flanking read %s sourced from %s visited states :%s' % (
                         logged_read.read_id, logged_read.source.name, visited_states))
                 logging.debug('repeats: %s' % repeats)
                 flanking_repeats.append(repeats)
+            else:
+                logging.debug('Rejecting read {} for low match rate in flanking regions'.format(selected_read.query_name))
         flanking_repeats = sorted(flanking_repeats)
         logging.info('covered repeats: %s' % covered_repeats)
         logging.info('flanking repeats: %s' % flanking_repeats)
@@ -802,23 +853,40 @@ class VNTRFinder:
         if len(max_flanking_repeat) < 5:
             max_flanking_repeat = []
 
+        if accuracy_filter:
+            # If accuracy_filter is set, remove repeat counts if there is less than the threshold spanning reads.
+            sr_min_support = 3
+            modified_repeats = []
+            cn_counter = Counter(covered_repeats)
+            for key , count in cn_counter.most_common():
+                if count >= sr_min_support:
+                    modified_repeats.extend([key] * count)
+            if sorted(modified_repeats) != sorted(covered_repeats):
+                logging.debug("Modifying repeat counts, observed: {} modified: {}".format(
+                              Counter(covered_repeats), Counter(modified_repeats)))
+            covered_repeats = modified_repeats
+            # Also remove any non-spanning reads as they might reflect a lower bound on the number of repeats.
+            max_flanking_repeat = []
+
         exact_genotype, max_prob = self.find_genotype_based_on_observed_repeats(covered_repeats + max_flanking_repeat)
         if exact_genotype is not None:
             exact_genotype_log = '/'.join([str(cn) for cn in sorted(exact_genotype)])
         else:
             exact_genotype_log = 'None'
         logging.info('RU count lower bounds: %s' % exact_genotype_log)
-        if average_coverage is None:
+        if average_coverage is None or average_coverage is False or average_coverage == 0:
+            logging.info('Average coverage is not set')
             return GenotypeResult(exact_genotype, len(selected_reads), len(covered_repeats), len(flanking_repeats),
                                   max_prob)
 
+        logging.info('Average coverage is {}'.format(average_coverage))
         pattern_occurrences = sum(flanking_repeats) + sum(covered_repeats)
         estimated_genotype = self.get_ru_count_with_coverage_method(pattern_occurrences, total_counted_vntr_bp,
                                                                     average_coverage)
         return GenotypeResult(estimated_genotype, len(selected_reads), len(covered_repeats), len(flanking_repeats),
                               0)  # No probability for the estimated genotype
 
-    def find_repeat_count_from_short_reads(self, short_read_files, working_directory='./'):
+    def find_repeat_count_from_short_reads(self, short_read_files, accuracy_filter, working_directory='./'):
         """
         Map short read sequencing data to human reference genome (hg19) and call find_repeat_count_from_alignment_file
         :param short_read_files: short read sequencing data
@@ -826,7 +894,9 @@ class VNTRFinder:
         """
         alignment_file = '' + short_read_files
         # TODO: use bowtie2 to map short reads to hg19
-        return self.find_repeat_count_from_alignment_file(alignment_file, working_directory)
+        return self.find_repeat_count_from_alignment_file(alignment_file=alignment_file,
+                                                          unmapped_filtered_reads=working_directory,
+                                                          accuracy_filter=accuracy_filter)
 
     @time_usage
     def train_classifier_threshold(self, reference_file, read_length=150):
