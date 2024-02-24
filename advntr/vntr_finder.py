@@ -378,8 +378,8 @@ class VNTRFinder:
 
         region_start = vntr_start - hmm_flanking_region_size
 
-        first_aligned_position = read.get_reference_positions()[0]
-        last_aligned_position = read.get_reference_positions()[-1]
+        first_aligned_position = read.get_reference_positions(full_length=True)[0]
+        last_aligned_position = read.get_reference_positions(full_length=True)[-1]
         if first_aligned_position <= vntr_start - min_flanking_bp and vntr_end + min_flanking_bp < last_aligned_position:
             read_region_start = None
             read_region_end = None
@@ -455,7 +455,7 @@ class VNTRFinder:
         chromosome = self.reference_vntr.chromosome if reference == 'HG19' else self.reference_vntr.chromosome[3:]
         process_list = []
         for read in samfile.fetch(chromosome, region_start, region_end):
-            if len(read.get_reference_positions()) == 0:
+            if len(read.get_reference_positions(full_length=True)) == 0:
                 logging.debug('no reference positions for read. skipping self.check_if_pacbio_mapped_read_spans_vntr for this read')
                 continue
             sema.acquire()
