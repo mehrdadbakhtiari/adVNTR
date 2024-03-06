@@ -376,6 +376,7 @@ class VNTRFinder:
         vntr_start = self.reference_vntr.start_point
         vntr_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
 
+        logging.debug("vntr_start {} vntr_end {} ".format(vntr_start, vntr_end))
         region_start = vntr_start - hmm_flanking_region_size
         logging.debug("checking if mapped read {} spans vntr".format(
                         read.query_name))
@@ -384,11 +385,9 @@ class VNTRFinder:
 
         logging.debug("with full length = True first_aligned_position {} last_aligned_position {}".format(
                         first_aligned_position, last_aligned_position))
-        first_aligned_position = read.get_reference_positions()[0]
-        last_aligned_position = read.get_reference_positions()[-1]
-        logging.debug("with full length = False first_aligned_position {} last_aligned_position {}".format(
-                        first_aligned_position, last_aligned_position))
-        logging.debug("vntr_start {} vntr_end {} ".format(vntr_start, vntr_end))
+        logging.debug("with full length = False len get_reference_positions {} len get_aligned_pairs {}".format(
+                        len(read.get_reference_positions(),
+                        len(get_aligned_pairs()))))
 
         if first_aligned_position <= vntr_start - min_flanking_bp and vntr_end + min_flanking_bp < last_aligned_position:
             read_region_start = None
