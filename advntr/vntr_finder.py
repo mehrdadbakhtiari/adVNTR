@@ -386,8 +386,8 @@ class VNTRFinder:
         logging.debug("with full length = True first_aligned_position {} last_aligned_position {}".format(
                         first_aligned_position, last_aligned_position))
         logging.debug("with full length = False len get_reference_positions {} len get_aligned_pairs {}".format(
-                        len(read.get_reference_positions(),
-                        len(get_aligned_pairs()))))
+                        len(read.get_reference_positions()),
+                        len(read.get_aligned_pairs())))
 
         if first_aligned_position <= vntr_start - min_flanking_bp and vntr_end + min_flanking_bp < last_aligned_position:
             read_region_start = None
