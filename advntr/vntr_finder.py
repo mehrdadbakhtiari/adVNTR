@@ -376,10 +376,10 @@ class VNTRFinder:
         vntr_start = self.reference_vntr.start_point
         vntr_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
 
-        logging.debug("vntr_start {} vntr_end {} ".format(vntr_start, vntr_end))
         region_start = vntr_start - hmm_flanking_region_size
         logging.debug("checking if mapped read {} spans vntr".format(
                         read.query_name))
+        logging.debug("vntr_start {} vntr_end {} ".format(vntr_start, vntr_end))
         # Find first not-none item
         first_aligned_position = next((item for item in read.get_reference_positions(full_length=True) \
                 if item is not None), None)
@@ -389,13 +389,16 @@ class VNTRFinder:
                 if item is not None), None)
 
         logging.debug("with full length = True len get_reference_positions {}".format(
-                        len(read.get_reference_positions())))
+                        len(read.get_reference_positions(full_length=True))))
 
         logging.debug("with full length = True first_aligned_position {} last_aligned_position {}".format(
                         first_aligned_position, last_aligned_position))
         logging.debug("with full length = False len get_reference_positions {} len get_aligned_pairs {}".format(
                         len(read.get_reference_positions()),
                         len(read.get_aligned_pairs())))
+        tmp_start = next((item for item in read.get_aligned_pairs() \
+                        if item is not None), None)
+        logging.debug("On get_aligned_pairs, first not None element is {}".format(tmp_start))
 
         if first_aligned_position <= vntr_start - min_flanking_bp and vntr_end + min_flanking_bp < last_aligned_position:
             read_region_start = None
