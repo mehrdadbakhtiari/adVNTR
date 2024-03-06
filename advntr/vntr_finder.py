@@ -381,6 +381,15 @@ class VNTRFinder:
                         read.query_name))
         first_aligned_position = read.get_reference_positions(full_length=True)[0]
         last_aligned_position = read.get_reference_positions(full_length=True)[-1]
+
+        logging.debug("with full length = True first_aligned_position {} last_aligned_position {}".format(
+                        first_aligned_position, last_aligned_position))
+        first_aligned_position = read.get_reference_positions()[0]
+        last_aligned_position = read.get_reference_positions()[-1]
+        logging.debug("with full length = False first_aligned_position {} last_aligned_position {}".format(
+                        first_aligned_position, last_aligned_position))
+        logging.debug("vntr_start {} vntr_end {} ".format(vntr_start, vntr_end))
+
         if first_aligned_position <= vntr_start - min_flanking_bp and vntr_end + min_flanking_bp < last_aligned_position:
             read_region_start = None
             read_region_end = None
