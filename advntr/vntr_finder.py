@@ -398,19 +398,25 @@ class VNTRFinder:
                     if region_start <= ref_pos < vntr_start:
                         if read_region_start is None:
                             read_region_start = read_pos
+                            logging.debug("Setting read_region_start {} for read {}".format(
+                                            read_pos, read.query_name))
                         left_flanking_bp += 1
                     elif vntr_start <= ref_pos < vntr_end:
                         tr_spanning_bp += 1
                     else:  # vntr_end <= ref_pos < vntr_end + hmm_flanking_region_size
                         if read_region_end is None:
                             read_region_end = read_pos
+                            logging.debug("Setting read_region_end {} for read {}".format(
+                                            read_pos, read.query_name))
                         right_flanking_bp += 1
-
+            logging.debug("tr_spanning_bp {} left_flanking_bp {} right_flanking_bp {}".format(
+                            tr_spanning_bp, left_flanking_bp, right_flanking_bp))
             if left_flanking_bp < min_flanking_bp or right_flanking_bp < min_flanking_bp:
                 logging.debug("Rejecting the read {} due to short spanning regions".format(read.query_name))
                 sema.release()
                 return
-
+            if read.seq is None:
+                logging.debug("read.seq is None")
             if read_region_start is not None and read_region_end is not None and read.seq is not None:
                 # If deletion occurred on the right flanking region, we only get the remaining sequence.
                 result_seq = read.seq[read_region_start: read_region_end + right_flanking_bp]
@@ -418,6 +424,9 @@ class VNTRFinder:
                                                  read_id=read.query_name,
                                                  source=ReadSource.MAPPED))
                 length_distribution.append(len(result_seq) - left_flanking_bp - right_flanking_bp)
+                logging.debug("mapped read {} added to spanning reads".format(
+                        read.query_name))
+        logging.debug("length of spanning_reads {}".format(len(spanning_reads)))
         sema.release()
 
     @time_usage
