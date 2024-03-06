@@ -380,8 +380,16 @@ class VNTRFinder:
         region_start = vntr_start - hmm_flanking_region_size
         logging.debug("checking if mapped read {} spans vntr".format(
                         read.query_name))
-        first_aligned_position = read.get_reference_positions(full_length=True)[0]
-        last_aligned_position = read.get_reference_positions(full_length=True)[-1]
+        # Find first not-none item
+        first_aligned_position = next((item for item in read.get_reference_positions(full_length=True) \
+                if item is not None), None)
+
+        last_aligned_position = next((item for item in reversed(
+                read.get_reference_positions(full_length=True)) \
+                if item is not None), None)
+
+        logging.debug("with full length = True len get_reference_positions {}".format(
+                        len(read.get_reference_positions())))
 
         logging.debug("with full length = True first_aligned_position {} last_aligned_position {}".format(
                         first_aligned_position, last_aligned_position))
