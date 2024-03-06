@@ -377,7 +377,8 @@ class VNTRFinder:
         vntr_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
 
         region_start = vntr_start - hmm_flanking_region_size
-
+        logging.debug("checking if mapped read {} spans vntr".format(
+                        read.query_name))
         first_aligned_position = read.get_reference_positions(full_length=True)[0]
         last_aligned_position = read.get_reference_positions(full_length=True)[-1]
         if first_aligned_position <= vntr_start - min_flanking_bp and vntr_end + min_flanking_bp < last_aligned_position:
@@ -452,7 +453,8 @@ class VNTRFinder:
         read_mode = self.get_alignment_file_read_mode(alignment_file)
         samfile = pysam.AlignmentFile(alignment_file, read_mode, reference_filename=self.reference_filename)
         reference = get_reference_genome_of_alignment_file(samfile)
-        chromosome = self.reference_vntr.chromosome if reference == 'HG19' else self.reference_vntr.chromosome[3:]
+        #chromosome = self.reference_vntr.chromosome if reference == 'HG19' else self.reference_vntr.chromosome[3:]
+        chromosome = self.reference_vntr.chromosome
         process_list = []
         for read in samfile.fetch(chromosome, region_start, region_end):
             if len(read.get_reference_positions(full_length=True)) == 0:
