@@ -380,18 +380,13 @@ class VNTRFinder:
         logging.debug("checking if mapped read {} spans vntr".format(
                         read.query_name))
         logging.debug("vntr_start {} vntr_end {} ".format(vntr_start, vntr_end))
-        # Find first not-none item
-        first_aligned_position = next((item for item in read.get_reference_positions(full_length=True) \
-                if item is not None), None)
-
-        last_aligned_position = next((item for item in reversed(
-                read.get_reference_positions(full_length=True)) \
-                if item is not None), None)
+        first_aligned_position = read.reference_start
+        last_aligned_position = read.reference_end
 
         logging.debug("with full length = True len get_reference_positions {}".format(
                         len(read.get_reference_positions(full_length=True))))
 
-        logging.debug("with full length = True first_aligned_position {} last_aligned_position {}".format(
+        logging.debug("first_aligned_position {} last_aligned_position {}".format(
                         first_aligned_position, last_aligned_position))
         logging.debug("with full length = False len get_reference_positions {} len get_aligned_pairs {}".format(
                         len(read.get_reference_positions()),
@@ -481,12 +476,13 @@ class VNTRFinder:
         read_mode = self.get_alignment_file_read_mode(alignment_file)
         samfile = pysam.AlignmentFile(alignment_file, read_mode, reference_filename=self.reference_filename)
         reference = get_reference_genome_of_alignment_file(samfile)
-        #chromosome = self.reference_vntr.chromosome if reference == 'HG19' else self.reference_vntr.chromosome[3:]
-        chromosome = self.reference_vntr.chromosome
+        chromosome = self.reference_vntr.chromosome if reference == 'HG19' else self.reference_vntr.chromosome[3:]
         process_list = []
         for read in samfile.fetch(chromosome, region_start, region_end):
-            if len(read.get_reference_positions(full_length=True)) == 0:
-                logging.debug('no reference positions for read. skipping self.check_if_pacbio_mapped_read_spans_vntr for this read')
+            if len(read.get_reference_positions()) == 0:
+                logging.debug("No reference positions for read. " + \
+                "Skipping self.check_if_pacbio_mapped_read_spans_vntr for this read. " + \
+                "This is likely due to old version of pysam and incompatibility of cigar string processing.")
                 continue
             sema.acquire()
             p = Process(target=self.check_if_pacbio_mapped_read_spans_vntr, args=(sema, read, length_distribution,
