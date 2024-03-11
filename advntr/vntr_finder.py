@@ -377,23 +377,8 @@ class VNTRFinder:
         vntr_end = self.reference_vntr.start_point + self.reference_vntr.get_length()
 
         region_start = vntr_start - hmm_flanking_region_size
-        logging.debug("checking if mapped read {} spans vntr".format(
-                        read.query_name))
-        logging.debug("vntr_start {} vntr_end {} ".format(vntr_start, vntr_end))
         first_aligned_position = read.reference_start
         last_aligned_position = read.reference_end
-
-        logging.debug("with full length = True len get_reference_positions {}".format(
-                        len(read.get_reference_positions(full_length=True))))
-
-        logging.debug("first_aligned_position {} last_aligned_position {}".format(
-                        first_aligned_position, last_aligned_position))
-        logging.debug("with full length = False len get_reference_positions {} len get_aligned_pairs {}".format(
-                        len(read.get_reference_positions()),
-                        len(read.get_aligned_pairs())))
-        tmp_start = next((item for item in read.get_aligned_pairs() \
-                        if item is not None), None)
-        logging.debug("On get_aligned_pairs, first not None element is {}".format(tmp_start))
 
         if first_aligned_position <= vntr_start - min_flanking_bp and vntr_end + min_flanking_bp < last_aligned_position:
             read_region_start = None
@@ -412,19 +397,13 @@ class VNTRFinder:
                     if region_start <= ref_pos < vntr_start:
                         if read_region_start is None:
                             read_region_start = read_pos
-                            logging.debug("Setting read_region_start {} for read {}".format(
-                                            read_pos, read.query_name))
                         left_flanking_bp += 1
                     elif vntr_start <= ref_pos < vntr_end:
                         tr_spanning_bp += 1
                     else:  # vntr_end <= ref_pos < vntr_end + hmm_flanking_region_size
                         if read_region_end is None:
                             read_region_end = read_pos
-                            logging.debug("Setting read_region_end {} for read {}".format(
-                                            read_pos, read.query_name))
                         right_flanking_bp += 1
-            logging.debug("tr_spanning_bp {} left_flanking_bp {} right_flanking_bp {}".format(
-                            tr_spanning_bp, left_flanking_bp, right_flanking_bp))
             if left_flanking_bp < min_flanking_bp or right_flanking_bp < min_flanking_bp:
                 logging.debug("Rejecting the read {} due to short spanning regions".format(read.query_name))
                 sema.release()
@@ -438,9 +417,6 @@ class VNTRFinder:
                                                  read_id=read.query_name,
                                                  source=ReadSource.MAPPED))
                 length_distribution.append(len(result_seq) - left_flanking_bp - right_flanking_bp)
-                logging.debug("mapped read {} added to spanning reads".format(
-                        read.query_name))
-        logging.debug("length of spanning_reads {}".format(len(spanning_reads)))
         sema.release()
 
     @time_usage
