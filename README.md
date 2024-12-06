@@ -24,7 +24,7 @@ adVNTR could be invoked from command line with ``advntr``
 Alternatively, you can install dependencies and [install the adVNTR from source](http://advntr.readthedocs.io/en/latest/installation.html#install-from-source-not-recommended).
 
 
-Data Requirements
+Data Requirements and Pre-trained Models (Databases)
 -----------------
 In order to genotype VNTRs, you need to either train models for loci of interest or use pre-trained models (recommended):
 * To run adVNTR on trained VNTR models:
@@ -33,6 +33,7 @@ In order to genotype VNTRs, you need to either train models for loci of interest
     and Pacbio (8960 loci) sequencing data. You can use [vntr_data_recommended_loci_hg38.zip](https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data_recommended_loci_hg38.zip) for VNTRs in GRCh38.
     - You can also download and use [vntr_data_genic_loci.zip](https://cseweb.ucsd.edu/~mbakhtia/adVNTR/vntr_data_genic_loci.zip)
     for 158522 VNTRs in hg19 that results in having much longer running time.
+    - You can download the database for the gene-proximal and phenotype associated VNTRs [G-VNTRs and P-VNTRs database](https://drive.google.com/file/d/1rF1CIliwzFcJmrCU2ibMVVZncsU6uNcs/view?usp=share_link) based on the GRCh38 reference.
     - Alternatively you can download the BED file for gene-proximal VNTRs [gene_proximal_vntrs.bed](https://drive.google.com/file/d/1DetpBQySPNe2YAJa4FsjHn9qiRNS3wEV/view?usp=share_link) for VNTRs in GRCh38.
     - The VNTR coordinates (GRCh38) utilized for GIAB TR benchmarking can be downloaded from [this link](https://drive.google.com/file/d/1FCk4HeXQMBiwnXeLucmIgSrz2qcmEcts/view?usp=drive_link).
 
